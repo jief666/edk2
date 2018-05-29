@@ -1,7 +1,7 @@
 /** @file
   This implementation of EFI_PXE_BASE_CODE_PROTOCOL and EFI_LOAD_FILE_PROTOCOL.
 
-  Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -95,19 +95,19 @@ EfiPxeBcStart (
     //
     // Configure block size for TFTP as a default value to handle all link layers.
     //
-    Private->BlockSize = (UINTN) (Private->Ip6MaxPacketSize -
-                           PXEBC_DEFAULT_UDP_OVERHEAD_SIZE - PXEBC_DEFAULT_TFTP_OVERHEAD_SIZE);
+    Private->BlockSize = Private->Ip6MaxPacketSize -
+                           PXEBC_DEFAULT_UDP_OVERHEAD_SIZE - PXEBC_DEFAULT_TFTP_OVERHEAD_SIZE;
 
     //
     // PXE over IPv6 starts here, initialize the fields and list header.
     //
     Private->Ip6Policy                          = PXEBC_IP6_POLICY_MAX;
-    Private->ProxyOffer.Dhcp6.Packet.Offer.Size = PXEBC_DHCP6_PACKET_MAX_SIZE;
-    Private->DhcpAck.Dhcp6.Packet.Ack.Size      = PXEBC_DHCP6_PACKET_MAX_SIZE;
-    Private->PxeReply.Dhcp6.Packet.Ack.Size     = PXEBC_DHCP6_PACKET_MAX_SIZE;
+    Private->ProxyOffer.Dhcp6.Packet.Offer.Size = PXEBC_CACHED_DHCP6_PACKET_MAX_SIZE;
+    Private->DhcpAck.Dhcp6.Packet.Ack.Size      = PXEBC_CACHED_DHCP6_PACKET_MAX_SIZE;
+    Private->PxeReply.Dhcp6.Packet.Ack.Size     = PXEBC_CACHED_DHCP6_PACKET_MAX_SIZE;
 
     for (Index = 0; Index < PXEBC_OFFER_MAX_NUM; Index++) {
-      Private->OfferBuffer[Index].Dhcp6.Packet.Offer.Size = PXEBC_DHCP6_PACKET_MAX_SIZE;
+      Private->OfferBuffer[Index].Dhcp6.Packet.Offer.Size = PXEBC_CACHED_DHCP6_PACKET_MAX_SIZE;
     }
 
     //
@@ -148,18 +148,18 @@ EfiPxeBcStart (
     //
     // Configure block size for TFTP as a default value to handle all link layers.
     //
-    Private->BlockSize = (UINTN) (Private->Ip4MaxPacketSize -
-                           PXEBC_DEFAULT_UDP_OVERHEAD_SIZE - PXEBC_DEFAULT_TFTP_OVERHEAD_SIZE);
+    Private->BlockSize = Private->Ip4MaxPacketSize -
+                           PXEBC_DEFAULT_UDP_OVERHEAD_SIZE - PXEBC_DEFAULT_TFTP_OVERHEAD_SIZE;
 
     //
     // PXE over IPv4 starts here, initialize the fields.
     //
-    Private->ProxyOffer.Dhcp4.Packet.Offer.Size = PXEBC_DHCP4_PACKET_MAX_SIZE;
-    Private->DhcpAck.Dhcp4.Packet.Ack.Size      = PXEBC_DHCP4_PACKET_MAX_SIZE;
-    Private->PxeReply.Dhcp4.Packet.Ack.Size     = PXEBC_DHCP4_PACKET_MAX_SIZE;
+    Private->ProxyOffer.Dhcp4.Packet.Offer.Size = PXEBC_CACHED_DHCP4_PACKET_MAX_SIZE;
+    Private->DhcpAck.Dhcp4.Packet.Ack.Size      = PXEBC_CACHED_DHCP4_PACKET_MAX_SIZE;
+    Private->PxeReply.Dhcp4.Packet.Ack.Size     = PXEBC_CACHED_DHCP4_PACKET_MAX_SIZE;
 
     for (Index = 0; Index < PXEBC_OFFER_MAX_NUM; Index++) {
-      Private->OfferBuffer[Index].Dhcp4.Packet.Offer.Size = PXEBC_DHCP4_PACKET_MAX_SIZE;
+      Private->OfferBuffer[Index].Dhcp4.Packet.Offer.Size = PXEBC_CACHED_DHCP4_PACKET_MAX_SIZE;
     }
 
     PxeBcSeedDhcp4Packet (&Private->SeedPacket, Private->Udp4Read);
@@ -855,16 +855,33 @@ EfiPxeBcMtftp (
       (Filename == NULL) ||
       (BufferSize == NULL) ||
       (ServerIp == NULL) ||
-      ((BufferPtr == NULL) && DontUseBuffer) ||
-      ((BlockSize != NULL) && (*BlockSize < PXE_MTFTP_DEFAULT_BLOCK_SIZE)) ||
-      (!NetIp4IsUnicast (NTOHL (ServerIp->Addr[0]), 0) && !NetIp6IsValidUnicast (&ServerIp->v6))) {
+      ((BlockSize != NULL) && (*BlockSize < PXE_MTFTP_DEFAULT_BLOCK_SIZE))) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  if (Operation == EFI_PXE_BASE_CODE_TFTP_READ_FILE ||
+      Operation == EFI_PXE_BASE_CODE_TFTP_READ_DIRECTORY ||
+      Operation == EFI_PXE_BASE_CODE_MTFTP_READ_FILE ||
+      Operation == EFI_PXE_BASE_CODE_MTFTP_READ_DIRECTORY) {
+    if (BufferPtr == NULL && !DontUseBuffer) {
+      return EFI_INVALID_PARAMETER;
+    }
   }
 
   Config    = NULL;
   Status    = EFI_DEVICE_ERROR;
   Private   = PXEBC_PRIVATE_DATA_FROM_PXEBC (This);
   Mode      = Private->PxeBc.Mode;
+
+  if (Mode->UsingIpv6) {
+    if (!NetIp6IsValidUnicast (&ServerIp->v6)) {
+      return EFI_INVALID_PARAMETER;
+    }
+  } else {
+    if (IP4_IS_UNSPECIFIED (NTOHL (ServerIp->Addr[0])) || IP4_IS_LOCAL_BROADCAST (NTOHL (ServerIp->Addr[0])))   {
+      return EFI_INVALID_PARAMETER;
+    }
+  }
 
   if (Mode->UsingIpv6) {
     //
@@ -1076,7 +1093,8 @@ EfiPxeBcUdpWrite (
     DoNotFragment = TRUE;
   }
 
-  if (!Mode->UsingIpv6 && GatewayIp != NULL && !NetIp4IsUnicast (NTOHL (GatewayIp->Addr[0]), 0)) {
+  if (!Mode->UsingIpv6 && GatewayIp != NULL && Mode->SubnetMask.Addr[0] != 0 && 
+      !NetIp4IsUnicast (NTOHL (GatewayIp->Addr[0]), EFI_NTOHL(Mode->SubnetMask))) {
     //
     // Gateway is provided but it's not a unicast IPv4 address, while it will be ignored for IPv6.
     //
@@ -1587,13 +1605,16 @@ EfiPxeBcSetIpFilter (
       //
       return EFI_INVALID_PARAMETER;
     }
-    if ((NewFilter->Filters & EFI_PXE_BASE_CODE_IP_FILTER_STATION_IP) != 0 &&
-        (NetIp4IsUnicast (EFI_IP4 (NewFilter->IpList[Index].v4), 0) ||
-         NetIp6IsValidUnicast (&NewFilter->IpList[Index].v6))) {
-      //
-      // If EFI_PXE_BASE_CODE_IP_FILTER_STATION_IP is set and IPv4/IPv6 address
-      // is in IpList, promiscuous mode is needed.
-      //
+    if (Mode->UsingIpv6) {
+      if ((NewFilter->Filters & EFI_PXE_BASE_CODE_IP_FILTER_STATION_IP) != 0 &&
+          NetIp6IsValidUnicast (&NewFilter->IpList[Index].v6)) {
+        NeedPromiscuous = TRUE;
+      }
+    } else if ((EFI_NTOHL(Mode->StationIp) != 0) &&
+               (EFI_NTOHL(Mode->SubnetMask) != 0) &&
+               IP4_NET_EQUAL(EFI_NTOHL(Mode->StationIp), EFI_NTOHL(NewFilter->IpList[Index].v4), EFI_NTOHL(Mode->SubnetMask.v4)) &&
+               NetIp4IsUnicast (EFI_IP4 (NewFilter->IpList[Index].v4), EFI_NTOHL(Mode->SubnetMask)) &&
+               ((NewFilter->Filters & EFI_PXE_BASE_CODE_IP_FILTER_STATION_IP) != 0)) {
       NeedPromiscuous = TRUE;
     }
   }
@@ -1912,7 +1933,7 @@ EfiPxeBcSetParameters (
       // Update the previous PxeBcCallback protocol.
       //
       Status = gBS->HandleProtocol (
-                      Private->Controller,
+                      Mode->UsingIpv6 ? Private->Ip6Nic->Controller : Private->Ip4Nic->Controller,
                       &gEfiPxeBaseCodeCallbackProtocolGuid,
                       (VOID **) &Private->PxeBcCallback
                       );
@@ -1928,6 +1949,7 @@ EfiPxeBcSetParameters (
 
   if (NewSendGUID != NULL) {
     if (*NewSendGUID && EFI_ERROR (NetLibGetSystemGuid (&SystemGuid))) {
+      DEBUG ((EFI_D_WARN, "PXE: Failed to read system GUID from the smbios table!\n"));
       return EFI_INVALID_PARAMETER;
     }
     Mode->SendGUID = *NewSendGUID;
@@ -1981,15 +2003,12 @@ EfiPxeBcSetStationIP (
   EFI_STATUS              Status;
   PXEBC_PRIVATE_DATA      *Private;
   EFI_PXE_BASE_CODE_MODE  *Mode;
-  EFI_ARP_CONFIG_DATA     ArpConfigData;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (NewStationIp != NULL &&
-      (!NetIp4IsUnicast (NTOHL (NewStationIp->Addr[0]), 0) &&
-       !NetIp6IsValidUnicast (&NewStationIp->v6))) {
+  if (NewStationIp != NULL && !NetIp6IsValidUnicast (&NewStationIp->v6)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -2003,6 +2022,14 @@ EfiPxeBcSetStationIP (
     return EFI_INVALID_PARAMETER;
   }
 
+  if (!Mode->UsingIpv6 && NewStationIp != NULL) {
+    if (IP4_IS_UNSPECIFIED(NTOHL (NewStationIp->Addr[0])) || 
+        IP4_IS_LOCAL_BROADCAST(NTOHL (NewStationIp->Addr[0])) ||
+        (NewSubnetMask != NULL && NewSubnetMask->Addr[0] != 0 && !NetIp4IsUnicast (NTOHL (NewStationIp->Addr[0]), NTOHL (NewSubnetMask->Addr[0])))) {
+      return EFI_INVALID_PARAMETER;
+    }
+  }
+  
   if (!Mode->Started) {
     return EFI_NOT_STARTED;
   }
@@ -2015,27 +2042,6 @@ EfiPxeBcSetStationIP (
     if (EFI_ERROR (Status)) {
       goto ON_EXIT;
     }
-  } else if (!Mode->UsingIpv6 && NewStationIp != NULL) {
-    //
-    // Configure the corresponding ARP with the IPv4 address.
-    //
-    ZeroMem (&ArpConfigData, sizeof (EFI_ARP_CONFIG_DATA));
-
-    ArpConfigData.SwAddressType   = 0x0800;
-    ArpConfigData.SwAddressLength = (UINT8) sizeof (EFI_IPv4_ADDRESS);
-    ArpConfigData.StationAddress  = &NewStationIp->v4;
-
-    Private->Arp->Configure (Private->Arp, NULL);
-    Private->Arp->Configure (Private->Arp, &ArpConfigData);
-
-    if (NewSubnetMask != NULL) {
-      Mode->RouteTableEntries                = 1;
-      Mode->RouteTable[0].IpAddr.Addr[0]     = NewStationIp->Addr[0] & NewSubnetMask->Addr[0];
-      Mode->RouteTable[0].SubnetMask.Addr[0] = NewSubnetMask->Addr[0];
-      Mode->RouteTable[0].GwAddr.Addr[0]     = 0;
-    }
-
-    Private->IsAddressOk = TRUE;
   }
 
   if (NewStationIp != NULL) {
@@ -2049,6 +2055,10 @@ EfiPxeBcSetStationIP (
   }
 
   Status = PxeBcFlushStationIp (Private, NewStationIp, NewSubnetMask);
+  if (!EFI_ERROR (Status)) {
+    Private->IsAddressOk = TRUE;
+  }
+  
 ON_EXIT:
   return Status;
 }
@@ -2328,10 +2338,17 @@ EfiPxeLoadFile (
   EFI_PXE_BASE_CODE_PROTOCOL  *PxeBc;
   BOOLEAN                     UsingIpv6;
   EFI_STATUS                  Status;
-  BOOLEAN                     MediaPresent;
+  EFI_STATUS                  MediaStatus;
 
-  if (FilePath == NULL || !IsDevicePathEnd (FilePath)) {
+  if (This == NULL || BufferSize == NULL || FilePath == NULL || !IsDevicePathEnd (FilePath)) {
     return EFI_INVALID_PARAMETER;
+  }
+  
+  //
+  // Only support BootPolicy
+  //
+  if (!BootPolicy) {
+    return EFI_UNSUPPORTED;
   }
   
   VirtualNic = PXEBC_VIRTUAL_NIC_FROM_LOADFILE (This);
@@ -2340,23 +2357,12 @@ EfiPxeLoadFile (
   UsingIpv6  = FALSE;
   Status     = EFI_DEVICE_ERROR;
 
-  if (This == NULL || BufferSize == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  //
-  // Only support BootPolicy
-  //
-  if (!BootPolicy) {
-    return EFI_UNSUPPORTED;
-  }
-
   //
   // Check media status before PXE start
   //
-  MediaPresent = TRUE;
-  NetLibDetectMedia (Private->Controller, &MediaPresent);
-  if (!MediaPresent) {
+  MediaStatus = EFI_SUCCESS;
+  NetLibDetectMediaWaitTimeout (Private->Controller, PXEBC_CHECK_MEDIA_WAITING_TIME, &MediaStatus);
+  if (MediaStatus != EFI_SUCCESS) {
     return EFI_NO_MEDIA;
   }
 

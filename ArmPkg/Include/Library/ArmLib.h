@@ -26,6 +26,10 @@
  #error "Unknown chipset."
 #endif
 
+#define EFI_MEMORY_CACHETYPE_MASK   (EFI_MEMORY_UC | EFI_MEMORY_WC | \
+                                     EFI_MEMORY_WT | EFI_MEMORY_WB | \
+                                     EFI_MEMORY_UCE)
+
 /**
  * The UEFI firmware must not use the ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_* attributes.
  *
@@ -37,6 +41,14 @@ typedef enum {
   ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED,
   ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK,
   ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK,
+
+  // On some platforms, memory mapped flash region is designed as not supporting
+  // shareable attribute, so WRITE_BACK_NONSHAREABLE is added for such special
+  // need.
+  // Do NOT use below two attributes if you are not sure.
+  ARM_MEMORY_REGION_ATTRIBUTE_WRITE_BACK_NONSHAREABLE,
+  ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_BACK_NONSHAREABLE,
+
   ARM_MEMORY_REGION_ATTRIBUTE_WRITE_THROUGH,
   ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_WRITE_THROUGH,
   ARM_MEMORY_REGION_ATTRIBUTE_DEVICE,
@@ -371,14 +383,6 @@ ArmGetTTBR0BaseAddress (
   VOID
   );
 
-RETURN_STATUS
-EFIAPI
-ArmConfigureMmu (
-  IN  ARM_MEMORY_REGION_DESCRIPTOR  *MemoryTable,
-  OUT VOID                         **TranslationTableBase OPTIONAL,
-  OUT UINTN                         *TranslationTableSize  OPTIONAL
-  );
-
 BOOLEAN
 EFIAPI
 ArmMmuEnabled (
@@ -554,6 +558,12 @@ ArmReadSctlr (
   VOID
   );
 
+VOID
+EFIAPI
+ArmWriteSctlr (
+  IN  UINT32   Value
+  );
+
 UINTN
 EFIAPI
 ArmReadHVBar (
@@ -595,34 +605,132 @@ ArmUnsetCpuActlrBit (
   IN  UINTN    Bits
   );
 
-RETURN_STATUS
-ArmSetMemoryRegionNoExec (
-  IN  EFI_PHYSICAL_ADDRESS      BaseAddress,
-  IN  UINT64                    Length
-  );
+//
+// Accessors for the architected generic timer registers
+//
 
-RETURN_STATUS
-ArmClearMemoryRegionNoExec (
-  IN  EFI_PHYSICAL_ADDRESS      BaseAddress,
-  IN  UINT64                    Length
-  );
+#define ARM_ARCH_TIMER_ENABLE           (1 << 0)
+#define ARM_ARCH_TIMER_IMASK            (1 << 1)
+#define ARM_ARCH_TIMER_ISTATUS          (1 << 2)
 
-RETURN_STATUS
-ArmSetMemoryRegionReadOnly (
-  IN  EFI_PHYSICAL_ADDRESS      BaseAddress,
-  IN  UINT64                    Length
-  );
-
-RETURN_STATUS
-ArmClearMemoryRegionReadOnly (
-  IN  EFI_PHYSICAL_ADDRESS      BaseAddress,
-  IN  UINT64                    Length
+UINTN
+EFIAPI
+ArmReadCntFrq (
+  VOID
   );
 
 VOID
-ArmReplaceLiveTranslationEntry (
-  IN  UINT64  *Entry,
-  IN  UINT64  Value
+EFIAPI
+ArmWriteCntFrq (
+  UINTN   FreqInHz
+  );
+
+UINT64
+EFIAPI
+ArmReadCntPct (
+  VOID
+  );
+
+UINTN
+EFIAPI
+ArmReadCntkCtl (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntkCtl (
+  UINTN   Val
+  );
+
+UINTN
+EFIAPI
+ArmReadCntpTval (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntpTval (
+  UINTN   Val
+  );
+
+UINTN
+EFIAPI
+ArmReadCntpCtl (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntpCtl (
+  UINTN   Val
+  );
+
+UINTN
+EFIAPI
+ArmReadCntvTval (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntvTval (
+  UINTN   Val
+  );
+
+UINTN
+EFIAPI
+ArmReadCntvCtl (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntvCtl (
+  UINTN   Val
+  );
+
+UINT64
+EFIAPI
+ArmReadCntvCt (
+  VOID
+  );
+
+UINT64
+EFIAPI
+ArmReadCntpCval (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntpCval (
+  UINT64   Val
+  );
+
+UINT64
+EFIAPI
+ArmReadCntvCval (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntvCval (
+  UINT64   Val
+  );
+
+UINT64
+EFIAPI
+ArmReadCntvOff (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmWriteCntvOff (
+  UINT64   Val
   );
 
 #endif // __ARM_LIB__

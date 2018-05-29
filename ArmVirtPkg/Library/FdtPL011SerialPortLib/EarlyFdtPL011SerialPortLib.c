@@ -19,10 +19,9 @@
 #include <Base.h>
 
 #include <Library/PcdLib.h>
+#include <Library/PL011UartLib.h>
 #include <Library/SerialPortLib.h>
 #include <libfdt.h>
-
-#include <Drivers/PL011Uart.h>
 
 RETURN_STATUS
 EFIAPI
@@ -66,6 +65,7 @@ SerialPortGetBaseAddress (
   INT32               Node, Prev;
   INT32               Len;
   CONST CHAR8         *Compatible;
+  CONST CHAR8         *NodeStatus;
   CONST CHAR8         *CompatibleItem;
   CONST UINT64        *RegProperty;
   UINTN               UartBase;
@@ -98,6 +98,11 @@ SerialPortGetBaseAddress (
       CompatibleItem += 1 + AsciiStrLen (CompatibleItem)) {
 
       if (AsciiStrCmp (CompatibleItem, "arm,pl011") == 0) {
+        NodeStatus = fdt_getprop (DeviceTreeBase, Node, "status", &Len);
+        if (NodeStatus != NULL && AsciiStrCmp (NodeStatus, "okay") != 0) {
+          continue;
+        }
+
         RegProperty = fdt_getprop (DeviceTreeBase, Node, "reg", &Len);
         if (Len != 16) {
           return 0;

@@ -2,6 +2,7 @@
   Legacy Boot Maintainence UI implementation.
 
 Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
+(C) Copyright 2018 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -15,7 +16,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include "LegacyBootMaintUi.h"
 
-LEGACY_BOOT_OPTION_CALLBACK_DATA  *mLegacyBootOptionPrivate;
+LEGACY_BOOT_OPTION_CALLBACK_DATA  *mLegacyBootOptionPrivate = NULL;
 EFI_GUID  mLegacyBootOptionGuid     = LEGACY_BOOT_OPTION_FORMSET_GUID;
 CHAR16    mLegacyBootStorageName[]  = L"LegacyBootData";
 BBS_TYPE  mBbsType[] = {BBS_FLOPPY, BBS_HARDDISK, BBS_CDROM, BBS_EMBED_NETWORK, BBS_BEV_DEVICE, BBS_UNKNOWN};
@@ -562,6 +563,8 @@ LegacyBootOptionRouteConfig (
   if (Configuration == NULL || Progress == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
+  *Progress = Configuration;
 
   //
   // Check routing data in <ConfigHdr>.
@@ -1486,7 +1489,7 @@ LegacyBootMaintUiLibDestructor (
 {
   EFI_STATUS    Status;
 
-  if (mLegacyBootOptionPrivate->DriverHandle != NULL) {
+  if (mLegacyBootOptionPrivate != NULL && mLegacyBootOptionPrivate->DriverHandle != NULL) {
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     mLegacyBootOptionPrivate->DriverHandle,
                     &gEfiDevicePathProtocolGuid,

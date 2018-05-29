@@ -17,7 +17,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <PiDxe.h>
 
-#define PCI_RESOURCE_LESS         0xFFFFFFFFFFFFFFFE
+#define PCI_RESOURCE_LESS         0xFFFFFFFFFFFFFFFEULL
 
 typedef enum {
   TypeIo    = 0,
@@ -38,6 +38,9 @@ typedef enum {
 
 typedef struct {
   PCI_RESOURCE_TYPE Type;
+  //
+  // Base is a host address
+  //
   UINT64            Base;
   UINT64            Length;
   UINT64            Alignment;

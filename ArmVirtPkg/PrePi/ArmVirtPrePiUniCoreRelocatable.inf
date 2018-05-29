@@ -22,7 +22,9 @@
   VERSION_STRING                 = 1.0
 
 [Sources]
+  FdtParser.c
   PrePi.c
+  PrePi.h
 
 [Sources.AArch64]
   AArch64/ArchPrePi.c
@@ -39,21 +41,18 @@
   ArmPkg/ArmPkg.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
   ArmVirtPkg/ArmVirtPkg.dec
-  IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
 
 [LibraryClasses]
   BaseLib
   DebugLib
+  FdtLib
   ArmLib
   IoLib
   TimerLib
   SerialPortLib
   ExtractGuidedSectionLib
   LzmaDecompressLib
-  PeCoffGetEntryPointLib
   PrePiLib
-  ArmPlatformLib
-  ArmPlatformStackLib
   MemoryAllocationLib
   HobLib
   PrePiHobListPointerLib
@@ -107,4 +106,4 @@
   gArmTokenSpaceGuid.PcdFvBaseAddress
 
 [BuildOptions]
-  GCC:*_*_*_DLINK_FLAGS = -pie -T $(MODULE_DIR)/Scripts/PrePi-PIE.lds
+  GCC:*_*_*_DLINK_FLAGS = -pie -Wl,-T,$(MODULE_DIR)/Scripts/PrePi-PIE.lds

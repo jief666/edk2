@@ -1,7 +1,7 @@
 @REM @file
 @REM   Windows batch file to build BIOS ROM
 @REM
-@REM Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
+@REM Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 @REM This program and the accompanying materials
 @REM are licensed and made available under the terms and conditions of the BSD License
 @REM which accompanies this distribution.  The full text of the license may be found at
@@ -37,6 +37,16 @@ if /i "%~1"=="/q" (
 )
 if /i "%~1"=="/l" (
     set Build_Flags=%Build_Flags% /l
+    shift
+    goto OptLoop
+)
+if /i "%~1"=="/y" (
+    set Build_Flags=%Build_Flags% /y
+    shift
+    goto OptLoop
+)
+if /i "%~1"=="/m" (
+    set Build_Flags=%Build_Flags% /m
     shift
     goto OptLoop
 )
@@ -121,11 +131,11 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 echo Finished Building BIOS.
 @REM Set BIOS_ID environment variable here.
-call Conf\BiosId.bat
+call %WORKSPACE%\Conf\BiosId.bat
 echo BIOS_ID=%BIOS_ID%
 
 :: Set the Board_Id, Build_Type, Version_Major, and Version_Minor environment variables
-find /v "#" Conf\BiosId.env > ver_strings
+find /v "#" %WORKSPACE%\Conf\BiosId.env > ver_strings
 for /f "tokens=1,3" %%i in (ver_strings) do set %%i=%%j
 del /f/q ver_strings >nul
 set BIOS_Name=%BOARD_ID%_%Arch%_%BUILD_TYPE%_%VERSION_MAJOR%_%VERSION_MINOR%.ROM
@@ -139,7 +149,7 @@ if "%Platform_Type%" == "BYTC" (
     pushd %PLATFORM_PACKAGE%\Stitch
 )
    :: IFWIStitch.bat [/nG] [/nM] [/nB] [/B BIOS.rom] [/C StitchConfig] [/S IFWISuffix]
-   call IFWIStitch.bat %Stitch_Flags% /B ..\..\%BIOS_Name% %IFWI_Suffix%
+   call IFWIStitch.bat %Stitch_Flags% /B %WORKSPACE%\%BIOS_Name% %IFWI_Suffix%
    
    @echo off
 popd
@@ -168,6 +178,11 @@ echo        Build Targets:    Release, Debug
 echo        IFWI Suffix:      Suffix to append to end of IFWI filename (default: MM_DD_YYYY)
 echo.
 echo        See  Stitch/Stitch_Config.txt  for additional stitching settings.
+echo.
+echo        If capsule update is needed, please update CAPSULE_ENABLE = TRUE in Config.dsc.
+echo        If recovery is needed, please update RECOVERY_ENABLE = TRUE in Config.dsc.
+echo        If either of above is TRUE, please set OPENSSL_PATH in windows evironment
+echo        and put openssl.exe there, to generate final capsule image.
 echo.
 set exitCode=1
 

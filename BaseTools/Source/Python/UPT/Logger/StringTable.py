@@ -1,7 +1,7 @@
 ## @file
 # This file is used to define strings used in the UPT tool
 #
-# Copyright (c) 2011 - 2016, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2011 - 2017, Intel Corporation. All rights reserved.<BR>
 #
 # This program and the accompanying materials are licensed and made available 
 # under the terms and conditions of the BSD License which accompanies this 
@@ -785,7 +785,7 @@ WRN_MODULE_EXISTED        = _("This module already exists: %s")
 WRN_FILE_EXISTED          = _("This file already exists: %s")
 WRN_FILE_NOT_OVERWRITTEN  = \
 _("This file already exist and cannot be overwritten: %s")
-WRN_DIST_PKG_INSTALLED = _("This distribution package has previously been installed.")
+WRN_DIST_PKG_INSTALLED = _("This distribution package %s has previously been installed.")
 WRN_DIST_NOT_FOUND         = _(
     "Distribution is not found at location %s")
 WRN_MULTI_PCD_RANGES      = _(
@@ -858,3 +858,8 @@ HLP_SPECIFY_PACKAGE_NAME_TO_BE_REPLACED = _(
     "Specify the UEFI Distribution Package file name to be replaced")
 HLP_USE_GUIDED_PATHS = _(
     "Install packages to the following directory path by default: <PackageName>_<PACKAGE_GUID>_<PACKAGE_VERSION>")
+HLP_TEST_INSTALL = _(
+    "Specify the UEFI Distribution Package filenames to install")
+
+MSG_TEST_INSTALL_PASS = _("All distribution package file are satisfied for dependence check.")
+MSG_TEST_INSTALL_FAIL = _("NOT all distribution package file are satisfied for dependence check.")

@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-9.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.10.
 
 **/
 
@@ -25,6 +25,23 @@
 #define __IVY_BRIDGE_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel processors based on the Ivy Bridge microarchitecture?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_IVY_BRIDGE_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x3A || \
+    DisplayModel == 0x3E    \
+    )                       \
+   )
 
 /**
   Package. See http://biosbits.org.
@@ -42,6 +59,7 @@
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_PLATFORM_INFO);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PLATFORM_INFO, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_PLATFORM_INFO is defined as MSR_PLATFORM_INFO in SDM.
 **/
 #define MSR_IVY_BRIDGE_PLATFORM_INFO             0x000000CE
 
@@ -127,6 +145,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_PKG_CST_CONFIG_CONTROL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PKG_CST_CONFIG_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_PKG_CST_CONFIG_CONTROL is defined as MSR_PKG_CST_CONFIG_CONTROL in SDM.
 **/
 #define MSR_IVY_BRIDGE_PKG_CST_CONFIG_CONTROL    0x000000E2
 
@@ -199,6 +218,25 @@ typedef union {
 
 
 /**
+  Package. PP0 Energy Status (R/O)  See Section 14.9.4, "PP0/PP1 RAPL
+  Domains.".
+
+  @param  ECX  MSR_IVY_BRIDGE_PP0_ENERGY_STATUS (0x00000639)
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PP0_ENERGY_STATUS);
+  @endcode
+  @note MSR_IVY_BRIDGE_PP0_ENERGY_STATUS is defined as MSR_PP0_ENERGY_STATUS in SDM.
+**/
+#define MSR_IVY_BRIDGE_PP0_ENERGY_STATUS         0x00000639
+
+
+/**
   Package. Base TDP Ratio (R/O).
 
   @param  ECX  MSR_IVY_BRIDGE_CONFIG_TDP_NOMINAL (0x00000648)
@@ -213,6 +251,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_CONFIG_TDP_NOMINAL);
   @endcode
+  @note MSR_IVY_BRIDGE_CONFIG_TDP_NOMINAL is defined as MSR_CONFIG_TDP_NOMINAL in SDM.
 **/
 #define MSR_IVY_BRIDGE_CONFIG_TDP_NOMINAL        0x00000648
 
@@ -258,6 +297,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_CONFIG_TDP_LEVEL1);
   @endcode
+  @note MSR_IVY_BRIDGE_CONFIG_TDP_LEVEL1 is defined as MSR_CONFIG_TDP_LEVEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_CONFIG_TDP_LEVEL1         0x00000649
 
@@ -315,6 +355,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_CONFIG_TDP_LEVEL2);
   @endcode
+  @note MSR_IVY_BRIDGE_CONFIG_TDP_LEVEL2 is defined as MSR_CONFIG_TDP_LEVEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_CONFIG_TDP_LEVEL2         0x0000064A
 
@@ -373,6 +414,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_CONFIG_TDP_CONTROL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_CONFIG_TDP_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_CONFIG_TDP_CONTROL is defined as MSR_CONFIG_TDP_CONTROL in SDM.
 **/
 #define MSR_IVY_BRIDGE_CONFIG_TDP_CONTROL        0x0000064B
 
@@ -423,6 +465,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_TURBO_ACTIVATION_RATIO);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_TURBO_ACTIVATION_RATIO, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_TURBO_ACTIVATION_RATIO is defined as MSR_TURBO_ACTIVATION_RATIO in SDM.
 **/
 #define MSR_IVY_BRIDGE_TURBO_ACTIVATION_RATIO    0x0000064C
 
@@ -474,6 +517,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_PPIN_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PPIN_CTL, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_PPIN_CTL is defined as MSR_PPIN_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_PPIN_CTL                  0x0000004E
 
@@ -535,6 +579,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PPIN);
   @endcode
+  @note MSR_IVY_BRIDGE_PPIN is defined as MSR_PPIN in SDM.
 **/
 #define MSR_IVY_BRIDGE_PPIN                      0x0000004F
 
@@ -555,6 +600,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_PLATFORM_INFO_1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PLATFORM_INFO_1, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_PLATFORM_INFO_1 is defined as MSR_PLATFORM_INFO_1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_PLATFORM_INFO_1           0x000000CE
 
@@ -636,6 +682,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_ERROR_CONTROL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_ERROR_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_ERROR_CONTROL is defined as MSR_ERROR_CONTROL in SDM.
 **/
 #define MSR_IVY_BRIDGE_ERROR_CONTROL             0x0000017F
 
@@ -683,6 +730,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_TEMPERATURE_TARGET);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_TEMPERATURE_TARGET, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_TEMPERATURE_TARGET is defined as MSR_TEMPERATURE_TARGET in SDM.
 **/
 #define MSR_IVY_BRIDGE_TEMPERATURE_TARGET        0x000001A2
 
@@ -737,6 +785,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_TURBO_RATIO_LIMIT1);
   @endcode
+  @note MSR_IVY_BRIDGE_TURBO_RATIO_LIMIT1 is defined as MSR_TURBO_RATIO_LIMIT1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_TURBO_RATIO_LIMIT1        0x000001AE
 
@@ -800,205 +849,6 @@ typedef union {
 
 
 /**
-  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
-  15.3.2.4, "IA32_MCi_MISC MSRs.". Bank MC5 reports MC error from the Intel
-  QPI module.
-
-  * Bank MC6 reports MC error from the integrated I/O module.
-  * Banks MC7 and MC 8 report MC error from the two home agents.
-  * Banks MC9 through MC 16 report MC error from each channel of the integrated
-    memory controllers.
-  * Banks MC17 through MC31 reports MC error from a specific CBo
-    (core broadcast) and its corresponding slice of L3.
-
-  @param  ECX  MSR_IVY_BRIDGE_MCi_CTL
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_MC5_CTL);
-  AsmWriteMsr64 (MSR_IVY_BRIDGE_MC5_CTL, Msr);
-  @endcode
-  @{
-**/
-#define MSR_IVY_BRIDGE_MC5_CTL                   0x00000414
-#define MSR_IVY_BRIDGE_MC6_CTL                   0x00000418
-#define MSR_IVY_BRIDGE_MC7_CTL                   0x0000041C
-#define MSR_IVY_BRIDGE_MC8_CTL                   0x00000420
-#define MSR_IVY_BRIDGE_MC9_CTL                   0x00000424
-#define MSR_IVY_BRIDGE_MC10_CTL                  0x00000428
-#define MSR_IVY_BRIDGE_MC11_CTL                  0x0000042C
-#define MSR_IVY_BRIDGE_MC12_CTL                  0x00000430
-#define MSR_IVY_BRIDGE_MC13_CTL                  0x00000434
-#define MSR_IVY_BRIDGE_MC14_CTL                  0x00000438
-#define MSR_IVY_BRIDGE_MC15_CTL                  0x0000043C
-#define MSR_IVY_BRIDGE_MC16_CTL                  0x00000440
-#define MSR_IVY_BRIDGE_MC17_CTL                  0x00000444
-#define MSR_IVY_BRIDGE_MC18_CTL                  0x00000448
-#define MSR_IVY_BRIDGE_MC19_CTL                  0x0000044C
-#define MSR_IVY_BRIDGE_MC20_CTL                  0x00000450
-#define MSR_IVY_BRIDGE_MC21_CTL                  0x00000454
-#define MSR_IVY_BRIDGE_MC22_CTL                  0x00000458
-#define MSR_IVY_BRIDGE_MC23_CTL                  0x0000045C
-#define MSR_IVY_BRIDGE_MC24_CTL                  0x00000460
-#define MSR_IVY_BRIDGE_MC25_CTL                  0x00000464
-#define MSR_IVY_BRIDGE_MC26_CTL                  0x00000468
-#define MSR_IVY_BRIDGE_MC27_CTL                  0x0000046C
-#define MSR_IVY_BRIDGE_MC28_CTL                  0x00000470
-#define MSR_IVY_BRIDGE_MC29_CTL                  0x00000474
-#define MSR_IVY_BRIDGE_MC30_CTL                  0x00000478
-#define MSR_IVY_BRIDGE_MC31_CTL                  0x0000047C
-/// @}
-
-
-/**
-  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
-  15.3.2.4, "IA32_MCi_MISC MSRs.".
-
-  Bank MC20 reports MC error from a specific CBo (core broadcast) and
-  its corresponding slice of L3.
-
-  @param  ECX  MSR_IVY_BRIDGE_MCi_STATUS
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_MC5_STATUS);
-  AsmWriteMsr64 (MSR_IVY_BRIDGE_MC5_STATUS, Msr);
-  @endcode
-  @{
-**/
-#define MSR_IVY_BRIDGE_MC5_STATUS                0x00000415
-#define MSR_IVY_BRIDGE_MC6_STATUS                0x00000419
-#define MSR_IVY_BRIDGE_MC7_STATUS                0x0000041D
-#define MSR_IVY_BRIDGE_MC8_STATUS                0x00000421
-#define MSR_IVY_BRIDGE_MC9_STATUS                0x00000425
-#define MSR_IVY_BRIDGE_MC10_STATUS               0x00000429
-#define MSR_IVY_BRIDGE_MC11_STATUS               0x0000042D
-#define MSR_IVY_BRIDGE_MC12_STATUS               0x00000431
-#define MSR_IVY_BRIDGE_MC13_STATUS               0x00000435
-#define MSR_IVY_BRIDGE_MC14_STATUS               0x00000439
-#define MSR_IVY_BRIDGE_MC15_STATUS               0x0000043D
-#define MSR_IVY_BRIDGE_MC16_STATUS               0x00000441
-#define MSR_IVY_BRIDGE_MC17_STATUS               0x00000445
-#define MSR_IVY_BRIDGE_MC18_STATUS               0x00000449
-#define MSR_IVY_BRIDGE_MC19_STATUS               0x0000044D
-#define MSR_IVY_BRIDGE_MC20_STATUS               0x00000451
-#define MSR_IVY_BRIDGE_MC21_STATUS               0x00000455
-#define MSR_IVY_BRIDGE_MC22_STATUS               0x00000459
-#define MSR_IVY_BRIDGE_MC23_STATUS               0x0000045D
-#define MSR_IVY_BRIDGE_MC24_STATUS               0x00000461
-#define MSR_IVY_BRIDGE_MC25_STATUS               0x00000465
-#define MSR_IVY_BRIDGE_MC26_STATUS               0x00000469
-#define MSR_IVY_BRIDGE_MC27_STATUS               0x0000046D
-#define MSR_IVY_BRIDGE_MC28_STATUS               0x00000471
-#define MSR_IVY_BRIDGE_MC29_STATUS               0x00000475
-#define MSR_IVY_BRIDGE_MC30_STATUS               0x00000479
-#define MSR_IVY_BRIDGE_MC31_STATUS               0x0000047D
-/// @}
-
-
-/**
-  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
-  15.3.2.4, "IA32_MCi_MISC MSRs.".
-
-  @param  ECX  MSR_IVY_BRIDGE_MCi_ADDR
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_MC5_ADDR);
-  AsmWriteMsr64 (MSR_IVY_BRIDGE_MC5_ADDR, Msr);
-  @endcode
-  @{
-**/
-#define MSR_IVY_BRIDGE_MC5_ADDR                  0x00000416
-#define MSR_IVY_BRIDGE_MC6_ADDR                  0x0000041A
-#define MSR_IVY_BRIDGE_MC7_ADDR                  0x0000041E
-#define MSR_IVY_BRIDGE_MC8_ADDR                  0x00000422
-#define MSR_IVY_BRIDGE_MC9_ADDR                  0x00000426
-#define MSR_IVY_BRIDGE_MC10_ADDR                 0x0000042A
-#define MSR_IVY_BRIDGE_MC11_ADDR                 0x0000042E
-#define MSR_IVY_BRIDGE_MC12_ADDR                 0x00000432
-#define MSR_IVY_BRIDGE_MC13_ADDR                 0x00000436
-#define MSR_IVY_BRIDGE_MC14_ADDR                 0x0000043A
-#define MSR_IVY_BRIDGE_MC15_ADDR                 0x0000043E
-#define MSR_IVY_BRIDGE_MC16_ADDR                 0x00000442
-#define MSR_IVY_BRIDGE_MC17_ADDR                 0x00000446
-#define MSR_IVY_BRIDGE_MC18_ADDR                 0x0000044A
-#define MSR_IVY_BRIDGE_MC19_ADDR                 0x0000044E
-#define MSR_IVY_BRIDGE_MC20_ADDR                 0x00000452
-#define MSR_IVY_BRIDGE_MC21_ADDR                 0x00000456
-#define MSR_IVY_BRIDGE_MC22_ADDR                 0x0000045A
-#define MSR_IVY_BRIDGE_MC23_ADDR                 0x0000045E
-#define MSR_IVY_BRIDGE_MC24_ADDR                 0x00000462
-#define MSR_IVY_BRIDGE_MC25_ADDR                 0x00000466
-#define MSR_IVY_BRIDGE_MC26_ADDR                 0x0000046A
-#define MSR_IVY_BRIDGE_MC27_ADDR                 0x0000046E
-#define MSR_IVY_BRIDGE_MC28_ADDR                 0x00000472
-#define MSR_IVY_BRIDGE_MC29_ADDR                 0x00000476
-#define MSR_IVY_BRIDGE_MC30_ADDR                 0x0000047A
-#define MSR_IVY_BRIDGE_MC31_ADDR                 0x0000047E
-/// @}
-
-
-/**
-  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
-  15.3.2.4, "IA32_MCi_MISC MSRs.".
-
-  @param  ECX  MSR_IVY_BRIDGE_MCi_MISC
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_MC5_MISC);
-  AsmWriteMsr64 (MSR_IVY_BRIDGE_MC5_MISC, Msr);
-  @endcode
-  @{
-**/
-#define MSR_IVY_BRIDGE_MC5_MISC                  0x00000417
-#define MSR_IVY_BRIDGE_MC6_MISC                  0x0000041B
-#define MSR_IVY_BRIDGE_MC7_MISC                  0x0000041F
-#define MSR_IVY_BRIDGE_MC8_MISC                  0x00000423
-#define MSR_IVY_BRIDGE_MC9_MISC                  0x00000427
-#define MSR_IVY_BRIDGE_MC10_MISC                 0x0000042B
-#define MSR_IVY_BRIDGE_MC11_MISC                 0x0000042F
-#define MSR_IVY_BRIDGE_MC12_MISC                 0x00000433
-#define MSR_IVY_BRIDGE_MC13_MISC                 0x00000437
-#define MSR_IVY_BRIDGE_MC14_MISC                 0x0000043B
-#define MSR_IVY_BRIDGE_MC15_MISC                 0x0000043F
-#define MSR_IVY_BRIDGE_MC16_MISC                 0x00000443
-#define MSR_IVY_BRIDGE_MC17_MISC                 0x00000447
-#define MSR_IVY_BRIDGE_MC18_MISC                 0x0000044B
-#define MSR_IVY_BRIDGE_MC19_MISC                 0x0000044F
-#define MSR_IVY_BRIDGE_MC20_MISC                 0x00000453
-#define MSR_IVY_BRIDGE_MC21_MISC                 0x00000457
-#define MSR_IVY_BRIDGE_MC22_MISC                 0x0000045B
-#define MSR_IVY_BRIDGE_MC23_MISC                 0x0000045F
-#define MSR_IVY_BRIDGE_MC24_MISC                 0x00000463
-#define MSR_IVY_BRIDGE_MC25_MISC                 0x00000467
-#define MSR_IVY_BRIDGE_MC26_MISC                 0x0000046B
-#define MSR_IVY_BRIDGE_MC27_MISC                 0x0000046F
-#define MSR_IVY_BRIDGE_MC28_MISC                 0x00000473
-#define MSR_IVY_BRIDGE_MC29_MISC                 0x00000477
-#define MSR_IVY_BRIDGE_MC30_MISC                 0x0000047B
-#define MSR_IVY_BRIDGE_MC31_MISC                 0x0000047F
-/// @}
-
-
-/**
   Package. Misc MAC information of Integrated I/O. (R/O) see Section 15.3.2.4.
 
   @param  ECX  MSR_IVY_BRIDGE_IA32_MC6_MISC (0x0000041B)
@@ -1013,6 +863,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_IA32_MC6_MISC);
   @endcode
+  @note MSR_IVY_BRIDGE_IA32_MC6_MISC is defined as IA32_MC6_MISC in SDM.
 **/
 #define MSR_IVY_BRIDGE_IA32_MC6_MISC             0x0000041B
 
@@ -1051,6 +902,122 @@ typedef union {
 
 
 /**
+  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
+  15.3.2.4, "IA32_MCi_MISC MSRs.".
+
+  Bank MC29 through MC31 reports MC error from a specific CBo (core broadcast)
+  and its corresponding slice of L3.
+
+  @param  ECX  MSR_IVY_BRIDGE_IA32_MCi_CTL
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_IA32_MC29_CTL);
+  AsmWriteMsr64 (MSR_IVY_BRIDGE_IA32_MC29_CTL, Msr);
+  @endcode
+  @note MSR_IVY_BRIDGE_IA32_MC29_CTL is defined as IA32_MC29_CTL in SDM.
+        MSR_IVY_BRIDGE_IA32_MC30_CTL is defined as IA32_MC30_CTL in SDM.
+        MSR_IVY_BRIDGE_IA32_MC31_CTL is defined as IA32_MC31_CTL in SDM.
+  @{
+**/
+#define MSR_IVY_BRIDGE_IA32_MC29_CTL             0x00000474
+#define MSR_IVY_BRIDGE_IA32_MC30_CTL             0x00000478
+#define MSR_IVY_BRIDGE_IA32_MC31_CTL             0x0000047C
+/// @}
+
+
+/**
+  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
+  15.3.2.4, "IA32_MCi_MISC MSRs.".
+
+  Bank MC29 through MC31 reports MC error from a specific CBo (core broadcast)
+  and its corresponding slice of L3.
+
+  @param  ECX  MSR_IVY_BRIDGE_IA32_MCi_STATUS
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_IA32_MC29_STATUS);
+  AsmWriteMsr64 (MSR_IVY_BRIDGE_IA32_MC29_STATUS, Msr);
+  @endcode
+  @note MSR_IVY_BRIDGE_IA32_MC29_STATUS is defined as IA32_MC29_STATUS in SDM.
+        MSR_IVY_BRIDGE_IA32_MC30_STATUS is defined as IA32_MC30_STATUS in SDM.
+        MSR_IVY_BRIDGE_IA32_MC31_STATUS is defined as IA32_MC31_STATUS in SDM.
+  @{
+**/
+#define MSR_IVY_BRIDGE_IA32_MC29_STATUS          0x00000475
+#define MSR_IVY_BRIDGE_IA32_MC30_STATUS          0x00000479
+#define MSR_IVY_BRIDGE_IA32_MC31_STATUS          0x0000047D
+/// @}
+
+
+/**
+  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
+  15.3.2.4, "IA32_MCi_MISC MSRs.".
+
+  Bank MC29 through MC31 reports MC error from a specific CBo (core broadcast)
+  and its corresponding slice of L3.
+
+  @param  ECX  MSR_IVY_BRIDGE_IA32_MCi_ADDR
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_IA32_MC29_ADDR);
+  AsmWriteMsr64 (MSR_IVY_BRIDGE_IA32_MC29_ADDR, Msr);
+  @endcode
+  @note MSR_IVY_BRIDGE_IA32_MC29_ADDR is defined as IA32_MC29_ADDR in SDM.
+        MSR_IVY_BRIDGE_IA32_MC30_ADDR is defined as IA32_MC30_ADDR in SDM.
+        MSR_IVY_BRIDGE_IA32_MC31_ADDR is defined as IA32_MC31_ADDR in SDM.
+  @{
+**/
+#define MSR_IVY_BRIDGE_IA32_MC29_ADDR            0x00000476
+#define MSR_IVY_BRIDGE_IA32_MC30_ADDR            0x0000047A
+#define MSR_IVY_BRIDGE_IA32_MC31_ADDR            0x0000047E
+/// @}
+
+
+/**
+  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs." through Section
+  15.3.2.4, "IA32_MCi_MISC MSRs.".
+
+  Bank MC29 through MC31 reports MC error from a specific CBo (core broadcast)
+  and its corresponding slice of L3.
+
+  @param  ECX  MSR_IVY_BRIDGE_IA32_MCi_MISC
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_IA32_MC29_MISC);
+  AsmWriteMsr64 (MSR_IVY_BRIDGE_IA32_MC29_MISC, Msr);
+  @endcode
+  @note MSR_IVY_BRIDGE_IA32_MC29_MISC is defined as IA32_MC29_MISC in SDM.
+        MSR_IVY_BRIDGE_IA32_MC30_MISC is defined as IA32_MC30_MISC in SDM.
+        MSR_IVY_BRIDGE_IA32_MC31_MISC is defined as IA32_MC31_MISC in SDM.
+  @{
+**/
+#define MSR_IVY_BRIDGE_IA32_MC29_MISC            0x00000477
+#define MSR_IVY_BRIDGE_IA32_MC30_MISC            0x0000047B
+#define MSR_IVY_BRIDGE_IA32_MC31_MISC            0x0000047F
+/// @}
+
+
+/**
   Package. Package RAPL Perf Status (R/O).
 
   @param  ECX  MSR_IVY_BRIDGE_PKG_PERF_STATUS (0x00000613)
@@ -1063,6 +1030,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PKG_PERF_STATUS);
   @endcode
+  @note MSR_IVY_BRIDGE_PKG_PERF_STATUS is defined as MSR_PKG_PERF_STATUS in SDM.
 **/
 #define MSR_IVY_BRIDGE_PKG_PERF_STATUS           0x00000613
 
@@ -1082,6 +1050,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_DRAM_POWER_LIMIT);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_DRAM_POWER_LIMIT, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_DRAM_POWER_LIMIT is defined as MSR_DRAM_POWER_LIMIT in SDM.
 **/
 #define MSR_IVY_BRIDGE_DRAM_POWER_LIMIT          0x00000618
 
@@ -1099,6 +1068,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_DRAM_ENERGY_STATUS);
   @endcode
+  @note MSR_IVY_BRIDGE_DRAM_ENERGY_STATUS is defined as MSR_DRAM_ENERGY_STATUS in SDM.
 **/
 #define MSR_IVY_BRIDGE_DRAM_ENERGY_STATUS        0x00000619
 
@@ -1117,6 +1087,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_DRAM_PERF_STATUS);
   @endcode
+  @note MSR_IVY_BRIDGE_DRAM_PERF_STATUS is defined as MSR_DRAM_PERF_STATUS in SDM.
 **/
 #define MSR_IVY_BRIDGE_DRAM_PERF_STATUS          0x0000061B
 
@@ -1135,12 +1106,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_DRAM_POWER_INFO);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_DRAM_POWER_INFO, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_DRAM_POWER_INFO is defined as MSR_DRAM_POWER_INFO in SDM.
 **/
 #define MSR_IVY_BRIDGE_DRAM_POWER_INFO           0x0000061C
 
 
 /**
-  Thread. See Section 18.7.1.1, "Precise Event Based Sampling (PEBS).".
+  Thread. See Section 18.8.1.1, "Precise Event Based Sampling (PEBS).".
 
   @param  ECX  MSR_IVY_BRIDGE_PEBS_ENABLE (0x000003F1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1155,6 +1127,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_IVY_BRIDGE_PEBS_ENABLE);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PEBS_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_IVY_BRIDGE_PEBS_ENABLE is defined as MSR_PEBS_ENABLE in SDM.
 **/
 #define MSR_IVY_BRIDGE_PEBS_ENABLE               0x000003F1
 
@@ -1222,6 +1195,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PMON_GLOBAL_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PMON_GLOBAL_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_PMON_GLOBAL_CTL is defined as MSR_PMON_GLOBAL_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_PMON_GLOBAL_CTL           0x00000C00
 
@@ -1240,6 +1214,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PMON_GLOBAL_STATUS);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PMON_GLOBAL_STATUS, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_PMON_GLOBAL_STATUS is defined as MSR_PMON_GLOBAL_STATUS in SDM.
 **/
 #define MSR_IVY_BRIDGE_PMON_GLOBAL_STATUS        0x00000C01
 
@@ -1258,6 +1233,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PMON_GLOBAL_CONFIG);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PMON_GLOBAL_CONFIG, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_PMON_GLOBAL_CONFIG is defined as MSR_PMON_GLOBAL_CONFIG in SDM.
 **/
 #define MSR_IVY_BRIDGE_PMON_GLOBAL_CONFIG        0x00000C06
 
@@ -1276,6 +1252,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_U_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_U_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_U_PMON_BOX_STATUS is defined as MSR_U_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_IVY_BRIDGE_U_PMON_BOX_STATUS         0x00000C15
 
@@ -1294,6 +1271,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_PCU_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_PCU_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_PCU_PMON_BOX_STATUS is defined as MSR_PCU_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_IVY_BRIDGE_PCU_PMON_BOX_STATUS       0x00000C35
 
@@ -1312,6 +1290,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C0_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C0_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C0_PMON_BOX_FILTER1 is defined as MSR_C0_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C0_PMON_BOX_FILTER1       0x00000D1A
 
@@ -1330,6 +1309,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C1_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C1_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C1_PMON_BOX_FILTER1 is defined as MSR_C1_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C1_PMON_BOX_FILTER1       0x00000D3A
 
@@ -1348,6 +1328,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C2_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C2_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C2_PMON_BOX_FILTER1 is defined as MSR_C2_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C2_PMON_BOX_FILTER1       0x00000D5A
 
@@ -1366,6 +1347,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C3_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C3_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C3_PMON_BOX_FILTER1 is defined as MSR_C3_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C3_PMON_BOX_FILTER1       0x00000D7A
 
@@ -1384,6 +1366,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C4_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C4_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C4_PMON_BOX_FILTER1 is defined as MSR_C4_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C4_PMON_BOX_FILTER1       0x00000D9A
 
@@ -1402,6 +1385,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C5_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C5_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C5_PMON_BOX_FILTER1 is defined as MSR_C5_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C5_PMON_BOX_FILTER1       0x00000DBA
 
@@ -1420,6 +1404,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C6_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C6_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C6_PMON_BOX_FILTER1 is defined as MSR_C6_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C6_PMON_BOX_FILTER1       0x00000DDA
 
@@ -1438,6 +1423,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C7_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C7_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C7_PMON_BOX_FILTER1 is defined as MSR_C7_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C7_PMON_BOX_FILTER1       0x00000DFA
 
@@ -1456,6 +1442,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_BOX_CTL is defined as MSR_C8_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_BOX_CTL           0x00000E04
 
@@ -1474,6 +1461,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_EVNTSEL0 is defined as MSR_C8_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_EVNTSEL0          0x00000E10
 
@@ -1492,6 +1480,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_EVNTSEL1 is defined as MSR_C8_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_EVNTSEL1          0x00000E11
 
@@ -1510,6 +1499,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_EVNTSEL2 is defined as MSR_C8_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_EVNTSEL2          0x00000E12
 
@@ -1528,6 +1518,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_EVNTSEL3 is defined as MSR_C8_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_EVNTSEL3          0x00000E13
 
@@ -1546,6 +1537,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER is defined as MSR_C8_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER        0x00000E14
 
@@ -1564,6 +1556,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_CTR0 is defined as MSR_C8_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_CTR0              0x00000E16
 
@@ -1582,6 +1575,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_CTR1 is defined as MSR_C8_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_CTR1              0x00000E17
 
@@ -1600,6 +1594,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_CTR2 is defined as MSR_C8_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_CTR2              0x00000E18
 
@@ -1618,6 +1613,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_CTR3 is defined as MSR_C8_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_CTR3              0x00000E19
 
@@ -1636,6 +1632,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER1 is defined as MSR_C8_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C8_PMON_BOX_FILTER1       0x00000E1A
 
@@ -1654,6 +1651,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_BOX_CTL is defined as MSR_C9_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_BOX_CTL           0x00000E24
 
@@ -1672,6 +1670,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_EVNTSEL0 is defined as MSR_C9_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_EVNTSEL0          0x00000E30
 
@@ -1690,6 +1689,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_EVNTSEL1 is defined as MSR_C9_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_EVNTSEL1          0x00000E31
 
@@ -1708,6 +1708,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_EVNTSEL2 is defined as MSR_C9_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_EVNTSEL2          0x00000E32
 
@@ -1726,6 +1727,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_EVNTSEL3 is defined as MSR_C9_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_EVNTSEL3          0x00000E33
 
@@ -1744,6 +1746,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER is defined as MSR_C9_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER        0x00000E34
 
@@ -1762,6 +1765,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_CTR0 is defined as MSR_C9_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_CTR0              0x00000E36
 
@@ -1780,6 +1784,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_CTR1 is defined as MSR_C9_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_CTR1              0x00000E37
 
@@ -1798,6 +1803,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_CTR2 is defined as MSR_C9_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_CTR2              0x00000E38
 
@@ -1816,6 +1822,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_CTR3 is defined as MSR_C9_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_CTR3              0x00000E39
 
@@ -1834,6 +1841,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER1 is defined as MSR_C9_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C9_PMON_BOX_FILTER1       0x00000E3A
 
@@ -1852,6 +1860,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_BOX_CTL is defined as MSR_C10_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_BOX_CTL          0x00000E44
 
@@ -1870,6 +1879,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_EVNTSEL0 is defined as MSR_C10_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_EVNTSEL0         0x00000E50
 
@@ -1888,6 +1898,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_EVNTSEL1 is defined as MSR_C10_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_EVNTSEL1         0x00000E51
 
@@ -1906,6 +1917,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_EVNTSEL2 is defined as MSR_C10_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_EVNTSEL2         0x00000E52
 
@@ -1924,6 +1936,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_EVNTSEL3 is defined as MSR_C10_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_EVNTSEL3         0x00000E53
 
@@ -1942,6 +1955,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER is defined as MSR_C10_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER       0x00000E54
 
@@ -1960,6 +1974,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_CTR0 is defined as MSR_C10_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_CTR0             0x00000E56
 
@@ -1978,6 +1993,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_CTR1 is defined as MSR_C10_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_CTR1             0x00000E57
 
@@ -1996,6 +2012,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_CTR2 is defined as MSR_C10_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_CTR2             0x00000E58
 
@@ -2014,6 +2031,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_CTR3 is defined as MSR_C10_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_CTR3             0x00000E59
 
@@ -2032,6 +2050,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER1 is defined as MSR_C10_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C10_PMON_BOX_FILTER1      0x00000E5A
 
@@ -2050,6 +2069,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_BOX_CTL is defined as MSR_C11_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_BOX_CTL          0x00000E64
 
@@ -2068,6 +2088,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_EVNTSEL0 is defined as MSR_C11_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_EVNTSEL0         0x00000E70
 
@@ -2086,6 +2107,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_EVNTSEL1 is defined as MSR_C11_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_EVNTSEL1         0x00000E71
 
@@ -2104,6 +2126,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_EVNTSEL2 is defined as MSR_C11_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_EVNTSEL2         0x00000E72
 
@@ -2122,6 +2145,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_EVNTSEL3 is defined as MSR_C11_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_EVNTSEL3         0x00000E73
 
@@ -2140,6 +2164,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER is defined as MSR_C11_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER       0x00000E74
 
@@ -2158,6 +2183,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_CTR0 is defined as MSR_C11_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_CTR0             0x00000E76
 
@@ -2176,6 +2202,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_CTR1 is defined as MSR_C11_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_CTR1             0x00000E77
 
@@ -2194,6 +2221,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_CTR2 is defined as MSR_C11_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_CTR2             0x00000E78
 
@@ -2212,6 +2240,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_CTR3 is defined as MSR_C11_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_CTR3             0x00000E79
 
@@ -2230,6 +2259,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER1 is defined as MSR_C11_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C11_PMON_BOX_FILTER1      0x00000E7A
 
@@ -2248,6 +2278,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_BOX_CTL is defined as MSR_C12_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_BOX_CTL          0x00000E84
 
@@ -2266,6 +2297,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_EVNTSEL0 is defined as MSR_C12_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_EVNTSEL0         0x00000E90
 
@@ -2284,6 +2316,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_EVNTSEL1 is defined as MSR_C12_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_EVNTSEL1         0x00000E91
 
@@ -2302,6 +2335,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_EVNTSEL2 is defined as MSR_C12_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_EVNTSEL2         0x00000E92
 
@@ -2320,6 +2354,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_EVNTSEL3 is defined as MSR_C12_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_EVNTSEL3         0x00000E93
 
@@ -2338,6 +2373,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER is defined as MSR_C12_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER       0x00000E94
 
@@ -2356,6 +2392,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_CTR0 is defined as MSR_C12_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_CTR0             0x00000E96
 
@@ -2374,6 +2411,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_CTR1 is defined as MSR_C12_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_CTR1             0x00000E97
 
@@ -2392,6 +2430,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_CTR2 is defined as MSR_C12_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_CTR2             0x00000E98
 
@@ -2410,6 +2449,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_CTR3 is defined as MSR_C12_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_CTR3             0x00000E99
 
@@ -2428,6 +2468,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER1 is defined as MSR_C12_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C12_PMON_BOX_FILTER1      0x00000E9A
 
@@ -2446,6 +2487,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_BOX_CTL is defined as MSR_C13_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_BOX_CTL          0x00000EA4
 
@@ -2464,6 +2506,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_EVNTSEL0 is defined as MSR_C13_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_EVNTSEL0         0x00000EB0
 
@@ -2482,6 +2525,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_EVNTSEL1 is defined as MSR_C13_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_EVNTSEL1         0x00000EB1
 
@@ -2500,6 +2544,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_EVNTSEL2 is defined as MSR_C13_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_EVNTSEL2         0x00000EB2
 
@@ -2518,6 +2563,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_EVNTSEL3 is defined as MSR_C13_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_EVNTSEL3         0x00000EB3
 
@@ -2536,6 +2582,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER is defined as MSR_C13_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER       0x00000EB4
 
@@ -2554,6 +2601,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_CTR0 is defined as MSR_C13_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_CTR0             0x00000EB6
 
@@ -2572,6 +2620,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_CTR1 is defined as MSR_C13_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_CTR1             0x00000EB7
 
@@ -2590,6 +2639,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_CTR2 is defined as MSR_C13_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_CTR2             0x00000EB8
 
@@ -2608,6 +2658,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_CTR3 is defined as MSR_C13_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_CTR3             0x00000EB9
 
@@ -2626,6 +2677,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER1 is defined as MSR_C13_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C13_PMON_BOX_FILTER1      0x00000EBA
 
@@ -2644,6 +2696,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_BOX_CTL is defined as MSR_C14_PMON_BOX_CTL in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_BOX_CTL          0x00000EC4
 
@@ -2662,6 +2715,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_EVNTSEL0 is defined as MSR_C14_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_EVNTSEL0         0x00000ED0
 
@@ -2680,6 +2734,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_EVNTSEL1 is defined as MSR_C14_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_EVNTSEL1         0x00000ED1
 
@@ -2698,6 +2753,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_EVNTSEL2 is defined as MSR_C14_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_EVNTSEL2         0x00000ED2
 
@@ -2716,6 +2772,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_EVNTSEL3 is defined as MSR_C14_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_EVNTSEL3         0x00000ED3
 
@@ -2734,6 +2791,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER is defined as MSR_C14_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER       0x00000ED4
 
@@ -2752,6 +2810,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR0);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR0, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_CTR0 is defined as MSR_C14_PMON_CTR0 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_CTR0             0x00000ED6
 
@@ -2770,6 +2829,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_CTR1 is defined as MSR_C14_PMON_CTR1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_CTR1             0x00000ED7
 
@@ -2788,6 +2848,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR2);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR2, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_CTR2 is defined as MSR_C14_PMON_CTR2 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_CTR2             0x00000ED8
 
@@ -2806,6 +2867,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR3);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_CTR3, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_CTR3 is defined as MSR_C14_PMON_CTR3 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_CTR3             0x00000ED9
 
@@ -2824,6 +2886,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER1);
   AsmWriteMsr64 (MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER1, Msr);
   @endcode
+  @note MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER1 is defined as MSR_C14_PMON_BOX_FILTER1 in SDM.
 **/
 #define MSR_IVY_BRIDGE_C14_PMON_BOX_FILTER1      0x00000EDA
 

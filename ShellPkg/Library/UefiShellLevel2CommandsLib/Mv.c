@@ -26,7 +26,6 @@
   @retval FALSE           The move is within a file system.
 **/
 BOOLEAN
-EFIAPI
 IsBetweenFileSystem(
   IN CONST CHAR16     *FullName,
   IN CONST CHAR16     *Cwd,
@@ -59,6 +58,73 @@ IsBetweenFileSystem(
 }
 
 /**
+  function to determine if SrcPath is valid to mv.
+
+  if SrcPath equal CWD then it's invalid.
+  if SrcPath is the parent path of CWD then it's invalid.
+  is SrcPath is NULL return FALSE.
+
+  if CwdPath is NULL then ASSERT()
+
+  @param SrcPath  [in]    The source path.
+  @param CwdPath  [in]    The current working directory.
+
+  @retval TRUE            The source path is valid.
+  @retval FALSE           The source path is invalid.
+**/
+BOOLEAN
+IsSoucePathValid(
+  IN CONST CHAR16*  SrcPath,
+  IN CONST CHAR16*  CwdPath
+  )
+{
+  CHAR16* SrcPathBuffer;
+  CHAR16* CwdPathBuffer;
+  BOOLEAN Ret;
+
+  ASSERT (CwdPath != NULL);
+  if (SrcPath == NULL) {
+    return FALSE;
+  }
+
+  Ret = TRUE;
+
+  SrcPathBuffer = AllocateCopyPool (StrSize (SrcPath), SrcPath);
+  if (SrcPathBuffer == NULL) {
+    return FALSE;
+  }
+
+  CwdPathBuffer = AllocateCopyPool (StrSize (CwdPath), CwdPath);
+  if (CwdPathBuffer == NULL) {
+    FreePool(SrcPathBuffer);
+    return FALSE;
+  }
+
+  gUnicodeCollation->StrUpr (gUnicodeCollation, SrcPathBuffer);
+  gUnicodeCollation->StrUpr (gUnicodeCollation, CwdPathBuffer);
+
+  if (SrcPathBuffer[StrLen (SrcPathBuffer) -1 ] == L'\\') {
+    SrcPathBuffer[StrLen (SrcPathBuffer) - 1] = CHAR_NULL;
+  }
+
+  if (CwdPathBuffer[StrLen (CwdPathBuffer) - 1] == L'\\') {
+    CwdPathBuffer[StrLen (CwdPathBuffer) - 1] = CHAR_NULL;
+  }
+
+  if (StrCmp (CwdPathBuffer, SrcPathBuffer) == 0 ||
+      ((StrStr (CwdPathBuffer, SrcPathBuffer) == CwdPathBuffer) &&
+       (CwdPathBuffer[StrLen (SrcPathBuffer)] == L'\\'))
+     ) {
+    Ret = FALSE;
+  }
+
+  FreePool (SrcPathBuffer);
+  FreePool (CwdPathBuffer);
+
+  return Ret;
+}
+
+/**
   Function to validate that moving a specific file (FileName) to a specific
   location (DestPath) is valid.
 
@@ -79,7 +145,6 @@ IsBetweenFileSystem(
   @retval FALSE       The move is not
 **/
 BOOLEAN
-EFIAPI
 IsValidMove(
   IN CONST CHAR16     *SourcePath,
   IN CONST CHAR16     *Cwd,
@@ -92,12 +157,14 @@ IsValidMove(
   CHAR16  *DestPathCopy;
   CHAR16  *DestPathWalker;
 
-  if (Cwd != NULL && StrCmp(SourcePath, Cwd) == 0) {
-    //
-    // Invalid move
-    //
-    ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN (STR_MV_INV_CWD), gShellLevel2HiiHandle);
-    return (FALSE);
+  if ((Cwd != NULL) && ((Attribute & EFI_FILE_DIRECTORY) == EFI_FILE_DIRECTORY)) {
+    if (!IsSoucePathValid (SourcePath, Cwd)) {
+      //
+      // Invalid move
+      //
+      ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN(STR_MV_INV_CWD), gShellLevel2HiiHandle);
+      return FALSE;
+    }
   }
 
   //
@@ -161,7 +228,6 @@ IsValidMove(
   @retval SHELL_SUCCESS            The operation was sucessful.
 **/
 SHELL_STATUS
-EFIAPI
 GetDestinationLocation(
   IN CONST CHAR16               *DestParameter,
   IN OUT CHAR16                 **DestPathPointer,
@@ -286,7 +352,6 @@ GetDestinationLocation(
   @retval SHELL_SUCCESS     The source file was moved to the destination.
 **/
 EFI_STATUS
-EFIAPI
 MoveBetweenFileSystems(
   IN EFI_SHELL_FILE_INFO  *Node,
   IN CONST CHAR16         *DestPath,
@@ -334,7 +399,6 @@ MoveBetweenFileSystems(
   @retval SHELL_OUT_OF_RESOURCES    a memory allocation failed
 **/
 EFI_STATUS
-EFIAPI
 CreateFullDestPath(
   IN CONST CHAR16 **DestPath,
   OUT CHAR16      **FullDestPath, 
@@ -373,7 +437,6 @@ CreateFullDestPath(
   @retval SHELL_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 MoveWithinFileSystems(
   IN EFI_SHELL_FILE_INFO  *Node,
   IN CHAR16               *DestPath,
@@ -454,7 +517,6 @@ MoveWithinFileSystems(
   @retval SHELL_OUT_OF_RESOURCES    a memory allocation failed
 **/
 SHELL_STATUS
-EFIAPI
 ValidateAndMoveFiles(
   IN EFI_SHELL_FILE_INFO        *FileList,
   OUT VOID                      **Resp,
@@ -736,11 +798,15 @@ ShellCommandRunMv (
             //
             CwdSize = StrSize(ShellGetCurrentDir(NULL)) + sizeof(CHAR16);
             Cwd = AllocateZeroPool(CwdSize);
-            ASSERT (Cwd != NULL);
-            StrCpyS(Cwd, CwdSize/sizeof(CHAR16), ShellGetCurrentDir(NULL));
-            StrCatS(Cwd, CwdSize/sizeof(CHAR16), L"\\");
-            ShellStatus = ValidateAndMoveFiles(FileList, &Response, Cwd);
-            FreePool(Cwd);
+            if (Cwd == NULL) {
+              ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_GEN_OUT_MEM), gShellLevel2HiiHandle, L"mv");
+              ShellStatus = SHELL_OUT_OF_RESOURCES;
+            } else {
+              StrCpyS (Cwd, CwdSize / sizeof (CHAR16), ShellGetCurrentDir (NULL));
+              StrCatS (Cwd, CwdSize / sizeof (CHAR16), L"\\");
+              ShellStatus = ValidateAndMoveFiles (FileList, &Response, Cwd);
+              FreePool (Cwd);
+            }
           }
         }
 

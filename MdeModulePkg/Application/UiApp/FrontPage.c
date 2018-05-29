@@ -1,7 +1,8 @@
 /** @file
   FrontPage routines to handle the callbacks and browser calls
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2017, Intel Corporation. All rights reserved.<BR>
+(C) Copyright 2018 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -151,6 +152,8 @@ FakeRouteConfig (
   if (Configuration == NULL || Progress == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
+  *Progress = Configuration;
 
   return EFI_NOT_FOUND;
 }
@@ -399,7 +402,7 @@ ConvertProcessorToString (
 
   if (Base10Exponent >= 6) {
     FreqMhz = ProcessorFrequency;
-    for (Index = 0; Index < (UINTN) (Base10Exponent - 6); Index++) {
+    for (Index = 0; Index < (UINT32) Base10Exponent - 6; Index++) {
       FreqMhz *= 10;
     }
   } else {
@@ -408,9 +411,16 @@ ConvertProcessorToString (
   DestMax = 0x20 / sizeof (CHAR16);
   StringBuffer = AllocateZeroPool (0x20);
   ASSERT (StringBuffer != NULL);
-  Index = UnicodeValueToString (StringBuffer, LEFT_JUSTIFY, FreqMhz / 1000, 3);
+  UnicodeValueToStringS (StringBuffer, sizeof (CHAR16) * DestMax, LEFT_JUSTIFY, FreqMhz / 1000, 3);
+  Index = StrnLenS (StringBuffer, DestMax);
   StrCatS (StringBuffer, DestMax, L".");
-  UnicodeValueToString (StringBuffer + Index + 1, PREFIX_ZERO, (FreqMhz % 1000) / 10, 2);
+  UnicodeValueToStringS (
+    StringBuffer + Index + 1,
+    sizeof (CHAR16) * (DestMax - (Index + 1)),
+    PREFIX_ZERO,
+    (FreqMhz % 1000) / 10,
+    2
+    );
   StrCatS (StringBuffer, DestMax, L" GHz");
   *String = (CHAR16 *) StringBuffer;
   return ;
@@ -434,7 +444,7 @@ ConvertMemorySizeToString (
 
   StringBuffer = AllocateZeroPool (0x24);
   ASSERT (StringBuffer != NULL);
-  UnicodeValueToString (StringBuffer, LEFT_JUSTIFY, MemorySize, 10);
+  UnicodeValueToStringS (StringBuffer, 0x24, LEFT_JUSTIFY, MemorySize, 10);
   StrCatS (StringBuffer, 0x24 / sizeof (CHAR16), L" MB RAM");
 
   *String = (CHAR16 *) StringBuffer;
@@ -579,7 +589,7 @@ UpdateFrontPageBannerStrings (
   SmbiosHandle = SMBIOS_HANDLE_PI_RESERVED;
   Status = Smbios->GetNext (Smbios, &SmbiosHandle, NULL, &Record, NULL);
   while (!EFI_ERROR(Status)) {
-    if (Record->Type == EFI_SMBIOS_TYPE_BIOS_INFORMATION) {
+    if (Record->Type == SMBIOS_TYPE_BIOS_INFORMATION) {
       Type0Record = (SMBIOS_TABLE_TYPE0 *) Record;
       StrIndex = Type0Record->BiosVersion;
       GetOptionalStringByIndex ((CHAR8*)((UINT8*)Type0Record + Type0Record->Hdr.Length), StrIndex, &NewString);
@@ -597,7 +607,7 @@ UpdateFrontPageBannerStrings (
       }
     }
 
-    if (Record->Type == EFI_SMBIOS_TYPE_SYSTEM_INFORMATION) {
+    if (Record->Type == SMBIOS_TYPE_SYSTEM_INFORMATION) {
       Type1Record = (SMBIOS_TABLE_TYPE1 *) Record;
       StrIndex = Type1Record->ProductName;
       GetOptionalStringByIndex ((CHAR8*)((UINT8*)Type1Record + Type1Record->Hdr.Length), StrIndex, &NewString);
@@ -606,7 +616,7 @@ UpdateFrontPageBannerStrings (
       FreePool (NewString);
     }
 
-    if ((Record->Type == EFI_SMBIOS_TYPE_PROCESSOR_INFORMATION) && !FoundCpu) {
+    if ((Record->Type == SMBIOS_TYPE_PROCESSOR_INFORMATION) && !FoundCpu) {
       Type4Record = (SMBIOS_TABLE_TYPE4 *) Record;
       //
       // The information in the record should be only valid when the CPU Socket is populated.
@@ -627,7 +637,7 @@ UpdateFrontPageBannerStrings (
       }
     }
 
-    if ( Record->Type == EFI_SMBIOS_TYPE_MEMORY_ARRAY_MAPPED_ADDRESS ) {
+    if ( Record->Type == SMBIOS_TYPE_MEMORY_ARRAY_MAPPED_ADDRESS ) {
       Type19Record = (SMBIOS_TABLE_TYPE19 *) Record;
       if (Type19Record->StartingAddress != 0xFFFFFFFF ) {
         InstalledMemory += RShiftU64(Type19Record->EndingAddress -
@@ -713,7 +723,7 @@ UiSetConsoleMode (
 
   if (IsSetupMode) {
     //
-    // The requried resolution and text mode is setup mode.
+    // The required resolution and text mode is setup mode.
     //
     NewHorizontalResolution = mSetupHorizontalResolution;
     NewVerticalResolution   = mSetupVerticalResolution;
@@ -769,7 +779,7 @@ UiSetConsoleMode (
             return EFI_SUCCESS;
           } else {
             //
-            // If current text mode is different from requried text mode.  Set new video mode
+            // If current text mode is different from required text mode.  Set new video mode
             //
             for (Index = 0; Index < MaxTextMode; Index++) {
               Status = SimpleTextOut->QueryMode (SimpleTextOut, Index, &CurrentColumn, &CurrentRow);
@@ -794,7 +804,7 @@ UiSetConsoleMode (
             }
             if (Index == MaxTextMode) {
               //
-              // If requried text mode is not supported, return error.
+              // If required text mode is not supported, return error.
               //
               FreePool (Info);
               return EFI_UNSUPPORTED;

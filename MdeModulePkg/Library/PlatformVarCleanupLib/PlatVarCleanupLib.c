@@ -1,7 +1,7 @@
 /** @file
   Sample platform variable cleanup library implementation.
 
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -21,6 +21,8 @@ EDKII_VAR_CHECK_PROTOCOL    *mVarCheck = NULL;
 /// The flag to indicate whether the platform has left the DXE phase of execution.
 ///
 BOOLEAN                     mEndOfDxe = FALSE;
+
+EFI_EVENT                   mPlatVarCleanupLibEndOfDxeEvent = NULL;
 
 LIST_ENTRY                  mUserVariableList = INITIALIZE_LIST_HEAD_VARIABLE (mUserVariableList);
 UINT16                      mUserVariableCount = 0;
@@ -926,7 +928,7 @@ VariableCleanupHiiCallback (
   }
 
   //
-  // Retrive uncommitted data from Form Browser.
+  // Retrieve uncommitted data from Form Browser.
   //
   VariableCleanupData = &Private->VariableCleanupData;
   HiiGetBrowserData (&mVariableCleanupHiiGuid, mVarStoreName, sizeof (VARIABLE_CLEANUP_DATA), (UINT8 *) VariableCleanupData);
@@ -1185,6 +1187,7 @@ Done:
 VAR_ERROR_FLAG
 EFIAPI
 GetLastBootVarErrorFlag (
+  VOID
   )
 {
   return mLastVarErrorFlag;
@@ -1229,7 +1232,6 @@ PlatformVarCleanupLibConstructor (
   )
 {
   EFI_STATUS    Status;
-  EFI_EVENT     Event;
 
   mLastVarErrorFlag = InternalGetVarErrorFlag ();
   DEBUG ((EFI_D_INFO, "mLastVarErrorFlag - 0x%02x\n", mLastVarErrorFlag));
@@ -1243,10 +1245,36 @@ PlatformVarCleanupLibConstructor (
                   PlatformVarCleanupEndOfDxeEvent,
                   NULL,
                   &gEfiEndOfDxeEventGroupGuid,
-                  &Event
+                  &mPlatVarCleanupLibEndOfDxeEvent
                   );
   ASSERT_EFI_ERROR (Status);
 
   return EFI_SUCCESS;
 }
 
+/**
+  The destructor function closes the End of DXE event.
+
+  @param  ImageHandle   The firmware allocated handle for the EFI image.
+  @param  SystemTable   A pointer to the EFI System Table.
+
+  @retval EFI_SUCCESS   The destructor completed successfully.
+
+**/
+EFI_STATUS
+EFIAPI
+PlatformVarCleanupLibDestructor (
+  IN EFI_HANDLE         ImageHandle,
+  IN EFI_SYSTEM_TABLE   *SystemTable
+  )
+{
+  EFI_STATUS    Status;
+
+  //
+  // Close the End of DXE event.
+  //
+  Status = gBS->CloseEvent (mPlatVarCleanupLibEndOfDxeEvent);
+  ASSERT_EFI_ERROR (Status);
+
+  return EFI_SUCCESS;
+}

@@ -65,6 +65,8 @@
   IntelFsp2Pkg/Library/BaseFspDebugLibSerialPort/BaseFspDebugLibSerialPort.inf
   IntelFsp2Pkg/Library/BaseFspPlatformLib/BaseFspPlatformLib.inf
   IntelFsp2Pkg/Library/BaseFspSwitchStackLib/BaseFspSwitchStackLib.inf
+  IntelFsp2Pkg/Library/BaseDebugDeviceLibNull/BaseDebugDeviceLibNull.inf
+  IntelFsp2Pkg/Library/SecFspSecPlatformLibNull/SecFspSecPlatformLibNull.inf
 
   IntelFsp2Pkg/FspSecCore/FspSecCoreT.inf
   IntelFsp2Pkg/FspSecCore/FspSecCoreM.inf
@@ -75,3 +77,6 @@
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x1f
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80080046
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|0x07
+
+[BuildOptions]
+  *_*_*_CC_FLAGS = -D DISABLE_NEW_DEPRECATED_INTERFACES

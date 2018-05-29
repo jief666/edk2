@@ -32,6 +32,7 @@
 #include <Library/PeimEntryPoint.h>
 #include <Library/PeiServicesLib.h>
 #include <Library/QemuFwCfgLib.h>
+#include <Library/QemuFwCfgS3Lib.h>
 #include <Library/ResourcePublicationLib.h>
 #include <Guid/MemoryTypeInformation.h>
 #include <Ppi/MasterBootMode.h>
@@ -68,6 +69,7 @@ EFI_BOOT_MODE mBootMode = BOOT_WITH_FULL_CONFIGURATION;
 
 BOOLEAN mS3Supported = FALSE;
 
+UINT32 mMaxCpuCount;
 
 VOID
 AddIoMemoryBaseSizeHob (
@@ -156,8 +158,9 @@ MemMapInitialization (
   VOID
   )
 {
-  UINT64 PciIoBase;
-  UINT64 PciIoSize;
+  UINT64        PciIoBase;
+  UINT64        PciIoSize;
+  RETURN_STATUS PcdStatus;
 
   PciIoBase = 0xC000;
   PciIoSize = 0x4000;
@@ -212,8 +215,11 @@ MemMapInitialization (
     //
     PciSize = 0xFC000000 - PciBase;
     AddIoMemoryBaseSizeHob (PciBase, PciSize);
-    PcdSet64 (PcdPciMmio32Base, PciBase);
-    PcdSet64 (PcdPciMmio32Size, PciSize);
+    PcdStatus = PcdSet64S (PcdPciMmio32Base, PciBase);
+    ASSERT_RETURN_ERROR (PcdStatus);
+    PcdStatus = PcdSet64S (PcdPciMmio32Size, PciSize);
+    ASSERT_RETURN_ERROR (PcdStatus);
+
     AddIoMemoryBaseSizeHob (0xFEC00000, SIZE_4KB);
     AddIoMemoryBaseSizeHob (0xFED00000, SIZE_1KB);
     if (mHostBridgeDevId == INTEL_Q35_MCH_DEVICE_ID) {
@@ -266,8 +272,10 @@ MemMapInitialization (
     PciIoBase,
     PciIoSize
     );
-  PcdSet64 (PcdPciIoBase, PciIoBase);
-  PcdSet64 (PcdPciIoSize, PciIoSize);
+  PcdStatus = PcdSet64S (PcdPciIoBase, PciIoBase);
+  ASSERT_RETURN_ERROR (PcdStatus);
+  PcdStatus = PcdSet64S (PcdPciIoSize, PciIoSize);
+  ASSERT_RETURN_ERROR (PcdStatus);
 }
 
 EFI_STATUS
@@ -316,11 +324,13 @@ GetNamedFwCfgBoolean (
 
 #define UPDATE_BOOLEAN_PCD_FROM_FW_CFG(TokenName)                   \
           do {                                                      \
-            BOOLEAN Setting;                                        \
+            BOOLEAN       Setting;                                  \
+            RETURN_STATUS PcdStatus;                                \
                                                                     \
             if (!EFI_ERROR (GetNamedFwCfgBoolean (                  \
                               "opt/ovmf/" #TokenName, &Setting))) { \
-              PcdSetBool (TokenName, Setting);                      \
+              PcdStatus = PcdSetBoolS (TokenName, Setting);         \
+              ASSERT_RETURN_ERROR (PcdStatus);                      \
             }                                                       \
           } while (0)
 
@@ -379,12 +389,13 @@ MiscInitialization (
   VOID
   )
 {
-  UINTN  PmCmd;
-  UINTN  Pmba;
-  UINT32 PmbaAndVal;
-  UINT32 PmbaOrVal;
-  UINTN  AcpiCtlReg;
-  UINT8  AcpiEnBit;
+  UINTN         PmCmd;
+  UINTN         Pmba;
+  UINT32        PmbaAndVal;
+  UINT32        PmbaOrVal;
+  UINTN         AcpiCtlReg;
+  UINT8         AcpiEnBit;
+  RETURN_STATUS PcdStatus;
 
   //
   // Disable A20 Mask
@@ -424,7 +435,8 @@ MiscInitialization (
       ASSERT (FALSE);
       return;
   }
-  PcdSet16 (PcdOvmfHostBridgePciDevId, mHostBridgeDevId);
+  PcdStatus = PcdSet16S (PcdOvmfHostBridgePciDevId, mHostBridgeDevId);
+  ASSERT_RETURN_ERROR (PcdStatus);
 
   //
   // If the appropriate IOspace enable bit is set, assume the ACPI PMBA
@@ -491,6 +503,7 @@ ReserveEmuVariableNvStore (
   )
 {
   EFI_PHYSICAL_ADDRESS VariableStore;
+  RETURN_STATUS        PcdStatus;
 
   //
   // Allocate storage for NV variables early on so it will be
@@ -500,16 +513,16 @@ ReserveEmuVariableNvStore (
   //
   VariableStore =
     (EFI_PHYSICAL_ADDRESS)(UINTN)
-      AllocateAlignedRuntimePages (
-        EFI_SIZE_TO_PAGES (2 * PcdGet32 (PcdFlashNvStorageFtwSpareSize)),
-        PcdGet32 (PcdFlashNvStorageFtwSpareSize)
+      AllocateRuntimePages (
+        EFI_SIZE_TO_PAGES (2 * PcdGet32 (PcdFlashNvStorageFtwSpareSize))
         );
   DEBUG ((EFI_D_INFO,
           "Reserved variable store memory: 0x%lX; size: %dkb\n",
           VariableStore,
           (2 * PcdGet32 (PcdFlashNvStorageFtwSpareSize)) / 1024
         ));
-  PcdSet64 (PcdEmuVariableNvStoreReserved, VariableStore);
+  PcdStatus = PcdSet64S (PcdEmuVariableNvStoreReserved, VariableStore);
+  ASSERT_RETURN_ERROR (PcdStatus);
 }
 
 
@@ -556,6 +569,47 @@ S3Verification (
 
 
 /**
+  Fetch the number of boot CPUs from QEMU and expose it to UefiCpuPkg modules.
+  Set the mMaxCpuCount variable.
+**/
+VOID
+MaxCpuCountInitialization (
+  VOID
+  )
+{
+  UINT16        ProcessorCount;
+  RETURN_STATUS PcdStatus;
+
+  QemuFwCfgSelectItem (QemuFwCfgItemSmpCpuCount);
+  ProcessorCount = QemuFwCfgRead16 ();
+  //
+  // If the fw_cfg key or fw_cfg entirely is unavailable, load mMaxCpuCount
+  // from the PCD default. No change to PCDs.
+  //
+  if (ProcessorCount == 0) {
+    mMaxCpuCount = PcdGet32 (PcdCpuMaxLogicalProcessorNumber);
+    return;
+  }
+  //
+  // Otherwise, set mMaxCpuCount to the value reported by QEMU.
+  //
+  mMaxCpuCount = ProcessorCount;
+  //
+  // Additionally, tell UefiCpuPkg modules (a) the exact number of VCPUs, (b)
+  // to wait, in the initial AP bringup, exactly as long as it takes for all of
+  // the APs to report in. For this, we set the longest representable timeout
+  // (approx. 71 minutes).
+  //
+  PcdStatus = PcdSet32S (PcdCpuMaxLogicalProcessorNumber, ProcessorCount);
+  ASSERT_RETURN_ERROR (PcdStatus);
+  PcdStatus = PcdSet32S (PcdCpuApInitTimeOutInMicroSeconds, MAX_UINT32);
+  ASSERT_RETURN_ERROR (PcdStatus);
+  DEBUG ((DEBUG_INFO, "%a: QEMU reports %d processor(s)\n", __FUNCTION__,
+    ProcessorCount));
+}
+
+
+/**
   Perform Platform PEI initialization.
 
   @param  FileHandle      Handle of the file being invoked.
@@ -573,7 +627,7 @@ InitializePlatform (
 {
   EFI_STATUS    Status;
 
-  DEBUG ((EFI_D_ERROR, "Platform PEIM Loaded\n"));
+  DEBUG ((DEBUG_INFO, "Platform PEIM Loaded\n"));
 
   DebugDumpCmos ();
 
@@ -589,6 +643,16 @@ InitializePlatform (
   S3Verification ();
   BootModeInitialization ();
   AddressWidthInitialization ();
+  MaxCpuCountInitialization ();
+
+  //
+  // Query Host Bridge DID
+  //
+  mHostBridgeDevId = PciRead16 (OVMF_HOSTBRIDGE_DID);
+
+  if (FeaturePcdGet (PcdSmmSmramRequire)) {
+    Q35TsegMbytesInitialization ();
+  }
 
   PublishPeiMemory ();
 
@@ -599,19 +663,18 @@ InitializePlatform (
     InitializeXen ();
   }
 
-  //
-  // Query Host Bridge DID
-  //
-  mHostBridgeDevId = PciRead16 (OVMF_HOSTBRIDGE_DID);
-
   if (mBootMode != BOOT_ON_S3_RESUME) {
-    ReserveEmuVariableNvStore ();
+    if (!FeaturePcdGet (PcdSmmSmramRequire)) {
+      ReserveEmuVariableNvStore ();
+    }
     PeiFvInitialization ();
     MemMapInitialization ();
     NoexecDxeInitialization ();
   }
 
+  AmdSevInitialize ();
   MiscInitialization ();
+  InstallFeatureControlCallback ();
 
   return EFI_SUCCESS;
 }

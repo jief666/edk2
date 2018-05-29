@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-10.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.11.
 
 **/
 
@@ -25,6 +25,24 @@
 #define __HASWELL_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel processors based on the Haswell microarchitecture?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_HASWELL_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x3C || \
+    DisplayModel == 0x45 || \
+    DisplayModel == 0x46    \
+    )                       \
+   )
 
 /**
   Package.
@@ -42,6 +60,7 @@
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PLATFORM_INFO);
   AsmWriteMsr64 (MSR_HASWELL_PLATFORM_INFO, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PLATFORM_INFO is defined as MSR_PLATFORM_INFO in SDM.
 **/
 #define MSR_HASWELL_PLATFORM_INFO                0x000000CE
 
@@ -126,6 +145,9 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_IA32_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_HASWELL_IA32_PERFEVTSEL0, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_IA32_PERFEVTSEL0 is defined as IA32_PERFEVTSEL0 in SDM.
+        MSR_HASWELL_IA32_PERFEVTSEL1 is defined as IA32_PERFEVTSEL1 in SDM.
+        MSR_HASWELL_IA32_PERFEVTSEL3 is defined as IA32_PERFEVTSEL3 in SDM.
   @{
 **/
 #define MSR_HASWELL_IA32_PERFEVTSEL0             0x00000186
@@ -226,6 +248,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_IA32_PERFEVTSEL2);
   AsmWriteMsr64 (MSR_HASWELL_IA32_PERFEVTSEL2, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_IA32_PERFEVTSEL2 is defined as IA32_PERFEVTSEL2 in SDM.
 **/
 #define MSR_HASWELL_IA32_PERFEVTSEL2             0x00000188
 
@@ -330,6 +353,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_LBR_SELECT);
   AsmWriteMsr64 (MSR_HASWELL_LBR_SELECT, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_LBR_SELECT is defined as MSR_LBR_SELECT in SDM.
 **/
 #define MSR_HASWELL_LBR_SELECT                   0x000001C8
 
@@ -416,6 +440,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PKGC_IRTL1);
   AsmWriteMsr64 (MSR_HASWELL_PKGC_IRTL1, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PKGC_IRTL1 is defined as MSR_PKGC_IRTL1 in SDM.
 **/
 #define MSR_HASWELL_PKGC_IRTL1                   0x0000060B
 
@@ -435,15 +460,8 @@ typedef union {
     UINT32  InterruptResponseTimeLimit:10;
     ///
     /// [Bits 12:10] Time Unit (R/W)  Specifies the encoding value of time
-    /// unit of the interrupt response time limit. The following time unit
-    /// encodings are supported:
-    ///
-    ///   000b: 1 ns
-    ///   001b: 32 ns
-    ///   010b: 1024 ns
-    ///   011b: 32768 ns
-    ///   100b: 1048576 ns
-    ///   101b: 33554432 ns.
+    /// unit of the interrupt response time limit. See Table 35-18 for
+    /// supported time unit encodings.
     ///
     UINT32  TimeUnit:3;
     UINT32  Reserved1:2;
@@ -487,6 +505,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PKGC_IRTL2);
   AsmWriteMsr64 (MSR_HASWELL_PKGC_IRTL2, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PKGC_IRTL2 is defined as MSR_PKGC_IRTL2 in SDM.
 **/
 #define MSR_HASWELL_PKGC_IRTL2                   0x0000060C
 
@@ -506,15 +525,8 @@ typedef union {
     UINT32  InterruptResponseTimeLimit:10;
     ///
     /// [Bits 12:10] Time Unit (R/W)  Specifies the encoding value of time
-    /// unit of the interrupt response time limit. The following time unit
-    /// encodings are supported:
-    ///
-    ///   000b: 1 ns
-    ///   001b: 32 ns
-    ///   010b: 1024 ns
-    ///   011b: 32768 ns
-    ///   100b: 1048576 ns
-    ///   101b: 33554432 ns.
+    /// unit of the interrupt response time limit. See Table 35-18 for
+    /// supported time unit encodings.
     ///
     UINT32  TimeUnit:3;
     UINT32  Reserved1:2;
@@ -550,6 +562,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_HASWELL_PKG_PERF_STATUS);
   @endcode
+  @note MSR_HASWELL_PKG_PERF_STATUS is defined as MSR_PKG_PERF_STATUS in SDM.
 **/
 #define MSR_HASWELL_PKG_PERF_STATUS              0x00000613
 
@@ -567,6 +580,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_HASWELL_DRAM_ENERGY_STATUS);
   @endcode
+  @note MSR_HASWELL_DRAM_ENERGY_STATUS is defined as MSR_DRAM_ENERGY_STATUS in SDM.
 **/
 #define MSR_HASWELL_DRAM_ENERGY_STATUS           0x00000619
 
@@ -585,6 +599,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_HASWELL_DRAM_PERF_STATUS);
   @endcode
+  @note MSR_HASWELL_DRAM_PERF_STATUS is defined as MSR_DRAM_PERF_STATUS in SDM.
 **/
 #define MSR_HASWELL_DRAM_PERF_STATUS             0x0000061B
 
@@ -604,6 +619,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_CONFIG_TDP_NOMINAL);
   @endcode
+  @note MSR_HASWELL_CONFIG_TDP_NOMINAL is defined as MSR_CONFIG_TDP_NOMINAL in SDM.
 **/
 #define MSR_HASWELL_CONFIG_TDP_NOMINAL           0x00000648
 
@@ -649,6 +665,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_CONFIG_TDP_LEVEL1);
   @endcode
+  @note MSR_HASWELL_CONFIG_TDP_LEVEL1 is defined as MSR_CONFIG_TDP_LEVEL1 in SDM.
 **/
 #define MSR_HASWELL_CONFIG_TDP_LEVEL1            0x00000649
 
@@ -705,6 +722,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_CONFIG_TDP_LEVEL2);
   @endcode
+  @note MSR_HASWELL_CONFIG_TDP_LEVEL2 is defined as MSR_CONFIG_TDP_LEVEL2 in SDM.
 **/
 #define MSR_HASWELL_CONFIG_TDP_LEVEL2            0x0000064A
 
@@ -762,6 +780,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_CONFIG_TDP_CONTROL);
   AsmWriteMsr64 (MSR_HASWELL_CONFIG_TDP_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_CONFIG_TDP_CONTROL is defined as MSR_CONFIG_TDP_CONTROL in SDM.
 **/
 #define MSR_HASWELL_CONFIG_TDP_CONTROL           0x0000064B
 
@@ -812,6 +831,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_TURBO_ACTIVATION_RATIO);
   AsmWriteMsr64 (MSR_HASWELL_TURBO_ACTIVATION_RATIO, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_TURBO_ACTIVATION_RATIO is defined as MSR_TURBO_ACTIVATION_RATIO in SDM.
 **/
 #define MSR_HASWELL_TURBO_ACTIVATION_RATIO       0x0000064C
 
@@ -848,24 +868,6 @@ typedef union {
 
 
 /**
-  Package. Silicon Debug Feature Control (R/W) See Table 35-2.
-
-  @param  ECX  MSR_HASWELL_IA32_DEBUG_FEATURE (0x00000C80)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_HASWELL_IA32_DEBUG_FEATURE);
-  AsmWriteMsr64 (MSR_HASWELL_IA32_DEBUG_FEATURE, Msr);
-  @endcode
-**/
-#define MSR_HASWELL_IA32_DEBUG_FEATURE           0x00000C80
-
-
-/**
   Core. C-State Configuration Control (R/W) Note: C-state values are processor
   specific C-state code names, unrelated to MWAIT extension C-state parameters
   or ACPI Cstates. `See http://biosbits.org. <http://biosbits.org>`__.
@@ -883,6 +885,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PKG_CST_CONFIG_CONTROL);
   AsmWriteMsr64 (MSR_HASWELL_PKG_CST_CONFIG_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PKG_CST_CONFIG_CONTROL is defined as MSR_PKG_CST_CONFIG_CONTROL in SDM.
 **/
 #define MSR_HASWELL_PKG_CST_CONFIG_CONTROL       0x000000E2
 
@@ -962,6 +965,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_SMM_MCA_CAP);
   AsmWriteMsr64 (MSR_HASWELL_SMM_MCA_CAP, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_SMM_MCA_CAP is defined as MSR_SMM_MCA_CAP in SDM.
 **/
 #define MSR_HASWELL_SMM_MCA_CAP                  0x0000017D
 
@@ -1012,6 +1016,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_TURBO_RATIO_LIMIT);
   @endcode
+  @note MSR_HASWELL_TURBO_RATIO_LIMIT is defined as MSR_TURBO_RATIO_LIMIT in SDM.
 **/
 #define MSR_HASWELL_TURBO_RATIO_LIMIT            0x000001AD
 
@@ -1072,6 +1077,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_UNC_PERF_GLOBAL_CTRL);
   AsmWriteMsr64 (MSR_HASWELL_UNC_PERF_GLOBAL_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_UNC_PERF_GLOBAL_CTRL is defined as MSR_UNC_PERF_GLOBAL_CTRL in SDM.
 **/
 #define MSR_HASWELL_UNC_PERF_GLOBAL_CTRL         0x00000391
 
@@ -1142,6 +1148,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_UNC_PERF_GLOBAL_STATUS);
   AsmWriteMsr64 (MSR_HASWELL_UNC_PERF_GLOBAL_STATUS, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_UNC_PERF_GLOBAL_STATUS is defined as MSR_UNC_PERF_GLOBAL_STATUS in SDM.
 **/
 #define MSR_HASWELL_UNC_PERF_GLOBAL_STATUS       0x00000392
 
@@ -1196,6 +1203,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_UNC_PERF_FIXED_CTRL);
   AsmWriteMsr64 (MSR_HASWELL_UNC_PERF_FIXED_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_UNC_PERF_FIXED_CTRL is defined as MSR_UNC_PERF_FIXED_CTRL in SDM.
 **/
 #define MSR_HASWELL_UNC_PERF_FIXED_CTRL          0x00000394
 
@@ -1247,6 +1255,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_UNC_PERF_FIXED_CTR);
   AsmWriteMsr64 (MSR_HASWELL_UNC_PERF_FIXED_CTR, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_UNC_PERF_FIXED_CTR is defined as MSR_UNC_PERF_FIXED_CTR in SDM.
 **/
 #define MSR_HASWELL_UNC_PERF_FIXED_CTR           0x00000395
 
@@ -1290,6 +1299,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_CONFIG);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_CONFIG is defined as MSR_UNC_CBO_CONFIG in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_CONFIG               0x00000396
 
@@ -1333,6 +1343,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_ARB_PERFCTR0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_ARB_PERFCTR0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_ARB_PERFCTR0 is defined as MSR_UNC_ARB_PERFCTR0 in SDM.
 **/
 #define MSR_HASWELL_UNC_ARB_PERFCTR0             0x000003B0
 
@@ -1351,6 +1362,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_ARB_PERFCTR1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_ARB_PERFCTR1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_ARB_PERFCTR1 is defined as MSR_UNC_ARB_PERFCTR1 in SDM.
 **/
 #define MSR_HASWELL_UNC_ARB_PERFCTR1             0x000003B1
 
@@ -1369,6 +1381,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_ARB_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_ARB_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_ARB_PERFEVTSEL0 is defined as MSR_UNC_ARB_PERFEVTSEL0 in SDM.
 **/
 #define MSR_HASWELL_UNC_ARB_PERFEVTSEL0          0x000003B2
 
@@ -1387,6 +1400,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_ARB_PERFEVTSEL1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_ARB_PERFEVTSEL1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_ARB_PERFEVTSEL1 is defined as MSR_UNC_ARB_PERFEVTSEL1 in SDM.
 **/
 #define MSR_HASWELL_UNC_ARB_PERFEVTSEL1          0x000003B3
 
@@ -1408,6 +1422,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_SMM_FEATURE_CONTROL);
   AsmWriteMsr64 (MSR_HASWELL_SMM_FEATURE_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_SMM_FEATURE_CONTROL is defined as MSR_SMM_FEATURE_CONTROL in SDM.
 **/
 #define MSR_HASWELL_SMM_FEATURE_CONTROL          0x000004E0
 
@@ -1481,6 +1496,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_HASWELL_SMM_DELAYED);
   @endcode
+  @note MSR_HASWELL_SMM_DELAYED is defined as MSR_SMM_DELAYED in SDM.
 **/
 #define MSR_HASWELL_SMM_DELAYED                  0x000004E2
 
@@ -1514,6 +1530,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_HASWELL_SMM_BLOCKED);
   @endcode
+  @note MSR_HASWELL_SMM_BLOCKED is defined as MSR_SMM_BLOCKED in SDM.
 **/
 #define MSR_HASWELL_SMM_BLOCKED                  0x000004E3
 
@@ -1533,6 +1550,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_RAPL_POWER_UNIT);
   @endcode
+  @note MSR_HASWELL_RAPL_POWER_UNIT is defined as MSR_RAPL_POWER_UNIT in SDM.
 **/
 #define MSR_HASWELL_RAPL_POWER_UNIT              0x00000606
 
@@ -1577,6 +1595,25 @@ typedef union {
 
 
 /**
+  Package. PP0 Energy Status (R/O)  See Section 14.9.4, "PP0/PP1 RAPL
+  Domains.".
+
+  @param  ECX  MSR_HASWELL_PP0_ENERGY_STATUS (0x00000639)
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_HASWELL_PP0_ENERGY_STATUS);
+  @endcode
+  @note MSR_HASWELL_PP0_ENERGY_STATUS is defined as MSR_PP0_ENERGY_STATUS in SDM.
+**/
+#define MSR_HASWELL_PP0_ENERGY_STATUS            0x00000639
+
+
+/**
   Package. PP1 RAPL Power Limit Control (R/W) See Section 14.9.4, "PP0/PP1
   RAPL Domains.".
 
@@ -1591,6 +1628,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_PP1_POWER_LIMIT);
   AsmWriteMsr64 (MSR_HASWELL_PP1_POWER_LIMIT, Msr);
   @endcode
+  @note MSR_HASWELL_PP1_POWER_LIMIT is defined as MSR_PP1_POWER_LIMIT in SDM.
 **/
 #define MSR_HASWELL_PP1_POWER_LIMIT              0x00000640
 
@@ -1609,6 +1647,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_HASWELL_PP1_ENERGY_STATUS);
   @endcode
+  @note MSR_HASWELL_PP1_ENERGY_STATUS is defined as MSR_PP1_ENERGY_STATUS in SDM.
 **/
 #define MSR_HASWELL_PP1_ENERGY_STATUS            0x00000641
 
@@ -1628,6 +1667,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_PP1_POLICY);
   AsmWriteMsr64 (MSR_HASWELL_PP1_POLICY, Msr);
   @endcode
+  @note MSR_HASWELL_PP1_POLICY is defined as MSR_PP1_POLICY in SDM.
 **/
 #define MSR_HASWELL_PP1_POLICY                   0x00000642
 
@@ -1649,6 +1689,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_CORE_PERF_LIMIT_REASONS);
   AsmWriteMsr64 (MSR_HASWELL_CORE_PERF_LIMIT_REASONS, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_CORE_PERF_LIMIT_REASONS is defined as MSR_CORE_PERF_LIMIT_REASONS in SDM.
 **/
 #define MSR_HASWELL_CORE_PERF_LIMIT_REASONS      0x00000690
 
@@ -1831,6 +1872,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_GRAPHICS_PERF_LIMIT_REASONS);
   AsmWriteMsr64 (MSR_HASWELL_GRAPHICS_PERF_LIMIT_REASONS, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_GRAPHICS_PERF_LIMIT_REASONS is defined as MSR_GRAPHICS_PERF_LIMIT_REASONS in SDM.
 **/
 #define MSR_HASWELL_GRAPHICS_PERF_LIMIT_REASONS  0x000006B0
 
@@ -2002,6 +2044,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_RING_PERF_LIMIT_REASONS);
   AsmWriteMsr64 (MSR_HASWELL_RING_PERF_LIMIT_REASONS, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_RING_PERF_LIMIT_REASONS is defined as MSR_RING_PERF_LIMIT_REASONS in SDM.
 **/
 #define MSR_HASWELL_RING_PERF_LIMIT_REASONS      0x000006B1
 
@@ -2152,6 +2195,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_0_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_0_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_0_PERFEVTSEL0 is defined as MSR_UNC_CBO_0_PERFEVTSEL0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_0_PERFEVTSEL0        0x00000700
 
@@ -2170,6 +2214,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_0_PERFEVTSEL1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_0_PERFEVTSEL1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_0_PERFEVTSEL1 is defined as MSR_UNC_CBO_0_PERFEVTSEL1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_0_PERFEVTSEL1        0x00000701
 
@@ -2188,6 +2233,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_0_PERFCTR0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_0_PERFCTR0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_0_PERFCTR0 is defined as MSR_UNC_CBO_0_PERFCTR0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_0_PERFCTR0           0x00000706
 
@@ -2206,6 +2252,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_0_PERFCTR1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_0_PERFCTR1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_0_PERFCTR1 is defined as MSR_UNC_CBO_0_PERFCTR1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_0_PERFCTR1           0x00000707
 
@@ -2224,6 +2271,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_1_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_1_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_1_PERFEVTSEL0 is defined as MSR_UNC_CBO_1_PERFEVTSEL0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_1_PERFEVTSEL0        0x00000710
 
@@ -2242,6 +2290,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_1_PERFEVTSEL1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_1_PERFEVTSEL1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_1_PERFEVTSEL1 is defined as MSR_UNC_CBO_1_PERFEVTSEL1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_1_PERFEVTSEL1        0x00000711
 
@@ -2260,6 +2309,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_1_PERFCTR0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_1_PERFCTR0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_1_PERFCTR0 is defined as MSR_UNC_CBO_1_PERFCTR0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_1_PERFCTR0           0x00000716
 
@@ -2278,6 +2328,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_1_PERFCTR1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_1_PERFCTR1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_1_PERFCTR1 is defined as MSR_UNC_CBO_1_PERFCTR1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_1_PERFCTR1           0x00000717
 
@@ -2296,6 +2347,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_2_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_2_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_2_PERFEVTSEL0 is defined as MSR_UNC_CBO_2_PERFEVTSEL0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_2_PERFEVTSEL0        0x00000720
 
@@ -2314,6 +2366,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_2_PERFEVTSEL1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_2_PERFEVTSEL1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_2_PERFEVTSEL1 is defined as MSR_UNC_CBO_2_PERFEVTSEL1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_2_PERFEVTSEL1        0x00000721
 
@@ -2332,6 +2385,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_2_PERFCTR0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_2_PERFCTR0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_2_PERFCTR0 is defined as MSR_UNC_CBO_2_PERFCTR0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_2_PERFCTR0           0x00000726
 
@@ -2350,6 +2404,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_2_PERFCTR1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_2_PERFCTR1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_2_PERFCTR1 is defined as MSR_UNC_CBO_2_PERFCTR1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_2_PERFCTR1           0x00000727
 
@@ -2368,6 +2423,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_3_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_3_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_3_PERFEVTSEL0 is defined as MSR_UNC_CBO_3_PERFEVTSEL0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_3_PERFEVTSEL0        0x00000730
 
@@ -2386,6 +2442,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_3_PERFEVTSEL1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_3_PERFEVTSEL1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_3_PERFEVTSEL1 is defined as MSR_UNC_CBO_3_PERFEVTSEL1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_3_PERFEVTSEL1        0x00000731
 
@@ -2404,6 +2461,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_3_PERFCTR0);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_3_PERFCTR0, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_3_PERFCTR0 is defined as MSR_UNC_CBO_3_PERFCTR0 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_3_PERFCTR0           0x00000736
 
@@ -2422,6 +2480,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_HASWELL_UNC_CBO_3_PERFCTR1);
   AsmWriteMsr64 (MSR_HASWELL_UNC_CBO_3_PERFCTR1, Msr);
   @endcode
+  @note MSR_HASWELL_UNC_CBO_3_PERFCTR1 is defined as MSR_UNC_CBO_3_PERFCTR1 in SDM.
 **/
 #define MSR_HASWELL_UNC_CBO_3_PERFCTR1           0x00000737
 
@@ -2443,6 +2502,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PKG_C8_RESIDENCY);
   AsmWriteMsr64 (MSR_HASWELL_PKG_C8_RESIDENCY, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PKG_C8_RESIDENCY is defined as MSR_PKG_C8_RESIDENCY in SDM.
 **/
 #define MSR_HASWELL_PKG_C8_RESIDENCY             0x00000630
 
@@ -2492,6 +2552,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PKG_C9_RESIDENCY);
   AsmWriteMsr64 (MSR_HASWELL_PKG_C9_RESIDENCY, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PKG_C9_RESIDENCY is defined as MSR_PKG_C9_RESIDENCY in SDM.
 **/
 #define MSR_HASWELL_PKG_C9_RESIDENCY             0x00000631
 
@@ -2541,6 +2602,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_HASWELL_PKG_C10_RESIDENCY);
   AsmWriteMsr64 (MSR_HASWELL_PKG_C10_RESIDENCY, Msr.Uint64);
   @endcode
+  @note MSR_HASWELL_PKG_C10_RESIDENCY is defined as MSR_PKG_C10_RESIDENCY in SDM.
 **/
 #define MSR_HASWELL_PKG_C10_RESIDENCY            0x00000632
 

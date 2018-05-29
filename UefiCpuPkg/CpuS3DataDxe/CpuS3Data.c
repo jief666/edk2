@@ -9,7 +9,7 @@ number of CPUs reported by the MP Services Protocol, so this module does not
 support hot plug CPUs.  This module can be copied into a CPU specific package
 and customized if these additional features are required.
 
-Copyright (c) 2013 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2013 - 2017, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2015, Red Hat, Inc.
 
 This program and the accompanying materials
@@ -84,20 +84,36 @@ AllocateAcpiNvsMemoryBelow4G (
 /**
   Callback function executed when the EndOfDxe event group is signaled.
 
-  We delay saving the MTRR settings until BDS signals EndOfDxe.
+  We delay allocating StartupVector and saving the MTRR settings until BDS signals EndOfDxe.
 
   @param[in]  Event    Event whose notification function is being invoked.
   @param[out] Context  Pointer to the MTRR_SETTINGS buffer to fill in.
 **/
 VOID
 EFIAPI
-SaveMtrrsOnEndOfDxe (
+CpuS3DataOnEndOfDxe (
   IN  EFI_EVENT  Event,
   OUT VOID       *Context
   )
 {
+  EFI_STATUS         Status;
+  ACPI_CPU_DATA_EX   *AcpiCpuDataEx;
+
+  AcpiCpuDataEx = (ACPI_CPU_DATA_EX *) Context;
+  //
+  // Allocate a 4KB reserved page below 1MB
+  //
+  AcpiCpuDataEx->AcpiCpuData.StartupVector = BASE_1MB - 1;
+  Status = gBS->AllocatePages (
+                  AllocateMaxAddress,
+                  EfiReservedMemoryType,
+                  1,
+                  &AcpiCpuDataEx->AcpiCpuData.StartupVector
+                  );
+  ASSERT_EFI_ERROR (Status);
+
   DEBUG ((EFI_D_VERBOSE, "%a\n", __FUNCTION__));
-  MtrrGetAllMtrrs (Context);
+  MtrrGetAllMtrrs (&AcpiCpuDataEx->MtrrTable);
 
   //
   // Close event, so it will not be invoked again.
@@ -117,6 +133,7 @@ SaveMtrrsOnEndOfDxe (
    @param[in] SystemTable  A pointer to the EFI System Table.
 
    @retval EFI_SUCCESS     The entry point is executed successfully.
+   @retval EFI_UNSUPPORTED Do not support ACPI S3.
    @retval other           Some error occurs when executing this entry point.
 
 **/
@@ -143,6 +160,16 @@ CpuS3DataInitialize (
   VOID                       *Gdt;
   VOID                       *Idt;
   EFI_EVENT                  Event;
+  ACPI_CPU_DATA              *OldAcpiCpuData;
+
+  if (!PcdGetBool (PcdAcpiS3Enable)) {
+    return EFI_UNSUPPORTED;
+  }
+
+  //
+  // Set PcdCpuS3DataAddress to the base address of the ACPI_CPU_DATA structure
+  //
+  OldAcpiCpuData = (ACPI_CPU_DATA *) (UINTN) PcdGet64 (PcdCpuS3DataAddress);
 
   //
   // Allocate ACPI NVS memory below 4G memory for use on ACPI S3 resume.
@@ -158,18 +185,6 @@ CpuS3DataInitialize (
                   &gEfiMpServiceProtocolGuid,
                   NULL,
                   (VOID **)&MpServices
-                  );
-  ASSERT_EFI_ERROR (Status);
-
-  //
-  // Allocate a 4KB reserved page below 1MB
-  //
-  AcpiCpuData->StartupVector = BASE_1MB - 1;
-  Status = gBS->AllocatePages (
-                  AllocateMaxAddress,
-                  EfiReservedMemoryType,
-                  1,
-                  &AcpiCpuData->StartupVector
                   );
   ASSERT_EFI_ERROR (Status);
 
@@ -220,32 +235,38 @@ CpuS3DataInitialize (
   AcpiCpuDataEx->GdtrProfile.Base = (UINTN)Gdt;
   AcpiCpuDataEx->IdtrProfile.Base = (UINTN)Idt;
 
-  //
-  // Allocate buffer for empty RegisterTable and PreSmmInitRegisterTable for all CPUs
-  //
-  TableSize = 2 * NumberOfCpus * sizeof (CPU_REGISTER_TABLE);
-  RegisterTable = (CPU_REGISTER_TABLE *)AllocateAcpiNvsMemoryBelow4G (TableSize);
-  ASSERT (RegisterTable != NULL);
-  for (Index = 0; Index < NumberOfCpus; Index++) {
-    Status = MpServices->GetProcessorInfo (
+  if (OldAcpiCpuData != NULL) {
+    AcpiCpuData->RegisterTable           = OldAcpiCpuData->RegisterTable;
+    AcpiCpuData->PreSmmInitRegisterTable = OldAcpiCpuData->PreSmmInitRegisterTable;
+  } else {
+    //
+    // Allocate buffer for empty RegisterTable and PreSmmInitRegisterTable for all CPUs
+    //
+    TableSize = 2 * NumberOfCpus * sizeof (CPU_REGISTER_TABLE);
+    RegisterTable = (CPU_REGISTER_TABLE *)AllocateAcpiNvsMemoryBelow4G (TableSize);
+    ASSERT (RegisterTable != NULL);
+
+    for (Index = 0; Index < NumberOfCpus; Index++) {
+      Status = MpServices->GetProcessorInfo (
                            MpServices,
                            Index,
                            &ProcessorInfoBuffer
                            );
-    ASSERT_EFI_ERROR (Status);
+      ASSERT_EFI_ERROR (Status);
 
-    RegisterTable[Index].InitialApicId      = (UINT32)ProcessorInfoBuffer.ProcessorId;
-    RegisterTable[Index].TableLength        = 0;
-    RegisterTable[Index].AllocatedSize      = 0;
-    RegisterTable[Index].RegisterTableEntry = NULL;
+      RegisterTable[Index].InitialApicId      = (UINT32)ProcessorInfoBuffer.ProcessorId;
+      RegisterTable[Index].TableLength        = 0;
+      RegisterTable[Index].AllocatedSize      = 0;
+      RegisterTable[Index].RegisterTableEntry = 0;
 
-    RegisterTable[NumberOfCpus + Index].InitialApicId      = (UINT32)ProcessorInfoBuffer.ProcessorId;
-    RegisterTable[NumberOfCpus + Index].TableLength        = 0;
-    RegisterTable[NumberOfCpus + Index].AllocatedSize      = 0;
-    RegisterTable[NumberOfCpus + Index].RegisterTableEntry = NULL;
+      RegisterTable[NumberOfCpus + Index].InitialApicId      = (UINT32)ProcessorInfoBuffer.ProcessorId;
+      RegisterTable[NumberOfCpus + Index].TableLength        = 0;
+      RegisterTable[NumberOfCpus + Index].AllocatedSize      = 0;
+      RegisterTable[NumberOfCpus + Index].RegisterTableEntry = 0;
+    }
+    AcpiCpuData->RegisterTable           = (EFI_PHYSICAL_ADDRESS)(UINTN)RegisterTable;
+    AcpiCpuData->PreSmmInitRegisterTable = (EFI_PHYSICAL_ADDRESS)(UINTN)(RegisterTable + NumberOfCpus);
   }
-  AcpiCpuData->RegisterTable           = (EFI_PHYSICAL_ADDRESS)(UINTN)RegisterTable;
-  AcpiCpuData->PreSmmInitRegisterTable = (EFI_PHYSICAL_ADDRESS)(UINTN)(RegisterTable + NumberOfCpus);
 
   //
   // Set PcdCpuS3DataAddress to the base address of the ACPI_CPU_DATA structure
@@ -255,13 +276,13 @@ CpuS3DataInitialize (
 
   //
   // Register EFI_END_OF_DXE_EVENT_GROUP_GUID event.
-  // The notification function saves MTRRs for ACPI_CPU_DATA
+  // The notification function allocates StartupVector and saves MTRRs for ACPI_CPU_DATA
   //
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
-                  SaveMtrrsOnEndOfDxe,
-                  &AcpiCpuDataEx->MtrrTable,
+                  CpuS3DataOnEndOfDxe,
+                  AcpiCpuData,
                   &gEfiEndOfDxeEventGroupGuid,
                   &Event
                   );

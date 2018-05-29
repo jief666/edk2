@@ -1,6 +1,6 @@
 /** @file
 
-Copyright (c) 2005 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -550,6 +550,7 @@ Ip4InitProtocol (
   IpInstance->Signature = IP4_PROTOCOL_SIGNATURE;
   CopyMem (&IpInstance->Ip4Proto, &mEfiIp4ProtocolTemplete, sizeof (IpInstance->Ip4Proto));
   IpInstance->State     = IP4_STATE_UNCONFIGED;
+  IpInstance->InDestroy   = FALSE;
   IpInstance->Service   = IpSb;
 
   InitializeListHead (&IpInstance->Link);
@@ -595,8 +596,12 @@ Ip4ConfigProtocol (
   IP4_ADDR                  Ip;
   IP4_ADDR                  Netmask;
   EFI_ARP_PROTOCOL          *Arp;
+  EFI_IP4_CONFIG2_PROTOCOL  *Ip4Config2;
+  EFI_IP4_CONFIG2_POLICY    Policy;
 
   IpSb = IpInstance->Service;
+
+  Ip4Config2  = NULL;
 
   //
   // User is changing packet filters. It must be stopped
@@ -676,10 +681,23 @@ Ip4ConfigProtocol (
     // Use the default address. Check the state.
     //
     if (IpSb->State == IP4_SERVICE_UNSTARTED) {
-      Status = Ip4StartAutoConfig (&IpSb->Ip4Config2Instance);
-
-      if (EFI_ERROR (Status)) {
-        goto ON_ERROR;
+      //
+      // Trigger the EFI_IP4_CONFIG2_PROTOCOL to retrieve the 
+      // default IPv4 address if it is not available yet.
+      //
+      Policy = IpSb->Ip4Config2Instance.Policy;
+      if (Policy != Ip4Config2PolicyDhcp) {
+        Ip4Config2 = &IpSb->Ip4Config2Instance.Ip4Config2;
+        Policy = Ip4Config2PolicyDhcp;
+        Status= Ip4Config2->SetData (
+                              Ip4Config2,
+                              Ip4Config2DataTypePolicy,
+                              sizeof (EFI_IP4_CONFIG2_POLICY),
+                              &Policy
+                              );
+        if (EFI_ERROR (Status)) {
+          goto ON_ERROR;
+        }
       }
     }
 
@@ -709,6 +727,7 @@ Ip4ConfigProtocol (
                     EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
                     );
     if (EFI_ERROR (Status)) {
+      Ip4FreeInterface (IpIf, IpInstance);
       goto ON_ERROR;
     }
   }
@@ -806,66 +825,6 @@ Ip4CleanProtocol (
   NetMapClean (&IpInstance->RxTokens);
 
   return EFI_SUCCESS;
-}
-
-
-/**
-  Validate that Ip/Netmask pair is OK to be used as station
-  address. Only continuous netmasks are supported. and check
-  that StationAddress is a unicast address on the newtwork.
-
-  @param[in]  Ip                 The IP address to validate.
-  @param[in]  Netmask            The netmaks of the IP.
-
-  @retval TRUE                   The Ip/Netmask pair is valid.
-  @retval FALSE                  The Ip/Netmask pair is invalid.
-
-**/
-BOOLEAN
-Ip4StationAddressValid (
-  IN IP4_ADDR               Ip,
-  IN IP4_ADDR               Netmask
-  )
-{
-  IP4_ADDR                  NetBrdcastMask;
-  INTN                      Len;
-  INTN                      Type;
-
-  //
-  // Only support the station address with 0.0.0.0/0 to enable DHCP client.
-  //
-  if (Netmask == IP4_ALLZERO_ADDRESS) {
-    return (BOOLEAN) (Ip == IP4_ALLZERO_ADDRESS);
-  }
-
-  //
-  // Only support the continuous net masks
-  //
-  if ((Len = NetGetMaskLength (Netmask)) == (IP4_MASK_MAX + 1)) {
-    return FALSE;
-  }
-
-  //
-  // Station address can't be class D or class E address
-  //
-  if ((Type = NetGetIpClass (Ip)) > IP4_ADDR_CLASSC) {
-    return FALSE;
-  }
-
-  //
-  // Station address can't be subnet broadcast/net broadcast address
-  //
-  if ((Ip == (Ip & Netmask)) || (Ip == (Ip | ~Netmask))) {
-    return FALSE;
-  }
-
-  NetBrdcastMask = gIp4AllMasks[MIN (Len, Type << 3)];
-
-  if (Ip == (Ip | ~NetBrdcastMask)) {
-    return FALSE;
-  }
-
-  return TRUE;
 }
 
 
@@ -996,8 +955,7 @@ EfiIp4Configure (
     Status = Ip4CleanProtocol (IpInstance);
 
     //
-    // Don't change the state if it is DESTROY, consider the following
-    // valid sequence: Mnp is unloaded-->Ip Stopped-->Udp Stopped,
+    // Consider the following valid sequence: Mnp is unloaded-->Ip Stopped-->Udp Stopped,
     // Configure (ThisIp, NULL). If the state is changed to UNCONFIGED,
     // the unload fails miserably.
     //
@@ -2291,18 +2249,10 @@ Ip4SentPacketTicking (
   return EFI_SUCCESS;
 }
 
-
 /**
-  There are two steps for this the heart beat timer of IP4 service instance. 
-  First, it times out all of its IP4 children's received-but-not-delivered 
-  and transmitted-but-not-recycle packets, and provides time input for its 
-  IGMP protocol.
-  Second, a dedicated timer is used to poll underlying media status. In case 
-  of cable swap, a new round auto configuration will be initiated. The timer 
-  will signal the IP4 to run DHCP configuration again. IP4 driver will free
-  old IP address related resource, such as route table and Interface, then
-  initiate a DHCP process to acquire new IP, eventually create route table 
-  for new IP address.
+  This heart beat timer of IP4 service instance times out all of its IP4 children's 
+  received-but-not-delivered and transmitted-but-not-recycle packets, and provides 
+  time input for its IGMP protocol.
 
   @param[in]  Event                  The IP4 service instance's heart beat timer.
   @param[in]  Context                The IP4 service instance.
@@ -2316,6 +2266,34 @@ Ip4TimerTicking (
   )
 {
   IP4_SERVICE               *IpSb;
+
+  IpSb = (IP4_SERVICE *) Context;
+  NET_CHECK_SIGNATURE (IpSb, IP4_SERVICE_SIGNATURE);
+  
+  Ip4PacketTimerTicking (IpSb);
+  Ip4IgmpTicking (IpSb);
+}
+
+/**
+  This dedicated timer is used to poll underlying network media status. In case 
+  of cable swap or wireless network switch, a new round auto configuration will 
+  be initiated. The timer will signal the IP4 to run DHCP configuration again. 
+  IP4 driver will free old IP address related resource, such as route table and 
+  Interface, then initiate a DHCP process to acquire new IP, eventually create 
+  route table for new IP address.
+
+  @param[in]  Event                  The IP4 service instance's heart beat timer.
+  @param[in]  Context                The IP4 service instance.
+
+**/
+VOID
+EFIAPI
+Ip4TimerReconfigChecking (
+  IN EFI_EVENT              Event,
+  IN VOID                   *Context
+  )
+{
+  IP4_SERVICE               *IpSb;
   BOOLEAN                   OldMediaPresent;
   EFI_STATUS                Status;
   EFI_SIMPLE_NETWORK_MODE   SnpModeData;
@@ -2324,9 +2302,6 @@ Ip4TimerTicking (
   NET_CHECK_SIGNATURE (IpSb, IP4_SERVICE_SIGNATURE);
   
   OldMediaPresent = IpSb->MediaPresent;
-
-  Ip4PacketTimerTicking (IpSb);
-  Ip4IgmpTicking (IpSb);
 
   //
   // Get fresh mode data from MNP, since underlying media status may change. 

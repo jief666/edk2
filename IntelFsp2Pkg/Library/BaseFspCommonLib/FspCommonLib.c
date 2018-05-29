@@ -17,7 +17,6 @@
 #include <Library/PcdLib.h>
 #include <FspGlobalData.h>
 #include <FspEas.h>
-#include <FspDataTable.h>
 #include <Library/FspSwitchStackLib.h>
 
 #pragma pack(1)
@@ -58,7 +57,7 @@ typedef struct {
 /**
   This function sets the FSP global data pointer.
 
-  @param[in] FspData       Fsp global data pointer.
+  @param[in] FspData       FSP global data pointer.
 
 **/
 VOID
@@ -191,7 +190,7 @@ SetFspCoreStackPointer (
 /**
   This function sets the platform specific data pointer.
 
-  @param[in] PlatformData       Fsp platform specific data pointer.
+  @param[in] PlatformData       FSP platform specific data pointer.
 
 **/
 VOID
@@ -210,7 +209,7 @@ SetFspPlatformDataPointer (
 /**
   This function gets the platform specific data pointer.
 
-   @param[in] PlatformData       Fsp platform specific data pointer.
+   @param[in] PlatformData       FSP platform specific data pointer.
 
 **/
 VOID *
@@ -240,7 +239,7 @@ SetFspUpdDataPointer (
   FSP_GLOBAL_DATA  *FspData;
 
   //
-  // Get the Fsp Global Data Pointer
+  // Get the FSP Global Data Pointer
   //
   FspData  = GetFspGlobalDataPointer ();
 
@@ -269,9 +268,9 @@ GetFspUpdDataPointer (
 
 
 /**
-  This function sets the memory init UPD data pointer.
+  This function sets the FspMemoryInit UPD data pointer.
 
-  @param[in] MemoryInitUpdPtr   memory init UPD data pointer.
+  @param[in] MemoryInitUpdPtr   FspMemoryInit UPD data pointer.
 **/
 VOID
 EFIAPI
@@ -282,20 +281,20 @@ SetFspMemoryInitUpdDataPointer (
   FSP_GLOBAL_DATA  *FspData;
 
   //
-  // Get the Fsp Global Data Pointer
+  // Get the FSP Global Data Pointer
   //
   FspData  = GetFspGlobalDataPointer ();
 
   //
-  // Set the memory init UPD pointer.
+  // Set the FspMemoryInit UPD pointer.
   //
   FspData->MemoryInitUpdPtr = MemoryInitUpdPtr;
 }
 
 /**
-  This function gets the memory init UPD data pointer.
+  This function gets the FspMemoryInit UPD data pointer.
 
-  @return memory init UPD data pointer.
+  @return FspMemoryInit UPD data pointer.
 **/
 VOID *
 EFIAPI
@@ -311,9 +310,9 @@ GetFspMemoryInitUpdDataPointer (
 
 
 /**
-  This function sets the silicon init UPD data pointer.
+  This function sets the FspSiliconInit UPD data pointer.
 
-  @param[in] SiliconInitUpdPtr   silicon init UPD data pointer.
+  @param[in] SiliconInitUpdPtr   FspSiliconInit UPD data pointer.
 **/
 VOID
 EFIAPI
@@ -324,20 +323,20 @@ SetFspSiliconInitUpdDataPointer (
   FSP_GLOBAL_DATA  *FspData;
 
   //
-  // Get the Fsp Global Data Pointer
+  // Get the FSP Global Data Pointer
   //
   FspData  = GetFspGlobalDataPointer ();
 
   //
-  // Set the silicon init UPD data pointer.
+  // Set the FspSiliconInit UPD data pointer.
   //
   FspData->SiliconInitUpdPtr = SiliconInitUpdPtr;
 }
 
 /**
-  This function gets the silicon init UPD data pointer.
+  This function gets the FspSiliconInit UPD data pointer.
 
-  @return silicon init UPD data pointer.
+  @return FspSiliconInit UPD data pointer.
 **/
 VOID *
 EFIAPI
@@ -505,48 +504,6 @@ SetPhaseStatusCode (
 }
 
 /**
-  This function gets FSP CAR base.
-
-**/
-UINT32
-EFIAPI
-GetFspCarBase (
-  VOID
-  )
-{
-  FSP_GLOBAL_DATA  *FspData;
-  UINT32           CarBase;
-
-  FspData  = GetFspGlobalDataPointer ();
-  CarBase = FspData->PlatformData.CarBase;
-  if (CarBase == 0) {
-    CarBase = PcdGet32(PcdTemporaryRamBase);
-  }
-  return CarBase;
-}
-
-/**
-  This function gets FSP CAR size.
-
-**/
-UINT32
-EFIAPI
-GetFspCarSize (
-  VOID
-  )
-{
-  FSP_GLOBAL_DATA  *FspData;
-  UINT32           CarSize;
-
-  FspData  = GetFspGlobalDataPointer ();
-  CarSize = FspData->PlatformData.CarSize;
-  if (FspData->PlatformData.CarBase == 0) {
-    CarSize = PcdGet32(PcdTemporaryRamSize);
-  }
-  return CarSize;
-}
-
-/**
   This function updates the return status of the FSP API with requested reset type and returns to Boot Loader.
 
   @param[in] FspResetType     Reset type that needs to returned as API return status
@@ -570,6 +527,6 @@ FspApiReturnStatusReset (
     SetFspApiReturnStatus ((EFI_STATUS)FspResetType);
     Pei2LoaderSwitchStack ();
     DEBUG ((DEBUG_ERROR, "!!!ERROR: FSP has requested BootLoader for reset. But BootLoader has not honored the reset\n"));
-    DEBUG ((DEBUG_ERROR, "!!!ERROR: Please add support in BootLoader to honour the reset request from FSP\n"));
+    DEBUG ((DEBUG_ERROR, "!!!ERROR: Please add support in BootLoader to honor the reset request from FSP\n"));
   } while (LoopUntilReset);
 }

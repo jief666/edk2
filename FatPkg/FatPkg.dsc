@@ -1,6 +1,5 @@
 ## @file
-#
-#  Build Binary Enhanced Fat Driver Modules
+#  Build Binary Enhanced Fat Driver Modules.
 #
 #  This Platform file is used to generate the Binary Fat Drivers
 #  for EDK II Prime release.
@@ -31,6 +30,7 @@
   INTEL:RELEASE_*_*_CC_FLAGS           = /D MDEPKG_NDEBUG
   MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG
   RVCT:RELEASE_*_*_CC_FLAGS            = -DMDEPKG_NDEBUG
+  *_*_*_CC_FLAGS                       = -D DISABLE_NEW_DEPRECATED_INTERFACES
 
 [LibraryClasses]
   #

@@ -209,6 +209,7 @@ XenStoreSPrint (
            indicating the type of write failure.
 **/
 XENSTORE_STATUS
+EFIAPI
 XenStoreVSPrint (
   IN CONST XENSTORE_TRANSACTION *Transaction,
   IN CONST CHAR8           *DirectoryPath,
@@ -229,7 +230,7 @@ XenStoreVSPrint (
 
   @return  On success, XENSTORE_STATUS_SUCCESS. Otherwise an errno value
            indicating the type of write failure.  EEXIST errors from the
-           XenStore are supressed, allowing multiple, physically different,
+           XenStore are suppressed, allowing multiple, physically different,
            xenbus_watch objects, to watch the same path in the XenStore.
 **/
 XENSTORE_STATUS

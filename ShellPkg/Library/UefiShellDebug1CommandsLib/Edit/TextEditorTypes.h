@@ -1,7 +1,7 @@
 /** @file
   Declares editor types.
 
-  Copyright (c) 2005 - 2016, Intel Corporation. All rights reserved. <BR>
+  Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved. <BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -19,9 +19,8 @@
 #include "EditTitleBar.h"
 #include "EditMenuBar.h"
 
-#define MIN_POOL_SIZE                 125
-#define MAX_STRING_LENGTH             127
-#define SHELL_EDIT_MAX_LINE_SIZE      0x50
+#define MIN_POOL_SIZE         125
+#define MAX_STRING_LENGTH     127
 
 typedef struct {
   UINTN Row;
@@ -88,18 +87,17 @@ typedef struct {
 } EFI_EDITOR_FILE_BUFFER;
 
 typedef struct {
-  EFI_EDITOR_FILE_BUFFER      *FileBuffer;
+  EFI_EDITOR_FILE_BUFFER            *FileBuffer;
 
-  EFI_EDITOR_COLOR_UNION      ColorAttributes;
-  EFI_EDITOR_POSITION         ScreenSize; // row number and column number
-  EFI_EDITOR_LINE             *CutLine;   // clip board
-  BOOLEAN                     MouseSupported;
-  EFI_SIMPLE_POINTER_PROTOCOL *MouseInterface;
-  INT32                       MouseAccumulatorX;
-  INT32                       MouseAccumulatorY;
+  EFI_EDITOR_COLOR_UNION            ColorAttributes;
+  EFI_EDITOR_POSITION               ScreenSize; // row number and column number
+  EFI_EDITOR_LINE                   *CutLine;   // clip board
+  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL *TextInputEx;
+  BOOLEAN                           MouseSupported;
+  EFI_SIMPLE_POINTER_PROTOCOL       *MouseInterface;
+  INT32                             MouseAccumulatorX;
+  INT32                             MouseAccumulatorY;
 
-  UINTN                       SelectStart;          // starting from 1
-  UINTN                       SelectEnd;            // starting from 1
 } EFI_EDITOR_GLOBAL_EDITOR;
 
 #endif

@@ -1,6 +1,6 @@
 /** @file
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
 This program and the accompanying materials
 are licensed and made available under the terms and conditions
@@ -47,6 +47,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/SerialIo.h>
 #include <Protocol/SuperIo.h>
+#include <Protocol/IoMmu.h>
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
@@ -508,6 +509,8 @@ extern BBS_TABLE           *mBbsTable;
 
 extern EFI_GENERIC_MEMORY_TEST_PROTOCOL *gGenMemoryTest;
 
+extern BOOLEAN mEndOfDxe;
+
 #define PORT_70 0x70
 #define PORT_71 0x71
 
@@ -826,7 +829,7 @@ LegacyBiosFarCall86 (
   @param  RomSize                Size of ROM Image
   @param  Flags                  Indicates if ROM found and if PC-AT.
 
-  @retval EFI_SUCCESS            Legacy Option ROM availible for this device
+  @retval EFI_SUCCESS            Legacy Option ROM available for this device
   @retval EFI_UNSUPPORTED        Legacy Option ROM not supported.
 
 **/
@@ -1258,10 +1261,10 @@ GenerateSoftInit (
   );
 
 /**
-  Do an AllocatePages () of type AllocateMaxAddress for EfiBootServicesCode
-  memory.
+  Allocate memory for legacy usage.
 
-  @param  AllocateType               Allocated Legacy Memory Type
+  @param  AllocateType               The type of allocation to perform.
+  @param  MemoryType                 The type of memory to allocate.
   @param  StartPageAddress           Start address of range
   @param  Pages                      Number of pages to allocate
   @param  Result                     Result of allocation
@@ -1273,6 +1276,7 @@ GenerateSoftInit (
 EFI_STATUS
 AllocateLegacyMemory (
   IN  EFI_ALLOCATE_TYPE         AllocateType,
+  IN  EFI_MEMORY_TYPE           MemoryType,
   IN  EFI_PHYSICAL_ADDRESS      StartPageAddress,
   IN  UINTN                     Pages,
   OUT EFI_PHYSICAL_ADDRESS      *Result
@@ -1463,7 +1467,7 @@ LegacyCalculateWriteStandardCmosChecksum (
   @param[out] OpromRevision          Revision of the PCI Rom
   @param[out] ConfigUtilityCodeHeaderPointer of Configuration Utility Code Header
 
-  @return EFI_SUCCESS            Legacy Option ROM availible for this device
+  @return EFI_SUCCESS            Legacy Option ROM available for this device
   @return EFI_ALREADY_STARTED    This device is already managed by its Oprom
   @return EFI_UNSUPPORTED        Legacy Option ROM not supported.
 

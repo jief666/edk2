@@ -1,7 +1,8 @@
 /** @file
   Capsule update PEIM for UEFI2.0
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
 
 This program and the accompanying materials
 are licensed and made available under the terms and conditions
@@ -40,6 +41,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED CONST IA32_DESCRIPTOR mGdt = {
   sizeof (mGdtEntries) - 1,
   (UINTN) mGdtEntries
   };
+
 
 /**
   The function will check if 1G page is supported.
@@ -145,6 +147,12 @@ Create4GPageTables (
   PAGE_TABLE_ENTRY                              *PageDirectoryEntry;
   UINTN                                         BigPageAddress;
   PAGE_TABLE_1G_ENTRY                           *PageDirectory1GEntry;
+  UINT64                                        AddressEncMask;
+
+  //
+  // Make sure AddressEncMask is contained to smallest supported address field.
+  //
+  AddressEncMask = PcdGet64 (PcdPteMemoryEncryptionAddressOrMask) & PAGING_1G_ADDRESS_MASK_64;
 
   //
   // Create 4G page table by default,
@@ -187,7 +195,7 @@ Create4GPageTables (
     //
     // Make a PML4 Entry
     //
-    PageMapLevel4Entry->Uint64 = (UINT64)(UINTN)PageDirectoryPointerEntry;
+    PageMapLevel4Entry->Uint64 = (UINT64)(UINTN)PageDirectoryPointerEntry | AddressEncMask;
     PageMapLevel4Entry->Bits.ReadWrite = 1;
     PageMapLevel4Entry->Bits.Present = 1;
 
@@ -198,7 +206,7 @@ Create4GPageTables (
         //
         // Fill in the Page Directory entries
         //
-        PageDirectory1GEntry->Uint64 = (UINT64)PageAddress;
+        PageDirectory1GEntry->Uint64 = (UINT64)PageAddress | AddressEncMask;
         PageDirectory1GEntry->Bits.ReadWrite = 1;
         PageDirectory1GEntry->Bits.Present = 1;
         PageDirectory1GEntry->Bits.MustBe1 = 1;
@@ -215,7 +223,7 @@ Create4GPageTables (
         //
         // Fill in a Page Directory Pointer Entries
         //
-        PageDirectoryPointerEntry->Uint64 = (UINT64)(UINTN)PageDirectoryEntry;
+        PageDirectoryPointerEntry->Uint64 = (UINT64)(UINTN)PageDirectoryEntry | AddressEncMask;
         PageDirectoryPointerEntry->Bits.ReadWrite = 1;
         PageDirectoryPointerEntry->Bits.Present = 1;
 
@@ -223,7 +231,7 @@ Create4GPageTables (
           //
           // Fill in the Page Directory entries
           //
-          PageDirectoryEntry->Uint64 = (UINT64)PageAddress;
+          PageDirectoryEntry->Uint64 = (UINT64)PageAddress | AddressEncMask;
           PageDirectoryEntry->Bits.ReadWrite = 1;
           PageDirectoryEntry->Bits.Present = 1;
           PageDirectoryEntry->Bits.MustBe1 = 1;
@@ -320,6 +328,14 @@ Thunk32To64 (
     // Write CR3
     //
     AsmWriteCr3 ((UINTN) PageTableAddress);
+
+    DEBUG ((
+      DEBUG_INFO,
+      "%a() Stack Base: 0x%lx, Stack Size: 0x%lx\n",
+      __FUNCTION__,
+      Context->StackBufferBase,
+      Context->StackBufferLength
+      ));
 
     //
     // Disable interrupt of Debug timer, since the IDT table cannot work in long mode
@@ -435,6 +451,7 @@ ModeSwitch (
   Context.MemoryBase64Ptr       = (EFI_PHYSICAL_ADDRESS)(UINTN)&MemoryBase64;
   Context.MemorySize64Ptr       = (EFI_PHYSICAL_ADDRESS)(UINTN)&MemorySize64;
   Context.Page1GSupport         = Page1GSupport;
+  Context.AddressEncMask        = PcdGet64 (PcdPteMemoryEncryptionAddressOrMask) & PAGING_1G_ADDRESS_MASK_64;
 
   //
   // Prepare data for return back
@@ -608,6 +625,82 @@ GetPhysicalAddressBits (
 #endif
 
 /**
+  Sort memory resource entries based upon PhysicalStart, from low to high.
+
+  @param[in, out] MemoryResource    A pointer to the memory resource entry buffer.
+
+**/
+VOID
+SortMemoryResourceDescriptor (
+  IN OUT MEMORY_RESOURCE_DESCRIPTOR *MemoryResource
+  )
+{
+  MEMORY_RESOURCE_DESCRIPTOR        *MemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *NextMemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        TempMemoryResource;
+
+  MemoryResourceEntry = MemoryResource;
+  NextMemoryResourceEntry = MemoryResource + 1;
+  while (MemoryResourceEntry->ResourceLength != 0) {
+    while (NextMemoryResourceEntry->ResourceLength != 0) {
+      if (MemoryResourceEntry->PhysicalStart > NextMemoryResourceEntry->PhysicalStart) {
+        CopyMem (&TempMemoryResource, MemoryResourceEntry, sizeof (MEMORY_RESOURCE_DESCRIPTOR));
+        CopyMem (MemoryResourceEntry, NextMemoryResourceEntry, sizeof (MEMORY_RESOURCE_DESCRIPTOR));
+        CopyMem (NextMemoryResourceEntry, &TempMemoryResource, sizeof (MEMORY_RESOURCE_DESCRIPTOR));
+      }
+
+      NextMemoryResourceEntry = NextMemoryResourceEntry + 1;
+    }
+
+    MemoryResourceEntry     = MemoryResourceEntry + 1;
+    NextMemoryResourceEntry = MemoryResourceEntry + 1;
+  }
+}
+
+/**
+  Merge continous memory resource entries.
+
+  @param[in, out] MemoryResource    A pointer to the memory resource entry buffer.
+
+**/
+VOID
+MergeMemoryResourceDescriptor (
+  IN OUT MEMORY_RESOURCE_DESCRIPTOR *MemoryResource
+  )
+{
+  MEMORY_RESOURCE_DESCRIPTOR        *MemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *NewMemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *NextMemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *MemoryResourceEnd;
+
+  MemoryResourceEntry = MemoryResource;
+  NewMemoryResourceEntry = MemoryResource;
+  while (MemoryResourceEntry->ResourceLength != 0) {
+    CopyMem (NewMemoryResourceEntry, MemoryResourceEntry, sizeof (MEMORY_RESOURCE_DESCRIPTOR));
+    NextMemoryResourceEntry = MemoryResourceEntry + 1;
+
+    while ((NextMemoryResourceEntry->ResourceLength != 0) &&
+           (NextMemoryResourceEntry->PhysicalStart == (MemoryResourceEntry->PhysicalStart + MemoryResourceEntry->ResourceLength))) {
+      MemoryResourceEntry->ResourceLength += NextMemoryResourceEntry->ResourceLength;
+      if (NewMemoryResourceEntry != MemoryResourceEntry) {
+        NewMemoryResourceEntry->ResourceLength += NextMemoryResourceEntry->ResourceLength;
+      }
+ 
+      NextMemoryResourceEntry = NextMemoryResourceEntry + 1;
+    }
+
+    MemoryResourceEntry = NextMemoryResourceEntry;
+    NewMemoryResourceEntry = NewMemoryResourceEntry + 1;
+  }
+
+  //
+  // Set NULL terminate memory resource descriptor after merging.
+  //
+  MemoryResourceEnd = NewMemoryResourceEntry;
+  ZeroMem (MemoryResourceEnd, sizeof (MEMORY_RESOURCE_DESCRIPTOR));
+}
+
+/**
   Build memory resource descriptor from resource descriptor in HOB list.
 
   @return Pointer to the buffer of memory resource descriptor.
@@ -687,6 +780,20 @@ BuildMemoryResourceDescriptor (
     Hob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, Hob.Raw);
   }
 
+  SortMemoryResourceDescriptor (MemoryResource);
+  MergeMemoryResourceDescriptor (MemoryResource);
+
+  DEBUG ((DEBUG_INFO, "Dump MemoryResource[] after sorted and merged\n"));
+  for (Index = 0; MemoryResource[Index].ResourceLength != 0; Index++) {
+    DEBUG ((
+      DEBUG_INFO,
+      "  MemoryResource[0x%x] - Start(0x%0lx) Length(0x%0lx)\n",
+      Index,
+      MemoryResource[Index].PhysicalStart,
+      MemoryResource[Index].ResourceLength
+      ));
+  }
+
   return MemoryResource;
 }
 
@@ -746,7 +853,7 @@ GetCapsuleDescriptors (
                                         (VOID *) &CapsuleDataPtr64
                                         );
         if (EFI_ERROR (Status)) {
-          DEBUG ((EFI_D_ERROR, "Capsule -- capsule variable not set\n"));
+          DEBUG ((DEBUG_INFO, "Capsule -- capsule variable not set\n"));
           return EFI_NOT_FOUND;
         }
         //
@@ -760,7 +867,13 @@ GetCapsuleDescriptors (
           return EFI_SUCCESS;
         }
       } else {
-        UnicodeValueToString (TempVarName, 0, Index, 0);
+        UnicodeValueToStringS (
+          TempVarName,
+          sizeof (CapsuleVarName) - ((UINTN)TempVarName - (UINTN)CapsuleVarName),
+          0,
+          Index,
+          0
+          );
         Status = PPIVariableServices->GetVariable (
                                         PPIVariableServices,
                                         CapsuleVarName,
@@ -883,7 +996,13 @@ CapsuleCoalesce (
   TempVarName = CapsuleVarName + StrLen (CapsuleVarName);
   while (TRUE) {
     if (Index > 0) {
-      UnicodeValueToString (TempVarName, 0, Index, 0);
+      UnicodeValueToStringS (
+        TempVarName,
+        sizeof (CapsuleVarName) - ((UINTN)TempVarName - (UINTN)CapsuleVarName),
+        0,
+        Index,
+        0
+        );
     }
     Status = PPIVariableServices->GetVariable (
                                     PPIVariableServices,

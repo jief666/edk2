@@ -91,7 +91,7 @@ AdjustRootBridgeResource (
   // Align IO  resource at 4K  boundary
   //
   Mask        = 0xFFFULL;
-  Io->Limit   = (Io->Limit + Mask) & ~Mask;
+  Io->Limit   = ((Io->Limit + Mask) & ~Mask) - 1;
   if (Io->Base != MAX_UINT64) {
     Io->Base &= ~Mask;
   }
@@ -100,7 +100,7 @@ AdjustRootBridgeResource (
   // Align MEM resource at 1MB boundary
   //
   Mask        = 0xFFFFFULL;
-  Mem->Limit  = (Mem->Limit + Mask) & ~Mask;
+  Mem->Limit  = ((Mem->Limit + Mask) & ~Mask) - 1;
   if (Mem->Base != MAX_UINT64) {
     Mem->Base &= ~Mask;
   }
@@ -328,8 +328,13 @@ ScanForRootBridges (
   for (PrimaryBus = 0; PrimaryBus <= PCI_MAX_BUS; PrimaryBus = SubBus + 1) {
     SubBus = PrimaryBus;
     Attributes = 0;
+
+    ZeroMem (&Io, sizeof (Io));
+    ZeroMem (&Mem, sizeof (Mem));
+    ZeroMem (&MemAbove4G, sizeof (MemAbove4G));
+    ZeroMem (&PMem, sizeof (PMem));
+    ZeroMem (&PMemAbove4G, sizeof (PMemAbove4G));
     Io.Base = Mem.Base = MemAbove4G.Base = PMem.Base = PMemAbove4G.Base = MAX_UINT64;
-    Io.Limit = Mem.Limit = MemAbove4G.Limit = PMem.Limit = PMemAbove4G.Limit = 0;
     //
     // Scan all the PCI devices on the primary bus of the PCI root bridge
     //

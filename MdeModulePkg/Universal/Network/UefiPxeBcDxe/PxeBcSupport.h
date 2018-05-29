@@ -1,6 +1,6 @@
 /** @file
   Support routines for PxeBc.
-Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2007 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -38,7 +38,7 @@ PxeBcCommonNotify (
   @param  SubnetMask Pointer to the subnetmask of the station ip address.
   @param  Gateway    Pointer to the gateway ip address.
   @param  SrcPort    Pointer to the srouce port of the station.
-  @param  TTL        The time to live field of the IP header. 
+  @param  Ttl        The time to live field of the IP header. 
   @param  ToS        The type of service field of the IP header.
 
   @retval EFI_SUCCESS           The configuration settings were set, changed, or reset successfully.
@@ -64,9 +64,23 @@ PxeBcConfigureUdpWriteInstance (
   IN EFI_IPv4_ADDRESS   *SubnetMask,
   IN EFI_IPv4_ADDRESS   *Gateway,
   IN OUT UINT16         *SrcPort,
-  IN     UINT8          TTL,
+  IN     UINT8          Ttl,
   IN     UINT8          ToS
   );
+
+
+/**
+  This function is to display the IPv4 address.
+
+  @param[in]  Ip        The pointer to the IPv4 address.
+
+**/
+VOID
+PxeBcShowIp4Addr (
+  IN EFI_IPv4_ADDRESS   *Ip
+  );
+  
+
 /**
   Convert number to ASCII value.
 

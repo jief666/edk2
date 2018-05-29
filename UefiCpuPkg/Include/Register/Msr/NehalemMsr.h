@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-5.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.6.
 
 **/
 
@@ -25,6 +25,25 @@
 #define __NEHALEM_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel processors based on the Nehalem microarchitecture?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_NEHALEM_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x1A || \
+    DisplayModel == 0x1E || \
+    DisplayModel == 0x1F || \
+    DisplayModel == 0x2E    \
+    )                       \
+   )
 
 /**
   Package. Model Specific Platform ID (R).
@@ -41,6 +60,7 @@
 
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PLATFORM_ID);
   @endcode
+  @note MSR_NEHALEM_PLATFORM_ID is defined as MSR_PLATFORM_ID in SDM.
 **/
 #define MSR_NEHALEM_PLATFORM_ID                  0x00000017
 
@@ -82,6 +102,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_SMI_COUNT);
   @endcode
+  @note MSR_NEHALEM_SMI_COUNT is defined as MSR_SMI_COUNT in SDM.
 **/
 #define MSR_NEHALEM_SMI_COUNT                    0x00000034
 
@@ -127,6 +148,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PLATFORM_INFO);
   AsmWriteMsr64 (MSR_NEHALEM_PLATFORM_INFO, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_PLATFORM_INFO is defined as MSR_PLATFORM_INFO in SDM.
 **/
 #define MSR_NEHALEM_PLATFORM_INFO                0x000000CE
 
@@ -195,6 +217,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PKG_CST_CONFIG_CONTROL);
   AsmWriteMsr64 (MSR_NEHALEM_PKG_CST_CONFIG_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_PKG_CST_CONFIG_CONTROL is defined as MSR_PKG_CST_CONFIG_CONTROL in SDM.
 **/
 #define MSR_NEHALEM_PKG_CST_CONFIG_CONTROL       0x000000E2
 
@@ -250,7 +273,23 @@ typedef union {
     /// auto-demote information.
     ///
     UINT32  C1AutoDemotion:1;
-    UINT32  Reserved4:5;
+    ///
+    /// [Bit 27] Enable C3 Undemotion (R/W).
+    ///
+    UINT32  C3Undemotion:1;
+    ///
+    /// [Bit 28] Enable C1 Undemotion (R/W).
+    ///
+    UINT32  C1Undemotion:1;
+    ///
+    /// [Bit 29] Package C State Demotion Enable (R/W).
+    ///
+    UINT32  CStateDemotion:1;
+    ///
+    /// [Bit 30] Package C State UnDemotion Enable (R/W).
+    ///
+    UINT32  CStateUndemotion:1;
+    UINT32  Reserved4:1;
     UINT32  Reserved5:32;
   } Bits;
   ///
@@ -281,6 +320,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PMG_IO_CAPTURE_BASE);
   AsmWriteMsr64 (MSR_NEHALEM_PMG_IO_CAPTURE_BASE, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_PMG_IO_CAPTURE_BASE is defined as MSR_PMG_IO_CAPTURE_BASE in SDM.
 **/
 #define MSR_NEHALEM_PMG_IO_CAPTURE_BASE          0x000000E4
 
@@ -340,6 +380,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_IA32_MISC_ENABLE);
   AsmWriteMsr64 (MSR_NEHALEM_IA32_MISC_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_IA32_MISC_ENABLE is defined as IA32_MISC_ENABLE in SDM.
 **/
 #define MSR_NEHALEM_IA32_MISC_ENABLE             0x000001A0
 
@@ -358,7 +399,7 @@ typedef union {
     UINT32  Reserved1:2;
     ///
     /// [Bit 3] Thread. Automatic Thermal Control Circuit Enable (R/W) See
-    /// Table 35-2.
+    /// Table 35-2. Default value is 1.
     ///
     UINT32  AutomaticThermalControlCircuit:1;
     UINT32  Reserved2:3;
@@ -372,7 +413,7 @@ typedef union {
     ///
     UINT32  BTS:1;
     ///
-    /// [Bit 12] Thread. Precise Event Based Sampling Unavailable (RO) See
+    /// [Bit 12] Thread. Processor Event Based Sampling Unavailable (RO) See
     /// Table 35-2.
     ///
     UINT32  PEBS:1;
@@ -440,6 +481,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_TEMPERATURE_TARGET);
   AsmWriteMsr64 (MSR_NEHALEM_TEMPERATURE_TARGET, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_TEMPERATURE_TARGET is defined as MSR_TEMPERATURE_TARGET in SDM.
 **/
 #define MSR_NEHALEM_TEMPERATURE_TARGET           0x000001A2
 
@@ -487,6 +529,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_MISC_FEATURE_CONTROL);
   AsmWriteMsr64 (MSR_NEHALEM_MISC_FEATURE_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_MISC_FEATURE_CONTROL is defined as MSR_MISC_FEATURE_CONTROL in SDM.
 **/
 #define MSR_NEHALEM_MISC_FEATURE_CONTROL         0x000001A4
 
@@ -551,6 +594,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_OFFCORE_RSP_0);
   AsmWriteMsr64 (MSR_NEHALEM_OFFCORE_RSP_0, Msr);
   @endcode
+  @note MSR_NEHALEM_OFFCORE_RSP_0 is defined as MSR_OFFCORE_RSP_0 in SDM.
 **/
 #define MSR_NEHALEM_OFFCORE_RSP_0                0x000001A6
 
@@ -571,6 +615,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_MISC_PWR_MGMT);
   AsmWriteMsr64 (MSR_NEHALEM_MISC_PWR_MGMT, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_MISC_PWR_MGMT is defined as MSR_MISC_PWR_MGMT in SDM.
 **/
 #define MSR_NEHALEM_MISC_PWR_MGMT                0x000001AA
 
@@ -626,6 +671,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_TURBO_POWER_CURRENT_LIMIT);
   AsmWriteMsr64 (MSR_NEHALEM_TURBO_POWER_CURRENT_LIMIT, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_TURBO_POWER_CURRENT_LIMIT is defined as MSR_TURBO_POWER_CURRENT_LIMIT in SDM.
 **/
 #define MSR_NEHALEM_TURBO_POWER_CURRENT_LIMIT    0x000001AC
 
@@ -686,6 +732,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_TURBO_RATIO_LIMIT);
   @endcode
+  @note MSR_NEHALEM_TURBO_RATIO_LIMIT is defined as MSR_TURBO_RATIO_LIMIT in SDM.
 **/
 #define MSR_NEHALEM_TURBO_RATIO_LIMIT            0x000001AD
 
@@ -732,7 +779,7 @@ typedef union {
 
 /**
   Core. Last Branch Record Filtering Select Register (R/W)  See Section
-  17.6.2, "Filtering of Last Branch Records.".
+  17.7.2, "Filtering of Last Branch Records.".
 
   @param  ECX  MSR_NEHALEM_LBR_SELECT (0x000001C8)
   @param  EAX  Lower 32-bits of MSR value.
@@ -747,6 +794,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_LBR_SELECT);
   AsmWriteMsr64 (MSR_NEHALEM_LBR_SELECT, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_LBR_SELECT is defined as MSR_LBR_SELECT in SDM.
 **/
 #define MSR_NEHALEM_LBR_SELECT                   0x000001C8
 
@@ -824,6 +872,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_LASTBRANCH_TOS);
   AsmWriteMsr64 (MSR_NEHALEM_LASTBRANCH_TOS, Msr);
   @endcode
+  @note MSR_NEHALEM_LASTBRANCH_TOS is defined as MSR_LASTBRANCH_TOS in SDM.
 **/
 #define MSR_NEHALEM_LASTBRANCH_TOS               0x000001C9
 
@@ -843,6 +892,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_NEHALEM_LER_FROM_LIP);
   @endcode
+  @note MSR_NEHALEM_LER_FROM_LIP is defined as MSR_LER_FROM_LIP in SDM.
 **/
 #define MSR_NEHALEM_LER_FROM_LIP                 0x000001DD
 
@@ -863,6 +913,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_NEHALEM_LER_TO_LIP);
   @endcode
+  @note MSR_NEHALEM_LER_TO_LIP is defined as MSR_LER_TO_LIP in SDM.
 **/
 #define MSR_NEHALEM_LER_TO_LIP                   0x000001DE
 
@@ -883,6 +934,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_POWER_CTL);
   AsmWriteMsr64 (MSR_NEHALEM_POWER_CTL, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_POWER_CTL is defined as MSR_POWER_CTL in SDM.
 **/
 #define MSR_NEHALEM_POWER_CTL                    0x000001FC
 
@@ -916,44 +968,26 @@ typedef union {
 
 
 /**
-  Thread. See Table 35-2. See Section 18.4.2, "Global Counter Control
-  Facilities.".
-
-  @param  ECX  MSR_NEHALEM_IA32_PERF_GLOBAL_STAUS (0x0000038E)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_NEHALEM_IA32_PERF_GLOBAL_STAUS);
-  AsmWriteMsr64 (MSR_NEHALEM_IA32_PERF_GLOBAL_STAUS, Msr);
-  @endcode
-**/
-#define MSR_NEHALEM_IA32_PERF_GLOBAL_STAUS       0x0000038E
-
-
-/**
   Thread. (RO).
 
-  @param  ECX  MSR_NEHALEM_PERF_GLOBAL_STAUS (0x0000038E)
+  @param  ECX  MSR_NEHALEM_PERF_GLOBAL_STATUS (0x0000038E)
   @param  EAX  Lower 32-bits of MSR value.
-               Described by the type MSR_NEHALEM_PERF_GLOBAL_STAUS_REGISTER.
+               Described by the type MSR_NEHALEM_PERF_GLOBAL_STATUS_REGISTER.
   @param  EDX  Upper 32-bits of MSR value.
-               Described by the type MSR_NEHALEM_PERF_GLOBAL_STAUS_REGISTER.
+               Described by the type MSR_NEHALEM_PERF_GLOBAL_STATUS_REGISTER.
 
   <b>Example usage</b>
   @code
-  MSR_NEHALEM_PERF_GLOBAL_STAUS_REGISTER  Msr;
+  MSR_NEHALEM_PERF_GLOBAL_STATUS_REGISTER  Msr;
 
-  Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PERF_GLOBAL_STAUS);
+  Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PERF_GLOBAL_STATUS);
   @endcode
+  @note MSR_NEHALEM_PERF_GLOBAL_STATUS is defined as MSR_PERF_GLOBAL_STATUS in SDM.
 **/
-#define MSR_NEHALEM_PERF_GLOBAL_STAUS            0x0000038E
+#define MSR_NEHALEM_PERF_GLOBAL_STATUS           0x0000038E
 
 /**
-  MSR information returned for MSR index #MSR_NEHALEM_PERF_GLOBAL_STAUS
+  MSR information returned for MSR index #MSR_NEHALEM_PERF_GLOBAL_STATUS
 **/
 typedef union {
   ///
@@ -972,7 +1006,7 @@ typedef union {
   /// All bit fields as a 64-bit value
   ///
   UINT64  Uint64;
-} MSR_NEHALEM_PERF_GLOBAL_STAUS_REGISTER;
+} MSR_NEHALEM_PERF_GLOBAL_STATUS_REGISTER;
 
 
 /**
@@ -991,6 +1025,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PERF_GLOBAL_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_PERF_GLOBAL_OVF_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_PERF_GLOBAL_OVF_CTRL is defined as MSR_PERF_GLOBAL_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_PERF_GLOBAL_OVF_CTRL         0x00000390
 
@@ -1018,7 +1053,7 @@ typedef union {
 
 
 /**
-  Thread. See Section 18.7.1.1, "Precise Event Based Sampling (PEBS).".
+  Thread. See Section 18.8.1.1, "Processor Event Based Sampling (PEBS).".
 
   @param  ECX  MSR_NEHALEM_PEBS_ENABLE (0x000003F1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1033,6 +1068,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PEBS_ENABLE);
   AsmWriteMsr64 (MSR_NEHALEM_PEBS_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_PEBS_ENABLE is defined as MSR_PEBS_ENABLE in SDM.
 **/
 #define MSR_NEHALEM_PEBS_ENABLE                  0x000003F1
 
@@ -1087,7 +1123,7 @@ typedef union {
 
 
 /**
-  Thread. See Section 18.7.1.2, "Load Latency Performance Monitoring
+  Thread. See Section 18.8.1.2, "Load Latency Performance Monitoring
   Facility.".
 
   @param  ECX  MSR_NEHALEM_PEBS_LD_LAT (0x000003F6)
@@ -1103,6 +1139,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_PEBS_LD_LAT);
   AsmWriteMsr64 (MSR_NEHALEM_PEBS_LD_LAT, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_PEBS_LD_LAT is defined as MSR_PEBS_LD_LAT in SDM.
 **/
 #define MSR_NEHALEM_PEBS_LD_LAT                  0x000003F6
 
@@ -1150,6 +1187,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_PKG_C3_RESIDENCY);
   AsmWriteMsr64 (MSR_NEHALEM_PKG_C3_RESIDENCY, Msr);
   @endcode
+  @note MSR_NEHALEM_PKG_C3_RESIDENCY is defined as MSR_PKG_C3_RESIDENCY in SDM.
 **/
 #define MSR_NEHALEM_PKG_C3_RESIDENCY             0x000003F8
 
@@ -1171,6 +1209,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_PKG_C6_RESIDENCY);
   AsmWriteMsr64 (MSR_NEHALEM_PKG_C6_RESIDENCY, Msr);
   @endcode
+  @note MSR_NEHALEM_PKG_C6_RESIDENCY is defined as MSR_PKG_C6_RESIDENCY in SDM.
 **/
 #define MSR_NEHALEM_PKG_C6_RESIDENCY             0x000003F9
 
@@ -1192,6 +1231,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_PKG_C7_RESIDENCY);
   AsmWriteMsr64 (MSR_NEHALEM_PKG_C7_RESIDENCY, Msr);
   @endcode
+  @note MSR_NEHALEM_PKG_C7_RESIDENCY is defined as MSR_PKG_C7_RESIDENCY in SDM.
 **/
 #define MSR_NEHALEM_PKG_C7_RESIDENCY             0x000003FA
 
@@ -1213,6 +1253,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_CORE_C3_RESIDENCY);
   AsmWriteMsr64 (MSR_NEHALEM_CORE_C3_RESIDENCY, Msr);
   @endcode
+  @note MSR_NEHALEM_CORE_C3_RESIDENCY is defined as MSR_CORE_C3_RESIDENCY in SDM.
 **/
 #define MSR_NEHALEM_CORE_C3_RESIDENCY            0x000003FC
 
@@ -1234,182 +1275,17 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_CORE_C6_RESIDENCY);
   AsmWriteMsr64 (MSR_NEHALEM_CORE_C6_RESIDENCY, Msr);
   @endcode
+  @note MSR_NEHALEM_CORE_C6_RESIDENCY is defined as MSR_CORE_C6_RESIDENCY in SDM.
 **/
 #define MSR_NEHALEM_CORE_C6_RESIDENCY            0x000003FD
 
 
 /**
-  See Section 15.3.2.4, "IA32_MCi_MISC MSRs.".
-
-  @param  ECX  MSR_NEHALEM_MCi_MISC
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_NEHALEM_MC0_MISC);
-  AsmWriteMsr64 (MSR_NEHALEM_MC0_MISC, Msr);
-  @endcode
-  @{
-**/
-#define MSR_NEHALEM_MC0_MISC                     0x00000403
-#define MSR_NEHALEM_MC1_MISC                     0x00000407
-#define MSR_NEHALEM_MC2_MISC                     0x0000040B
-#define MSR_NEHALEM_MC3_MISC                     0x0000040F
-#define MSR_NEHALEM_MC4_MISC                     0x00000413
-#define MSR_NEHALEM_MC5_MISC                     0x00000417
-#define MSR_NEHALEM_MC6_MISC                     0x0000041B
-#define MSR_NEHALEM_MC7_MISC                     0x0000041F
-#define MSR_NEHALEM_MC8_MISC                     0x00000423
-#define MSR_NEHALEM_MC9_MISC                     0x00000427
-#define MSR_NEHALEM_MC10_MISC                    0x0000042B
-#define MSR_NEHALEM_MC11_MISC                    0x0000042F
-#define MSR_NEHALEM_MC12_MISC                    0x00000433
-#define MSR_NEHALEM_MC13_MISC                    0x00000437
-#define MSR_NEHALEM_MC14_MISC                    0x0000043B
-#define MSR_NEHALEM_MC15_MISC                    0x0000043F
-#define MSR_NEHALEM_MC16_MISC                    0x00000443
-#define MSR_NEHALEM_MC17_MISC                    0x00000447
-#define MSR_NEHALEM_MC18_MISC                    0x0000044B
-#define MSR_NEHALEM_MC19_MISC                    0x0000044F
-#define MSR_NEHALEM_MC20_MISC                    0x00000453
-#define MSR_NEHALEM_MC21_MISC                    0x00000457
-/// @}
-
-
-/**
-  See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
-
-  @param  ECX  MSR_NEHALEM_MCi_CTL
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_NEHALEM_MC3_CTL);
-  AsmWriteMsr64 (MSR_NEHALEM_MC3_CTL, Msr);
-  @endcode
-  @{
-**/
-#define MSR_NEHALEM_MC3_CTL                      0x0000040C
-#define MSR_NEHALEM_MC4_CTL                      0x00000410
-#define MSR_NEHALEM_MC5_CTL                      0x00000414
-#define MSR_NEHALEM_MC6_CTL                      0x00000418
-#define MSR_NEHALEM_MC7_CTL                      0x0000041C
-#define MSR_NEHALEM_MC8_CTL                      0x00000420
-#define MSR_NEHALEM_MC9_CTL                      0x00000424
-#define MSR_NEHALEM_MC10_CTL                     0x00000428
-#define MSR_NEHALEM_MC11_CTL                     0x0000042C
-#define MSR_NEHALEM_MC12_CTL                     0x00000430
-#define MSR_NEHALEM_MC13_CTL                     0x00000434
-#define MSR_NEHALEM_MC14_CTL                     0x00000438
-#define MSR_NEHALEM_MC15_CTL                     0x0000043C
-#define MSR_NEHALEM_MC16_CTL                     0x00000440
-#define MSR_NEHALEM_MC17_CTL                     0x00000444
-#define MSR_NEHALEM_MC18_CTL                     0x00000448
-#define MSR_NEHALEM_MC19_CTL                     0x0000044C
-#define MSR_NEHALEM_MC20_CTL                     0x00000450
-#define MSR_NEHALEM_MC21_CTL                     0x00000454
-/// @}
-
-
-/**
-  See Section 15.3.2.2, "IA32_MCi_STATUS MSRS," and Chapter 16.
-
-  @param  ECX  MSR_NEHALEM_MCi_STATUS (0x0000040D)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_NEHALEM_MC3_STATUS);
-  AsmWriteMsr64 (MSR_NEHALEM_MC3_STATUS, Msr);
-  @endcode
-  @{
-**/
-#define MSR_NEHALEM_MC3_STATUS                   0x0000040D
-#define MSR_NEHALEM_MC4_STATUS                   0x00000411
-#define MSR_NEHALEM_MC5_STATUS                   0x00000415
-#define MSR_NEHALEM_MC6_STATUS                   0x00000419
-#define MSR_NEHALEM_MC7_STATUS                   0x0000041D
-#define MSR_NEHALEM_MC8_STATUS                   0x00000421
-#define MSR_NEHALEM_MC9_STATUS                   0x00000425
-#define MSR_NEHALEM_MC10_STATUS                  0x00000429
-#define MSR_NEHALEM_MC11_STATUS                  0x0000042D
-#define MSR_NEHALEM_MC12_STATUS                  0x00000431
-#define MSR_NEHALEM_MC13_STATUS                  0x00000435
-#define MSR_NEHALEM_MC14_STATUS                  0x00000439
-#define MSR_NEHALEM_MC15_STATUS                  0x0000043D
-#define MSR_NEHALEM_MC16_STATUS                  0x00000441
-#define MSR_NEHALEM_MC17_STATUS                  0x00000445
-#define MSR_NEHALEM_MC18_STATUS                  0x00000449
-#define MSR_NEHALEM_MC19_STATUS                  0x0000044D
-#define MSR_NEHALEM_MC20_STATUS                  0x00000451
-#define MSR_NEHALEM_MC21_STATUS                  0x00000455
-/// @}
-
-
-/**
-  Core. See Section 15.3.2.3, "IA32_MCi_ADDR MSRs."
-
-  The MSR_MC3_ADDR register is either not implemented or contains no address
-  if the ADDRV flag in the MSR_MC3_STATUS register is clear. When not
-  implemented in the processor, all reads and writes to this MSR will cause a
-  general-protection exception.
-
-  The MSR_MC4_ADDR register is either not implemented or contains no address
-  if the ADDRV flag in the MSR_MC4_STATUS register is clear. When not
-  implemented in the processor, all reads and writes to this MSR will cause a
-  general-protection exception.
-
-  @param  ECX  MSR_NEHALEM_MC3_ADDR (0x0000040E)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_NEHALEM_MC3_ADDR);
-  AsmWriteMsr64 (MSR_NEHALEM_MC3_ADDR, Msr);
-  @endcode
-  @{
-**/
-#define MSR_NEHALEM_MC3_ADDR                     0x0000040E
-#define MSR_NEHALEM_MC4_ADDR                     0x00000412
-#define MSR_NEHALEM_MC5_ADDR                     0x00000416
-#define MSR_NEHALEM_MC6_ADDR                     0x0000041A
-#define MSR_NEHALEM_MC7_ADDR                     0x0000041E
-#define MSR_NEHALEM_MC8_ADDR                     0x00000422
-#define MSR_NEHALEM_MC9_ADDR                     0x00000426
-#define MSR_NEHALEM_MC10_ADDR                    0x0000042A
-#define MSR_NEHALEM_MC11_ADDR                    0x0000042E
-#define MSR_NEHALEM_MC12_ADDR                    0x00000432
-#define MSR_NEHALEM_MC13_ADDR                    0x00000436
-#define MSR_NEHALEM_MC14_ADDR                    0x0000043A
-#define MSR_NEHALEM_MC15_ADDR                    0x0000043E
-#define MSR_NEHALEM_MC16_ADDR                    0x00000442
-#define MSR_NEHALEM_MC17_ADDR                    0x00000446
-#define MSR_NEHALEM_MC18_ADDR                    0x0000044A
-#define MSR_NEHALEM_MC19_ADDR                    0x0000044E
-#define MSR_NEHALEM_MC20_ADDR                    0x00000452
-#define MSR_NEHALEM_MC21_ADDR                    0x00000456
-/// @}
-
-
-/**
   Thread. Last Branch Record n From IP (R/W) One of sixteen pairs of last
-  branch record registers on the last branch record stack. This part of the
-  stack contains pointers to the source instruction for one of the last
-  sixteen branches, exceptions, or interrupts taken by the processor. See
-  also: -  Last Branch Record Stack TOS at 1C9H -  Section 17.6.1, "LBR
-  Stack.".
+  branch record registers on the last branch record stack. The From_IP part of
+  the stack contains pointers to the source instruction. See also: -  Last
+  Branch Record Stack TOS at 1C9H -  Section 17.7.1 and record format in
+  Section 17.4.8.1.
 
   @param  ECX  MSR_NEHALEM_LASTBRANCH_n_FROM_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -1422,6 +1298,22 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_LASTBRANCH_0_FROM_IP);
   AsmWriteMsr64 (MSR_NEHALEM_LASTBRANCH_0_FROM_IP, Msr);
   @endcode
+  @note MSR_NEHALEM_LASTBRANCH_0_FROM_IP  is defined as MSR_LASTBRANCH_0_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_1_FROM_IP  is defined as MSR_LASTBRANCH_1_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_2_FROM_IP  is defined as MSR_LASTBRANCH_2_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_3_FROM_IP  is defined as MSR_LASTBRANCH_3_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_4_FROM_IP  is defined as MSR_LASTBRANCH_4_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_5_FROM_IP  is defined as MSR_LASTBRANCH_5_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_6_FROM_IP  is defined as MSR_LASTBRANCH_6_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_7_FROM_IP  is defined as MSR_LASTBRANCH_7_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_8_FROM_IP  is defined as MSR_LASTBRANCH_8_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_9_FROM_IP  is defined as MSR_LASTBRANCH_9_FROM_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_10_FROM_IP is defined as MSR_LASTBRANCH_10_FROM_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_11_FROM_IP is defined as MSR_LASTBRANCH_11_FROM_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_12_FROM_IP is defined as MSR_LASTBRANCH_12_FROM_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_13_FROM_IP is defined as MSR_LASTBRANCH_13_FROM_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_14_FROM_IP is defined as MSR_LASTBRANCH_14_FROM_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_15_FROM_IP is defined as MSR_LASTBRANCH_15_FROM_IP in SDM.
   @{
 **/
 #define MSR_NEHALEM_LASTBRANCH_0_FROM_IP         0x00000680
@@ -1446,8 +1338,7 @@ typedef union {
 /**
   Thread. Last Branch Record n To IP (R/W) One of sixteen pairs of last branch
   record registers on the last branch record stack. This part of the stack
-  contains pointers to the destination instruction for one of the last sixteen
-  branches, exceptions, or interrupts taken by the processor.
+  contains pointers to the destination instruction.
 
   @param  ECX  MSR_NEHALEM_LASTBRANCH_n_TO_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -1460,6 +1351,22 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_LASTBRANCH_0_TO_IP);
   AsmWriteMsr64 (MSR_NEHALEM_LASTBRANCH_0_TO_IP, Msr);
   @endcode
+  @note MSR_NEHALEM_LASTBRANCH_0_TO_IP  is defined as MSR_LASTBRANCH_0_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_1_TO_IP  is defined as MSR_LASTBRANCH_1_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_2_TO_IP  is defined as MSR_LASTBRANCH_2_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_3_TO_IP  is defined as MSR_LASTBRANCH_3_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_4_TO_IP  is defined as MSR_LASTBRANCH_4_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_5_TO_IP  is defined as MSR_LASTBRANCH_5_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_6_TO_IP  is defined as MSR_LASTBRANCH_6_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_7_TO_IP  is defined as MSR_LASTBRANCH_7_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_8_TO_IP  is defined as MSR_LASTBRANCH_8_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_9_TO_IP  is defined as MSR_LASTBRANCH_9_TO_IP  in SDM.
+        MSR_NEHALEM_LASTBRANCH_10_TO_IP is defined as MSR_LASTBRANCH_10_TO_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_11_TO_IP is defined as MSR_LASTBRANCH_11_TO_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_12_TO_IP is defined as MSR_LASTBRANCH_12_TO_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_13_TO_IP is defined as MSR_LASTBRANCH_13_TO_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_14_TO_IP is defined as MSR_LASTBRANCH_14_TO_IP in SDM.
+        MSR_NEHALEM_LASTBRANCH_15_TO_IP is defined as MSR_LASTBRANCH_15_TO_IP in SDM.
   @{
 **/
 #define MSR_NEHALEM_LASTBRANCH_0_TO_IP           0x000006C0
@@ -1497,6 +1404,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_NEHALEM_GQ_SNOOP_MESF);
   AsmWriteMsr64 (MSR_NEHALEM_GQ_SNOOP_MESF, Msr.Uint64);
   @endcode
+  @note MSR_NEHALEM_GQ_SNOOP_MESF is defined as MSR_GQ_SNOOP_MESF in SDM.
 **/
 #define MSR_NEHALEM_GQ_SNOOP_MESF                0x00000301
 
@@ -1555,7 +1463,7 @@ typedef union {
 
 
 /**
-  Package. See Section 18.7.2.1, "Uncore Performance Monitoring Management
+  Package. See Section 18.8.2.1, "Uncore Performance Monitoring Management
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_PERF_GLOBAL_CTRL (0x00000391)
@@ -1569,12 +1477,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_PERF_GLOBAL_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_PERF_GLOBAL_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_PERF_GLOBAL_CTRL is defined as MSR_UNCORE_PERF_GLOBAL_CTRL in SDM.
 **/
 #define MSR_NEHALEM_UNCORE_PERF_GLOBAL_CTRL      0x00000391
 
 
 /**
-  Package. See Section 18.7.2.1, "Uncore Performance Monitoring Management
+  Package. See Section 18.8.2.1, "Uncore Performance Monitoring Management
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_PERF_GLOBAL_STATUS (0x00000392)
@@ -1588,12 +1497,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_PERF_GLOBAL_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_PERF_GLOBAL_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_PERF_GLOBAL_STATUS is defined as MSR_UNCORE_PERF_GLOBAL_STATUS in SDM.
 **/
 #define MSR_NEHALEM_UNCORE_PERF_GLOBAL_STATUS    0x00000392
 
 
 /**
-  Package. See Section 18.7.2.1, "Uncore Performance Monitoring Management
+  Package. See Section 18.8.2.1, "Uncore Performance Monitoring Management
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_PERF_GLOBAL_OVF_CTRL (0x00000393)
@@ -1607,12 +1517,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_PERF_GLOBAL_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_PERF_GLOBAL_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_PERF_GLOBAL_OVF_CTRL is defined as MSR_UNCORE_PERF_GLOBAL_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_UNCORE_PERF_GLOBAL_OVF_CTRL  0x00000393
 
 
 /**
-  Package. See Section 18.7.2.1, "Uncore Performance Monitoring Management
+  Package. See Section 18.8.2.1, "Uncore Performance Monitoring Management
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_FIXED_CTR0 (0x00000394)
@@ -1626,12 +1537,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_FIXED_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_FIXED_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_FIXED_CTR0 is defined as MSR_UNCORE_FIXED_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_UNCORE_FIXED_CTR0            0x00000394
 
 
 /**
-  Package. See Section 18.7.2.1, "Uncore Performance Monitoring Management
+  Package. See Section 18.8.2.1, "Uncore Performance Monitoring Management
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_FIXED_CTR_CTRL (0x00000395)
@@ -1645,12 +1557,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_FIXED_CTR_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_FIXED_CTR_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_FIXED_CTR_CTRL is defined as MSR_UNCORE_FIXED_CTR_CTRL in SDM.
 **/
 #define MSR_NEHALEM_UNCORE_FIXED_CTR_CTRL        0x00000395
 
 
 /**
-  Package. See Section 18.7.2.3, "Uncore Address/Opcode Match MSR.".
+  Package. See Section 18.8.2.3, "Uncore Address/Opcode Match MSR.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_ADDR_OPCODE_MATCH (0x00000396)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1663,12 +1576,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_ADDR_OPCODE_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_ADDR_OPCODE_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_ADDR_OPCODE_MATCH is defined as MSR_UNCORE_ADDR_OPCODE_MATCH in SDM.
 **/
 #define MSR_NEHALEM_UNCORE_ADDR_OPCODE_MATCH     0x00000396
 
 
 /**
-  Package. See Section 18.7.2.2, "Uncore Performance Event Configuration
+  Package. See Section 18.8.2.2, "Uncore Performance Event Configuration
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_PMCi
@@ -1682,6 +1596,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_PMC0);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_PMC0, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_PMC0 is defined as MSR_UNCORE_PMC0 in SDM.
+        MSR_NEHALEM_UNCORE_PMC1 is defined as MSR_UNCORE_PMC1 in SDM.
+        MSR_NEHALEM_UNCORE_PMC2 is defined as MSR_UNCORE_PMC2 in SDM.
+        MSR_NEHALEM_UNCORE_PMC3 is defined as MSR_UNCORE_PMC3 in SDM.
+        MSR_NEHALEM_UNCORE_PMC4 is defined as MSR_UNCORE_PMC4 in SDM.
+        MSR_NEHALEM_UNCORE_PMC5 is defined as MSR_UNCORE_PMC5 in SDM.
+        MSR_NEHALEM_UNCORE_PMC6 is defined as MSR_UNCORE_PMC6 in SDM.
+        MSR_NEHALEM_UNCORE_PMC7 is defined as MSR_UNCORE_PMC7 in SDM.
   @{
 **/
 #define MSR_NEHALEM_UNCORE_PMC0                  0x000003B0
@@ -1695,7 +1617,7 @@ typedef union {
 /// @}
 
 /**
-  Package. See Section 18.7.2.2, "Uncore Performance Event Configuration
+  Package. See Section 18.8.2.2, "Uncore Performance Event Configuration
   Facility.".
 
   @param  ECX  MSR_NEHALEM_UNCORE_PERFEVTSELi
@@ -1709,6 +1631,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_UNCORE_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_NEHALEM_UNCORE_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_UNCORE_PERFEVTSEL0 is defined as MSR_UNCORE_PERFEVTSEL0 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL1 is defined as MSR_UNCORE_PERFEVTSEL1 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL2 is defined as MSR_UNCORE_PERFEVTSEL2 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL3 is defined as MSR_UNCORE_PERFEVTSEL3 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL4 is defined as MSR_UNCORE_PERFEVTSEL4 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL5 is defined as MSR_UNCORE_PERFEVTSEL5 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL6 is defined as MSR_UNCORE_PERFEVTSEL6 in SDM.
+        MSR_NEHALEM_UNCORE_PERFEVTSEL7 is defined as MSR_UNCORE_PERFEVTSEL7 in SDM.
   @{
 **/
 #define MSR_NEHALEM_UNCORE_PERFEVTSEL0           0x000003C0
@@ -1736,6 +1666,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_FIXED_CTR);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_FIXED_CTR, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_FIXED_CTR is defined as MSR_W_PMON_FIXED_CTR in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_FIXED_CTR             0x00000394
 
@@ -1754,6 +1685,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_FIXED_CTR_CTL);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_FIXED_CTR_CTL, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_FIXED_CTR_CTL is defined as MSR_W_PMON_FIXED_CTR_CTL in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_FIXED_CTR_CTL         0x00000395
 
@@ -1772,6 +1704,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_U_PMON_GLOBAL_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_U_PMON_GLOBAL_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_U_PMON_GLOBAL_CTRL is defined as MSR_U_PMON_GLOBAL_CTRL in SDM.
 **/
 #define MSR_NEHALEM_U_PMON_GLOBAL_CTRL           0x00000C00
 
@@ -1790,6 +1723,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_U_PMON_GLOBAL_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_U_PMON_GLOBAL_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_U_PMON_GLOBAL_STATUS is defined as MSR_U_PMON_GLOBAL_STATUS in SDM.
 **/
 #define MSR_NEHALEM_U_PMON_GLOBAL_STATUS         0x00000C01
 
@@ -1808,6 +1742,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_U_PMON_GLOBAL_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_U_PMON_GLOBAL_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_U_PMON_GLOBAL_OVF_CTRL is defined as MSR_U_PMON_GLOBAL_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_U_PMON_GLOBAL_OVF_CTRL       0x00000C02
 
@@ -1826,6 +1761,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_U_PMON_EVNT_SEL);
   AsmWriteMsr64 (MSR_NEHALEM_U_PMON_EVNT_SEL, Msr);
   @endcode
+  @note MSR_NEHALEM_U_PMON_EVNT_SEL is defined as MSR_U_PMON_EVNT_SEL in SDM.
 **/
 #define MSR_NEHALEM_U_PMON_EVNT_SEL              0x00000C10
 
@@ -1844,6 +1780,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_U_PMON_CTR);
   AsmWriteMsr64 (MSR_NEHALEM_U_PMON_CTR, Msr);
   @endcode
+  @note MSR_NEHALEM_U_PMON_CTR is defined as MSR_U_PMON_CTR in SDM.
 **/
 #define MSR_NEHALEM_U_PMON_CTR                   0x00000C11
 
@@ -1862,6 +1799,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_BOX_CTRL is defined as MSR_B0_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_BOX_CTRL             0x00000C20
 
@@ -1880,6 +1818,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_BOX_STATUS is defined as MSR_B0_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_BOX_STATUS           0x00000C21
 
@@ -1898,6 +1837,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_BOX_OVF_CTRL is defined as MSR_B0_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_BOX_OVF_CTRL         0x00000C22
 
@@ -1916,6 +1856,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_EVNT_SEL0 is defined as MSR_B0_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_EVNT_SEL0            0x00000C30
 
@@ -1934,6 +1875,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_CTR0 is defined as MSR_B0_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_CTR0                 0x00000C31
 
@@ -1952,6 +1894,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_EVNT_SEL1 is defined as MSR_B0_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_EVNT_SEL1            0x00000C32
 
@@ -1970,6 +1913,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_CTR1 is defined as MSR_B0_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_CTR1                 0x00000C33
 
@@ -1988,6 +1932,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_EVNT_SEL2 is defined as MSR_B0_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_EVNT_SEL2            0x00000C34
 
@@ -2006,6 +1951,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_CTR2 is defined as MSR_B0_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_CTR2                 0x00000C35
 
@@ -2024,6 +1970,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_EVNT_SEL3 is defined as MSR_B0_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_EVNT_SEL3            0x00000C36
 
@@ -2042,6 +1989,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_CTR3 is defined as MSR_B0_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_CTR3                 0x00000C37
 
@@ -2060,6 +2008,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_BOX_CTRL is defined as MSR_S0_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_BOX_CTRL             0x00000C40
 
@@ -2078,6 +2027,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_BOX_STATUS is defined as MSR_S0_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_BOX_STATUS           0x00000C41
 
@@ -2096,6 +2046,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_BOX_OVF_CTRL is defined as MSR_S0_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_BOX_OVF_CTRL         0x00000C42
 
@@ -2114,6 +2065,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_EVNT_SEL0 is defined as MSR_S0_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_EVNT_SEL0            0x00000C50
 
@@ -2132,6 +2084,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_CTR0 is defined as MSR_S0_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_CTR0                 0x00000C51
 
@@ -2150,6 +2103,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_EVNT_SEL1 is defined as MSR_S0_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_EVNT_SEL1            0x00000C52
 
@@ -2168,6 +2122,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_CTR1 is defined as MSR_S0_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_CTR1                 0x00000C53
 
@@ -2186,6 +2141,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_EVNT_SEL2 is defined as MSR_S0_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_EVNT_SEL2            0x00000C54
 
@@ -2204,6 +2160,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_CTR2 is defined as MSR_S0_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_CTR2                 0x00000C55
 
@@ -2222,6 +2179,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_EVNT_SEL3 is defined as MSR_S0_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_EVNT_SEL3            0x00000C56
 
@@ -2240,6 +2198,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_CTR3 is defined as MSR_S0_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_CTR3                 0x00000C57
 
@@ -2258,6 +2217,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_BOX_CTRL is defined as MSR_B1_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_BOX_CTRL             0x00000C60
 
@@ -2276,6 +2236,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_BOX_STATUS is defined as MSR_B1_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_BOX_STATUS           0x00000C61
 
@@ -2294,6 +2255,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_BOX_OVF_CTRL is defined as MSR_B1_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_BOX_OVF_CTRL         0x00000C62
 
@@ -2312,6 +2274,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_EVNT_SEL0 is defined as MSR_B1_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_EVNT_SEL0            0x00000C70
 
@@ -2330,6 +2293,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_CTR0 is defined as MSR_B1_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_CTR0                 0x00000C71
 
@@ -2348,6 +2312,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_EVNT_SEL1 is defined as MSR_B1_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_EVNT_SEL1            0x00000C72
 
@@ -2366,6 +2331,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_CTR1 is defined as MSR_B1_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_CTR1                 0x00000C73
 
@@ -2384,6 +2350,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_EVNT_SEL2 is defined as MSR_B1_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_EVNT_SEL2            0x00000C74
 
@@ -2402,6 +2369,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_CTR2 is defined as MSR_B1_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_CTR2                 0x00000C75
 
@@ -2420,6 +2388,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_EVNT_SEL3 is defined as MSR_B1_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_EVNT_SEL3            0x00000C76
 
@@ -2438,6 +2407,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_CTR3 is defined as MSR_B1_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_CTR3                 0x00000C77
 
@@ -2456,6 +2426,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_BOX_CTRL is defined as MSR_W_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_BOX_CTRL              0x00000C80
 
@@ -2474,6 +2445,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_BOX_STATUS is defined as MSR_W_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_BOX_STATUS            0x00000C81
 
@@ -2492,6 +2464,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_BOX_OVF_CTRL is defined as MSR_W_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_BOX_OVF_CTRL          0x00000C82
 
@@ -2510,6 +2483,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_EVNT_SEL0 is defined as MSR_W_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_EVNT_SEL0             0x00000C90
 
@@ -2528,6 +2502,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_CTR0 is defined as MSR_W_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_CTR0                  0x00000C91
 
@@ -2546,6 +2521,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_EVNT_SEL1 is defined as MSR_W_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_EVNT_SEL1             0x00000C92
 
@@ -2564,6 +2540,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_CTR1 is defined as MSR_W_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_CTR1                  0x00000C93
 
@@ -2582,6 +2559,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_EVNT_SEL2 is defined as MSR_W_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_EVNT_SEL2             0x00000C94
 
@@ -2600,6 +2578,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_CTR2 is defined as MSR_W_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_CTR2                  0x00000C95
 
@@ -2618,6 +2597,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_EVNT_SEL3 is defined as MSR_W_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_EVNT_SEL3             0x00000C96
 
@@ -2636,6 +2616,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_W_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_W_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_W_PMON_CTR3 is defined as MSR_W_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_W_PMON_CTR3                  0x00000C97
 
@@ -2654,6 +2635,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_BOX_CTRL is defined as MSR_M0_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_BOX_CTRL             0x00000CA0
 
@@ -2672,6 +2654,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_BOX_STATUS is defined as MSR_M0_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_BOX_STATUS           0x00000CA1
 
@@ -2690,6 +2673,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_BOX_OVF_CTRL is defined as MSR_M0_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_BOX_OVF_CTRL         0x00000CA2
 
@@ -2708,6 +2692,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_TIMESTAMP);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_TIMESTAMP, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_TIMESTAMP is defined as MSR_M0_PMON_TIMESTAMP in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_TIMESTAMP            0x00000CA4
 
@@ -2726,6 +2711,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_DSP);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_DSP, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_DSP is defined as MSR_M0_PMON_DSP in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_DSP                  0x00000CA5
 
@@ -2744,6 +2730,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_ISS);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_ISS, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_ISS is defined as MSR_M0_PMON_ISS in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_ISS                  0x00000CA6
 
@@ -2762,6 +2749,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_MAP);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_MAP, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_MAP is defined as MSR_M0_PMON_MAP in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_MAP                  0x00000CA7
 
@@ -2780,6 +2768,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_MSC_THR);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_MSC_THR, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_MSC_THR is defined as MSR_M0_PMON_MSC_THR in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_MSC_THR              0x00000CA8
 
@@ -2798,6 +2787,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_PGT);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_PGT, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_PGT is defined as MSR_M0_PMON_PGT in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_PGT                  0x00000CA9
 
@@ -2816,6 +2806,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_PLD);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_PLD, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_PLD is defined as MSR_M0_PMON_PLD in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_PLD                  0x00000CAA
 
@@ -2834,6 +2825,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_ZDP);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_ZDP, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_ZDP is defined as MSR_M0_PMON_ZDP in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_ZDP                  0x00000CAB
 
@@ -2852,6 +2844,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_EVNT_SEL0 is defined as MSR_M0_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_EVNT_SEL0            0x00000CB0
 
@@ -2870,6 +2863,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_CTR0 is defined as MSR_M0_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_CTR0                 0x00000CB1
 
@@ -2888,6 +2882,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_EVNT_SEL1 is defined as MSR_M0_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_EVNT_SEL1            0x00000CB2
 
@@ -2906,6 +2901,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_CTR1 is defined as MSR_M0_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_CTR1                 0x00000CB3
 
@@ -2924,6 +2920,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_EVNT_SEL2 is defined as MSR_M0_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_EVNT_SEL2            0x00000CB4
 
@@ -2942,6 +2939,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_CTR2 is defined as MSR_M0_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_CTR2                 0x00000CB5
 
@@ -2960,6 +2958,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_EVNT_SEL3 is defined as MSR_M0_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_EVNT_SEL3            0x00000CB6
 
@@ -2978,6 +2977,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_CTR3 is defined as MSR_M0_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_CTR3                 0x00000CB7
 
@@ -2996,6 +2996,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_EVNT_SEL4 is defined as MSR_M0_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_EVNT_SEL4            0x00000CB8
 
@@ -3014,6 +3015,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_CTR4 is defined as MSR_M0_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_CTR4                 0x00000CB9
 
@@ -3032,6 +3034,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_EVNT_SEL5 is defined as MSR_M0_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_EVNT_SEL5            0x00000CBA
 
@@ -3050,6 +3053,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_CTR5 is defined as MSR_M0_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_CTR5                 0x00000CBB
 
@@ -3068,6 +3072,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_BOX_CTRL is defined as MSR_S1_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_BOX_CTRL             0x00000CC0
 
@@ -3086,6 +3091,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_BOX_STATUS is defined as MSR_S1_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_BOX_STATUS           0x00000CC1
 
@@ -3104,6 +3110,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_BOX_OVF_CTRL is defined as MSR_S1_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_BOX_OVF_CTRL         0x00000CC2
 
@@ -3122,6 +3129,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_EVNT_SEL0 is defined as MSR_S1_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_EVNT_SEL0            0x00000CD0
 
@@ -3140,6 +3148,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_CTR0 is defined as MSR_S1_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_CTR0                 0x00000CD1
 
@@ -3158,6 +3167,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_EVNT_SEL1 is defined as MSR_S1_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_EVNT_SEL1            0x00000CD2
 
@@ -3176,6 +3186,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_CTR1 is defined as MSR_S1_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_CTR1                 0x00000CD3
 
@@ -3194,6 +3205,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_EVNT_SEL2 is defined as MSR_S1_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_EVNT_SEL2            0x00000CD4
 
@@ -3212,6 +3224,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_CTR2 is defined as MSR_S1_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_CTR2                 0x00000CD5
 
@@ -3230,6 +3243,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_EVNT_SEL3 is defined as MSR_S1_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_EVNT_SEL3            0x00000CD6
 
@@ -3248,6 +3262,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_CTR3 is defined as MSR_S1_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_CTR3                 0x00000CD7
 
@@ -3266,6 +3281,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_BOX_CTRL is defined as MSR_M1_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_BOX_CTRL             0x00000CE0
 
@@ -3284,6 +3300,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_BOX_STATUS is defined as MSR_M1_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_BOX_STATUS           0x00000CE1
 
@@ -3302,6 +3319,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_BOX_OVF_CTRL is defined as MSR_M1_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_BOX_OVF_CTRL         0x00000CE2
 
@@ -3320,6 +3338,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_TIMESTAMP);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_TIMESTAMP, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_TIMESTAMP is defined as MSR_M1_PMON_TIMESTAMP in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_TIMESTAMP            0x00000CE4
 
@@ -3338,6 +3357,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_DSP);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_DSP, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_DSP is defined as MSR_M1_PMON_DSP in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_DSP                  0x00000CE5
 
@@ -3356,6 +3376,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_ISS);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_ISS, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_ISS is defined as MSR_M1_PMON_ISS in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_ISS                  0x00000CE6
 
@@ -3374,6 +3395,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_MAP);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_MAP, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_MAP is defined as MSR_M1_PMON_MAP in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_MAP                  0x00000CE7
 
@@ -3392,6 +3414,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_MSC_THR);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_MSC_THR, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_MSC_THR is defined as MSR_M1_PMON_MSC_THR in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_MSC_THR              0x00000CE8
 
@@ -3410,6 +3433,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_PGT);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_PGT, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_PGT is defined as MSR_M1_PMON_PGT in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_PGT                  0x00000CE9
 
@@ -3428,6 +3452,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_PLD);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_PLD, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_PLD is defined as MSR_M1_PMON_PLD in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_PLD                  0x00000CEA
 
@@ -3446,6 +3471,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_ZDP);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_ZDP, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_ZDP is defined as MSR_M1_PMON_ZDP in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_ZDP                  0x00000CEB
 
@@ -3464,6 +3490,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_EVNT_SEL0 is defined as MSR_M1_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_EVNT_SEL0            0x00000CF0
 
@@ -3482,6 +3509,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_CTR0 is defined as MSR_M1_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_CTR0                 0x00000CF1
 
@@ -3500,6 +3528,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_EVNT_SEL1 is defined as MSR_M1_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_EVNT_SEL1            0x00000CF2
 
@@ -3518,6 +3547,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_CTR1 is defined as MSR_M1_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_CTR1                 0x00000CF3
 
@@ -3536,6 +3566,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_EVNT_SEL2 is defined as MSR_M1_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_EVNT_SEL2            0x00000CF4
 
@@ -3554,6 +3585,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_CTR2 is defined as MSR_M1_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_CTR2                 0x00000CF5
 
@@ -3572,6 +3604,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_EVNT_SEL3 is defined as MSR_M1_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_EVNT_SEL3            0x00000CF6
 
@@ -3590,6 +3623,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_CTR3 is defined as MSR_M1_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_CTR3                 0x00000CF7
 
@@ -3608,6 +3642,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_EVNT_SEL4 is defined as MSR_M1_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_EVNT_SEL4            0x00000CF8
 
@@ -3626,6 +3661,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_CTR4 is defined as MSR_M1_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_CTR4                 0x00000CF9
 
@@ -3644,6 +3680,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_EVNT_SEL5 is defined as MSR_M1_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_EVNT_SEL5            0x00000CFA
 
@@ -3662,6 +3699,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_CTR5 is defined as MSR_M1_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_CTR5                 0x00000CFB
 
@@ -3680,6 +3718,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_BOX_CTRL is defined as MSR_C0_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_BOX_CTRL             0x00000D00
 
@@ -3698,6 +3737,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_BOX_STATUS is defined as MSR_C0_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_BOX_STATUS           0x00000D01
 
@@ -3716,6 +3756,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_BOX_OVF_CTRL is defined as MSR_C0_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_BOX_OVF_CTRL         0x00000D02
 
@@ -3734,6 +3775,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_EVNT_SEL0 is defined as MSR_C0_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_EVNT_SEL0            0x00000D10
 
@@ -3752,6 +3794,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_CTR0 is defined as MSR_C0_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_CTR0                 0x00000D11
 
@@ -3770,6 +3813,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_EVNT_SEL1 is defined as MSR_C0_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_EVNT_SEL1            0x00000D12
 
@@ -3788,6 +3832,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_CTR1 is defined as MSR_C0_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_CTR1                 0x00000D13
 
@@ -3806,6 +3851,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_EVNT_SEL2 is defined as MSR_C0_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_EVNT_SEL2            0x00000D14
 
@@ -3824,6 +3870,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_CTR2 is defined as MSR_C0_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_CTR2                 0x00000D15
 
@@ -3842,6 +3889,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_EVNT_SEL3 is defined as MSR_C0_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_EVNT_SEL3            0x00000D16
 
@@ -3860,6 +3908,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_CTR3 is defined as MSR_C0_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_CTR3                 0x00000D17
 
@@ -3878,6 +3927,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_EVNT_SEL4 is defined as MSR_C0_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_EVNT_SEL4            0x00000D18
 
@@ -3896,6 +3946,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_CTR4 is defined as MSR_C0_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_CTR4                 0x00000D19
 
@@ -3914,6 +3965,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_EVNT_SEL5 is defined as MSR_C0_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_EVNT_SEL5            0x00000D1A
 
@@ -3932,6 +3984,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C0_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C0_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C0_PMON_CTR5 is defined as MSR_C0_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C0_PMON_CTR5                 0x00000D1B
 
@@ -3950,6 +4003,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_BOX_CTRL is defined as MSR_C4_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_BOX_CTRL             0x00000D20
 
@@ -3968,6 +4022,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_BOX_STATUS is defined as MSR_C4_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_BOX_STATUS           0x00000D21
 
@@ -3986,6 +4041,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_BOX_OVF_CTRL is defined as MSR_C4_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_BOX_OVF_CTRL         0x00000D22
 
@@ -4004,6 +4060,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_EVNT_SEL0 is defined as MSR_C4_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_EVNT_SEL0            0x00000D30
 
@@ -4022,6 +4079,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_CTR0 is defined as MSR_C4_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_CTR0                 0x00000D31
 
@@ -4040,6 +4098,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_EVNT_SEL1 is defined as MSR_C4_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_EVNT_SEL1            0x00000D32
 
@@ -4058,6 +4117,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_CTR1 is defined as MSR_C4_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_CTR1                 0x00000D33
 
@@ -4076,6 +4136,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_EVNT_SEL2 is defined as MSR_C4_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_EVNT_SEL2            0x00000D34
 
@@ -4094,6 +4155,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_CTR2 is defined as MSR_C4_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_CTR2                 0x00000D35
 
@@ -4112,6 +4174,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_EVNT_SEL3 is defined as MSR_C4_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_EVNT_SEL3            0x00000D36
 
@@ -4130,6 +4193,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_CTR3 is defined as MSR_C4_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_CTR3                 0x00000D37
 
@@ -4148,6 +4212,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_EVNT_SEL4 is defined as MSR_C4_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_EVNT_SEL4            0x00000D38
 
@@ -4166,6 +4231,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_CTR4 is defined as MSR_C4_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_CTR4                 0x00000D39
 
@@ -4184,6 +4250,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_EVNT_SEL5 is defined as MSR_C4_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_EVNT_SEL5            0x00000D3A
 
@@ -4202,6 +4269,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C4_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C4_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C4_PMON_CTR5 is defined as MSR_C4_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C4_PMON_CTR5                 0x00000D3B
 
@@ -4220,6 +4288,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_BOX_CTRL is defined as MSR_C2_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_BOX_CTRL             0x00000D40
 
@@ -4238,6 +4307,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_BOX_STATUS is defined as MSR_C2_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_BOX_STATUS           0x00000D41
 
@@ -4256,6 +4326,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_BOX_OVF_CTRL is defined as MSR_C2_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_BOX_OVF_CTRL         0x00000D42
 
@@ -4274,6 +4345,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_EVNT_SEL0 is defined as MSR_C2_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_EVNT_SEL0            0x00000D50
 
@@ -4292,6 +4364,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_CTR0 is defined as MSR_C2_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_CTR0                 0x00000D51
 
@@ -4310,6 +4383,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_EVNT_SEL1 is defined as MSR_C2_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_EVNT_SEL1            0x00000D52
 
@@ -4328,6 +4402,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_CTR1 is defined as MSR_C2_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_CTR1                 0x00000D53
 
@@ -4346,6 +4421,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_EVNT_SEL2 is defined as MSR_C2_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_EVNT_SEL2            0x00000D54
 
@@ -4364,6 +4440,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_CTR2 is defined as MSR_C2_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_CTR2                 0x00000D55
 
@@ -4382,6 +4459,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_EVNT_SEL3 is defined as MSR_C2_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_EVNT_SEL3            0x00000D56
 
@@ -4400,6 +4478,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_CTR3 is defined as MSR_C2_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_CTR3                 0x00000D57
 
@@ -4418,6 +4497,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_EVNT_SEL4 is defined as MSR_C2_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_EVNT_SEL4            0x00000D58
 
@@ -4436,6 +4516,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_CTR4 is defined as MSR_C2_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_CTR4                 0x00000D59
 
@@ -4454,6 +4535,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_EVNT_SEL5 is defined as MSR_C2_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_EVNT_SEL5            0x00000D5A
 
@@ -4472,6 +4554,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C2_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C2_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C2_PMON_CTR5 is defined as MSR_C2_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C2_PMON_CTR5                 0x00000D5B
 
@@ -4490,6 +4573,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_BOX_CTRL is defined as MSR_C6_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_BOX_CTRL             0x00000D60
 
@@ -4508,6 +4592,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_BOX_STATUS is defined as MSR_C6_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_BOX_STATUS           0x00000D61
 
@@ -4526,6 +4611,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_BOX_OVF_CTRL is defined as MSR_C6_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_BOX_OVF_CTRL         0x00000D62
 
@@ -4544,6 +4630,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_EVNT_SEL0 is defined as MSR_C6_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_EVNT_SEL0            0x00000D70
 
@@ -4562,6 +4649,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_CTR0 is defined as MSR_C6_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_CTR0                 0x00000D71
 
@@ -4580,6 +4668,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_EVNT_SEL1 is defined as MSR_C6_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_EVNT_SEL1            0x00000D72
 
@@ -4598,6 +4687,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_CTR1 is defined as MSR_C6_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_CTR1                 0x00000D73
 
@@ -4616,6 +4706,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_EVNT_SEL2 is defined as MSR_C6_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_EVNT_SEL2            0x00000D74
 
@@ -4634,6 +4725,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_CTR2 is defined as MSR_C6_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_CTR2                 0x00000D75
 
@@ -4652,6 +4744,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_EVNT_SEL3 is defined as MSR_C6_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_EVNT_SEL3            0x00000D76
 
@@ -4670,6 +4763,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_CTR3 is defined as MSR_C6_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_CTR3                 0x00000D77
 
@@ -4688,6 +4782,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_EVNT_SEL4 is defined as MSR_C6_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_EVNT_SEL4            0x00000D78
 
@@ -4706,6 +4801,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_CTR4 is defined as MSR_C6_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_CTR4                 0x00000D79
 
@@ -4724,6 +4820,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_EVNT_SEL5 is defined as MSR_C6_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_EVNT_SEL5            0x00000D7A
 
@@ -4742,6 +4839,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C6_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C6_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C6_PMON_CTR5 is defined as MSR_C6_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C6_PMON_CTR5                 0x00000D7B
 
@@ -4760,6 +4858,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_BOX_CTRL is defined as MSR_C1_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_BOX_CTRL             0x00000D80
 
@@ -4778,6 +4877,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_BOX_STATUS is defined as MSR_C1_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_BOX_STATUS           0x00000D81
 
@@ -4796,6 +4896,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_BOX_OVF_CTRL is defined as MSR_C1_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_BOX_OVF_CTRL         0x00000D82
 
@@ -4814,6 +4915,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_EVNT_SEL0 is defined as MSR_C1_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_EVNT_SEL0            0x00000D90
 
@@ -4832,6 +4934,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_CTR0 is defined as MSR_C1_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_CTR0                 0x00000D91
 
@@ -4850,6 +4953,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_EVNT_SEL1 is defined as MSR_C1_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_EVNT_SEL1            0x00000D92
 
@@ -4868,6 +4972,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_CTR1 is defined as MSR_C1_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_CTR1                 0x00000D93
 
@@ -4886,6 +4991,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_EVNT_SEL2 is defined as MSR_C1_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_EVNT_SEL2            0x00000D94
 
@@ -4904,6 +5010,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_CTR2 is defined as MSR_C1_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_CTR2                 0x00000D95
 
@@ -4922,6 +5029,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_EVNT_SEL3 is defined as MSR_C1_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_EVNT_SEL3            0x00000D96
 
@@ -4940,6 +5048,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_CTR3 is defined as MSR_C1_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_CTR3                 0x00000D97
 
@@ -4958,6 +5067,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_EVNT_SEL4 is defined as MSR_C1_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_EVNT_SEL4            0x00000D98
 
@@ -4976,6 +5086,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_CTR4 is defined as MSR_C1_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_CTR4                 0x00000D99
 
@@ -4994,6 +5105,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_EVNT_SEL5 is defined as MSR_C1_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_EVNT_SEL5            0x00000D9A
 
@@ -5012,6 +5124,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C1_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C1_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C1_PMON_CTR5 is defined as MSR_C1_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C1_PMON_CTR5                 0x00000D9B
 
@@ -5030,6 +5143,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_BOX_CTRL is defined as MSR_C5_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_BOX_CTRL             0x00000DA0
 
@@ -5048,6 +5162,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_BOX_STATUS is defined as MSR_C5_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_BOX_STATUS           0x00000DA1
 
@@ -5066,6 +5181,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_BOX_OVF_CTRL is defined as MSR_C5_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_BOX_OVF_CTRL         0x00000DA2
 
@@ -5084,6 +5200,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_EVNT_SEL0 is defined as MSR_C5_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_EVNT_SEL0            0x00000DB0
 
@@ -5102,6 +5219,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_CTR0 is defined as MSR_C5_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_CTR0                 0x00000DB1
 
@@ -5120,6 +5238,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_EVNT_SEL1 is defined as MSR_C5_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_EVNT_SEL1            0x00000DB2
 
@@ -5138,6 +5257,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_CTR1 is defined as MSR_C5_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_CTR1                 0x00000DB3
 
@@ -5156,6 +5276,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_EVNT_SEL2 is defined as MSR_C5_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_EVNT_SEL2            0x00000DB4
 
@@ -5174,6 +5295,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_CTR2 is defined as MSR_C5_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_CTR2                 0x00000DB5
 
@@ -5192,6 +5314,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_EVNT_SEL3 is defined as MSR_C5_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_EVNT_SEL3            0x00000DB6
 
@@ -5210,6 +5333,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_CTR3 is defined as MSR_C5_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_CTR3                 0x00000DB7
 
@@ -5228,6 +5352,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_EVNT_SEL4 is defined as MSR_C5_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_EVNT_SEL4            0x00000DB8
 
@@ -5246,6 +5371,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_CTR4 is defined as MSR_C5_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_CTR4                 0x00000DB9
 
@@ -5264,6 +5390,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_EVNT_SEL5 is defined as MSR_C5_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_EVNT_SEL5            0x00000DBA
 
@@ -5282,6 +5409,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C5_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C5_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C5_PMON_CTR5 is defined as MSR_C5_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C5_PMON_CTR5                 0x00000DBB
 
@@ -5300,6 +5428,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_BOX_CTRL is defined as MSR_C3_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_BOX_CTRL             0x00000DC0
 
@@ -5318,6 +5447,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_BOX_STATUS is defined as MSR_C3_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_BOX_STATUS           0x00000DC1
 
@@ -5336,6 +5466,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_BOX_OVF_CTRL is defined as MSR_C3_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_BOX_OVF_CTRL         0x00000DC2
 
@@ -5354,6 +5485,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_EVNT_SEL0 is defined as MSR_C3_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_EVNT_SEL0            0x00000DD0
 
@@ -5372,6 +5504,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_CTR0 is defined as MSR_C3_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_CTR0                 0x00000DD1
 
@@ -5390,6 +5523,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_EVNT_SEL1 is defined as MSR_C3_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_EVNT_SEL1            0x00000DD2
 
@@ -5408,6 +5542,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_CTR1 is defined as MSR_C3_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_CTR1                 0x00000DD3
 
@@ -5426,6 +5561,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_EVNT_SEL2 is defined as MSR_C3_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_EVNT_SEL2            0x00000DD4
 
@@ -5444,6 +5580,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_CTR2 is defined as MSR_C3_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_CTR2                 0x00000DD5
 
@@ -5462,6 +5599,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_EVNT_SEL3 is defined as MSR_C3_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_EVNT_SEL3            0x00000DD6
 
@@ -5480,6 +5618,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_CTR3 is defined as MSR_C3_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_CTR3                 0x00000DD7
 
@@ -5498,6 +5637,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_EVNT_SEL4 is defined as MSR_C3_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_EVNT_SEL4            0x00000DD8
 
@@ -5516,6 +5656,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_CTR4 is defined as MSR_C3_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_CTR4                 0x00000DD9
 
@@ -5534,6 +5675,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_EVNT_SEL5 is defined as MSR_C3_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_EVNT_SEL5            0x00000DDA
 
@@ -5552,6 +5694,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C3_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C3_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C3_PMON_CTR5 is defined as MSR_C3_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C3_PMON_CTR5                 0x00000DDB
 
@@ -5570,6 +5713,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_BOX_CTRL is defined as MSR_C7_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_BOX_CTRL             0x00000DE0
 
@@ -5588,6 +5732,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_BOX_STATUS is defined as MSR_C7_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_BOX_STATUS           0x00000DE1
 
@@ -5606,6 +5751,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_BOX_OVF_CTRL is defined as MSR_C7_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_BOX_OVF_CTRL         0x00000DE2
 
@@ -5624,6 +5770,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_EVNT_SEL0 is defined as MSR_C7_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_EVNT_SEL0            0x00000DF0
 
@@ -5642,6 +5789,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_CTR0 is defined as MSR_C7_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_CTR0                 0x00000DF1
 
@@ -5660,6 +5808,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_EVNT_SEL1 is defined as MSR_C7_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_EVNT_SEL1            0x00000DF2
 
@@ -5678,6 +5827,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_CTR1 is defined as MSR_C7_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_CTR1                 0x00000DF3
 
@@ -5696,6 +5846,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_EVNT_SEL2 is defined as MSR_C7_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_EVNT_SEL2            0x00000DF4
 
@@ -5714,6 +5865,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_CTR2 is defined as MSR_C7_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_CTR2                 0x00000DF5
 
@@ -5732,6 +5884,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_EVNT_SEL3 is defined as MSR_C7_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_EVNT_SEL3            0x00000DF6
 
@@ -5750,6 +5903,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_CTR3 is defined as MSR_C7_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_CTR3                 0x00000DF7
 
@@ -5768,6 +5922,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_EVNT_SEL4 is defined as MSR_C7_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_EVNT_SEL4            0x00000DF8
 
@@ -5786,6 +5941,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_CTR4 is defined as MSR_C7_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_CTR4                 0x00000DF9
 
@@ -5804,6 +5960,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_EVNT_SEL5 is defined as MSR_C7_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_EVNT_SEL5            0x00000DFA
 
@@ -5822,6 +5979,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_C7_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_C7_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_C7_PMON_CTR5 is defined as MSR_C7_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_C7_PMON_CTR5                 0x00000DFB
 
@@ -5840,6 +5998,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_BOX_CTRL is defined as MSR_R0_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_BOX_CTRL             0x00000E00
 
@@ -5858,6 +6017,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_BOX_STATUS is defined as MSR_R0_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_BOX_STATUS           0x00000E01
 
@@ -5876,6 +6036,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_BOX_OVF_CTRL is defined as MSR_R0_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_BOX_OVF_CTRL         0x00000E02
 
@@ -5894,6 +6055,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P0);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P0, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P0 is defined as MSR_R0_PMON_IPERF0_P0 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P0            0x00000E04
 
@@ -5912,6 +6074,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P1);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P1, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P1 is defined as MSR_R0_PMON_IPERF0_P1 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P1            0x00000E05
 
@@ -5930,6 +6093,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P2);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P2, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P2 is defined as MSR_R0_PMON_IPERF0_P2 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P2            0x00000E06
 
@@ -5948,6 +6112,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P3);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P3, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P3 is defined as MSR_R0_PMON_IPERF0_P3 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P3            0x00000E07
 
@@ -5966,6 +6131,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P4);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P4, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P4 is defined as MSR_R0_PMON_IPERF0_P4 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P4            0x00000E08
 
@@ -5984,6 +6150,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P5);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P5, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P5 is defined as MSR_R0_PMON_IPERF0_P5 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P5            0x00000E09
 
@@ -6002,6 +6169,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P6);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P6, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P6 is defined as MSR_R0_PMON_IPERF0_P6 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P6            0x00000E0A
 
@@ -6020,6 +6188,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P7);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_IPERF0_P7, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_IPERF0_P7 is defined as MSR_R0_PMON_IPERF0_P7 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_IPERF0_P7            0x00000E0B
 
@@ -6038,6 +6207,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_QLX_P0);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_QLX_P0, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_QLX_P0 is defined as MSR_R0_PMON_QLX_P0 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_QLX_P0               0x00000E0C
 
@@ -6056,6 +6226,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_QLX_P1);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_QLX_P1, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_QLX_P1 is defined as MSR_R0_PMON_QLX_P1 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_QLX_P1               0x00000E0D
 
@@ -6074,6 +6245,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_QLX_P2);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_QLX_P2, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_QLX_P2 is defined as MSR_R0_PMON_QLX_P2 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_QLX_P2               0x00000E0E
 
@@ -6092,6 +6264,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_QLX_P3);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_QLX_P3, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_QLX_P3 is defined as MSR_R0_PMON_QLX_P3 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_QLX_P3               0x00000E0F
 
@@ -6110,6 +6283,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL0);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL0, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL0 is defined as MSR_R0_PMON_EVNT_SEL0 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL0            0x00000E10
 
@@ -6128,6 +6302,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR0);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR0, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR0 is defined as MSR_R0_PMON_CTR0 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR0                 0x00000E11
 
@@ -6146,6 +6321,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL1);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL1, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL1 is defined as MSR_R0_PMON_EVNT_SEL1 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL1            0x00000E12
 
@@ -6164,6 +6340,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR1);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR1, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR1 is defined as MSR_R0_PMON_CTR1 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR1                 0x00000E13
 
@@ -6182,6 +6359,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL2);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL2, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL2 is defined as MSR_R0_PMON_EVNT_SEL2 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL2            0x00000E14
 
@@ -6200,6 +6378,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR2);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR2, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR2 is defined as MSR_R0_PMON_CTR2 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR2                 0x00000E15
 
@@ -6218,6 +6397,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL3);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL3, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL3 is defined as MSR_R0_PMON_EVNT_SEL3 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL3            0x00000E16
 
@@ -6236,6 +6416,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR3);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR3, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR3 is defined as MSR_R0_PMON_CTR3 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR3                 0x00000E17
 
@@ -6254,6 +6435,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL4);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL4, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL4 is defined as MSR_R0_PMON_EVNT_SEL4 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL4            0x00000E18
 
@@ -6272,6 +6454,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR4);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR4, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR4 is defined as MSR_R0_PMON_CTR4 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR4                 0x00000E19
 
@@ -6290,6 +6473,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL5);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL5, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL5 is defined as MSR_R0_PMON_EVNT_SEL5 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL5            0x00000E1A
 
@@ -6308,6 +6492,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR5);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR5, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR5 is defined as MSR_R0_PMON_CTR5 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR5                 0x00000E1B
 
@@ -6326,6 +6511,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL6);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL6, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL6 is defined as MSR_R0_PMON_EVNT_SEL6 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL6            0x00000E1C
 
@@ -6344,6 +6530,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR6);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR6, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR6 is defined as MSR_R0_PMON_CTR6 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR6                 0x00000E1D
 
@@ -6362,6 +6549,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL7);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_EVNT_SEL7, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_EVNT_SEL7 is defined as MSR_R0_PMON_EVNT_SEL7 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_EVNT_SEL7            0x00000E1E
 
@@ -6380,6 +6568,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R0_PMON_CTR7);
   AsmWriteMsr64 (MSR_NEHALEM_R0_PMON_CTR7, Msr);
   @endcode
+  @note MSR_NEHALEM_R0_PMON_CTR7 is defined as MSR_R0_PMON_CTR7 in SDM.
 **/
 #define MSR_NEHALEM_R0_PMON_CTR7                 0x00000E1F
 
@@ -6398,6 +6587,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_BOX_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_BOX_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_BOX_CTRL is defined as MSR_R1_PMON_BOX_CTRL in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_BOX_CTRL             0x00000E20
 
@@ -6416,6 +6606,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_BOX_STATUS);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_BOX_STATUS, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_BOX_STATUS is defined as MSR_R1_PMON_BOX_STATUS in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_BOX_STATUS           0x00000E21
 
@@ -6434,6 +6625,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_BOX_OVF_CTRL);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_BOX_OVF_CTRL, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_BOX_OVF_CTRL is defined as MSR_R1_PMON_BOX_OVF_CTRL in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_BOX_OVF_CTRL         0x00000E22
 
@@ -6452,6 +6644,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P8);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P8, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P8 is defined as MSR_R1_PMON_IPERF1_P8 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P8            0x00000E24
 
@@ -6470,6 +6663,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P9);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P9, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P9 is defined as MSR_R1_PMON_IPERF1_P9 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P9            0x00000E25
 
@@ -6488,6 +6682,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P10);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P10, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P10 is defined as MSR_R1_PMON_IPERF1_P10 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P10           0x00000E26
 
@@ -6506,6 +6701,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P11);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P11, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P11 is defined as MSR_R1_PMON_IPERF1_P11 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P11           0x00000E27
 
@@ -6524,6 +6720,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P12);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P12, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P12 is defined as MSR_R1_PMON_IPERF1_P12 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P12           0x00000E28
 
@@ -6542,6 +6739,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P13);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P13, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P13 is defined as MSR_R1_PMON_IPERF1_P13 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P13           0x00000E29
 
@@ -6560,6 +6758,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P14);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P14, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P14 is defined as MSR_R1_PMON_IPERF1_P14 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P14           0x00000E2A
 
@@ -6578,6 +6777,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P15);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_IPERF1_P15, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_IPERF1_P15 is defined as MSR_R1_PMON_IPERF1_P15 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_IPERF1_P15           0x00000E2B
 
@@ -6596,6 +6796,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_QLX_P4);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_QLX_P4, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_QLX_P4 is defined as MSR_R1_PMON_QLX_P4 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_QLX_P4               0x00000E2C
 
@@ -6614,6 +6815,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_QLX_P5);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_QLX_P5, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_QLX_P5 is defined as MSR_R1_PMON_QLX_P5 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_QLX_P5               0x00000E2D
 
@@ -6632,6 +6834,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_QLX_P6);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_QLX_P6, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_QLX_P6 is defined as MSR_R1_PMON_QLX_P6 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_QLX_P6               0x00000E2E
 
@@ -6650,6 +6853,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_QLX_P7);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_QLX_P7, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_QLX_P7 is defined as MSR_R1_PMON_QLX_P7 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_QLX_P7               0x00000E2F
 
@@ -6668,6 +6872,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL8);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL8, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL8 is defined as MSR_R1_PMON_EVNT_SEL8 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL8            0x00000E30
 
@@ -6686,6 +6891,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR8);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR8, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR8 is defined as MSR_R1_PMON_CTR8 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR8                 0x00000E31
 
@@ -6704,6 +6910,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL9);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL9, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL9 is defined as MSR_R1_PMON_EVNT_SEL9 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL9            0x00000E32
 
@@ -6722,6 +6929,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR9);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR9, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR9 is defined as MSR_R1_PMON_CTR9 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR9                 0x00000E33
 
@@ -6740,6 +6948,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL10);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL10, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL10 is defined as MSR_R1_PMON_EVNT_SEL10 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL10           0x00000E34
 
@@ -6758,6 +6967,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR10);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR10, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR10 is defined as MSR_R1_PMON_CTR10 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR10                0x00000E35
 
@@ -6776,6 +6986,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL11);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL11, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL11 is defined as MSR_R1_PMON_EVNT_SEL11 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL11           0x00000E36
 
@@ -6794,6 +7005,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR11);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR11, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR11 is defined as MSR_R1_PMON_CTR11 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR11                0x00000E37
 
@@ -6812,6 +7024,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL12);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL12, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL12 is defined as MSR_R1_PMON_EVNT_SEL12 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL12           0x00000E38
 
@@ -6830,6 +7043,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR12);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR12, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR12 is defined as MSR_R1_PMON_CTR12 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR12                0x00000E39
 
@@ -6848,6 +7062,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL13);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL13, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL13 is defined as MSR_R1_PMON_EVNT_SEL13 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL13           0x00000E3A
 
@@ -6866,6 +7081,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR13);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR13, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR13 is defined as MSR_R1_PMON_CTR13 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR13                0x00000E3B
 
@@ -6884,6 +7100,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL14);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL14, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL14 is defined as MSR_R1_PMON_EVNT_SEL14 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL14           0x00000E3C
 
@@ -6902,6 +7119,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR14);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR14, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR14 is defined as MSR_R1_PMON_CTR14 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR14                0x00000E3D
 
@@ -6920,6 +7138,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL15);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_EVNT_SEL15, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_EVNT_SEL15 is defined as MSR_R1_PMON_EVNT_SEL15 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_EVNT_SEL15           0x00000E3E
 
@@ -6938,6 +7157,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_R1_PMON_CTR15);
   AsmWriteMsr64 (MSR_NEHALEM_R1_PMON_CTR15, Msr);
   @endcode
+  @note MSR_NEHALEM_R1_PMON_CTR15 is defined as MSR_R1_PMON_CTR15 in SDM.
 **/
 #define MSR_NEHALEM_R1_PMON_CTR15                0x00000E3F
 
@@ -6956,6 +7176,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_MATCH is defined as MSR_B0_PMON_MATCH in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_MATCH                0x00000E45
 
@@ -6974,6 +7195,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B0_PMON_MASK);
   AsmWriteMsr64 (MSR_NEHALEM_B0_PMON_MASK, Msr);
   @endcode
+  @note MSR_NEHALEM_B0_PMON_MASK is defined as MSR_B0_PMON_MASK in SDM.
 **/
 #define MSR_NEHALEM_B0_PMON_MASK                 0x00000E46
 
@@ -6992,6 +7214,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_MATCH is defined as MSR_S0_PMON_MATCH in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_MATCH                0x00000E49
 
@@ -7010,6 +7233,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S0_PMON_MASK);
   AsmWriteMsr64 (MSR_NEHALEM_S0_PMON_MASK, Msr);
   @endcode
+  @note MSR_NEHALEM_S0_PMON_MASK is defined as MSR_S0_PMON_MASK in SDM.
 **/
 #define MSR_NEHALEM_S0_PMON_MASK                 0x00000E4A
 
@@ -7028,6 +7252,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_MATCH is defined as MSR_B1_PMON_MATCH in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_MATCH                0x00000E4D
 
@@ -7046,6 +7271,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_B1_PMON_MASK);
   AsmWriteMsr64 (MSR_NEHALEM_B1_PMON_MASK, Msr);
   @endcode
+  @note MSR_NEHALEM_B1_PMON_MASK is defined as MSR_B1_PMON_MASK in SDM.
 **/
 #define MSR_NEHALEM_B1_PMON_MASK                 0x00000E4E
 
@@ -7064,6 +7290,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_MM_CONFIG);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_MM_CONFIG, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_MM_CONFIG is defined as MSR_M0_PMON_MM_CONFIG in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_MM_CONFIG            0x00000E54
 
@@ -7082,6 +7309,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_ADDR_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_ADDR_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_ADDR_MATCH is defined as MSR_M0_PMON_ADDR_MATCH in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_ADDR_MATCH           0x00000E55
 
@@ -7100,6 +7328,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M0_PMON_ADDR_MASK);
   AsmWriteMsr64 (MSR_NEHALEM_M0_PMON_ADDR_MASK, Msr);
   @endcode
+  @note MSR_NEHALEM_M0_PMON_ADDR_MASK is defined as MSR_M0_PMON_ADDR_MASK in SDM.
 **/
 #define MSR_NEHALEM_M0_PMON_ADDR_MASK            0x00000E56
 
@@ -7118,6 +7347,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_MATCH is defined as MSR_S1_PMON_MATCH in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_MATCH                0x00000E59
 
@@ -7136,6 +7366,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_S1_PMON_MASK);
   AsmWriteMsr64 (MSR_NEHALEM_S1_PMON_MASK, Msr);
   @endcode
+  @note MSR_NEHALEM_S1_PMON_MASK is defined as MSR_S1_PMON_MASK in SDM.
 **/
 #define MSR_NEHALEM_S1_PMON_MASK                 0x00000E5A
 
@@ -7154,6 +7385,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_MM_CONFIG);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_MM_CONFIG, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_MM_CONFIG is defined as MSR_M1_PMON_MM_CONFIG in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_MM_CONFIG            0x00000E5C
 
@@ -7172,6 +7404,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_ADDR_MATCH);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_ADDR_MATCH, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_ADDR_MATCH is defined as MSR_M1_PMON_ADDR_MATCH in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_ADDR_MATCH           0x00000E5D
 
@@ -7190,6 +7423,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_NEHALEM_M1_PMON_ADDR_MASK);
   AsmWriteMsr64 (MSR_NEHALEM_M1_PMON_ADDR_MASK, Msr);
   @endcode
+  @note MSR_NEHALEM_M1_PMON_ADDR_MASK is defined as MSR_M1_PMON_ADDR_MASK in SDM.
 **/
 #define MSR_NEHALEM_M1_PMON_ADDR_MASK            0x00000E5E
 

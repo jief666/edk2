@@ -1,7 +1,7 @@
 /** @file
 Private MACRO, structure and function definitions for Setup Browser module.
 
-Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2007 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -90,7 +90,7 @@ typedef struct {
   // Produced protocol
   //
   EFI_FORM_BROWSER2_PROTOCOL            FormBrowser2;
-  EFI_FORM_BROWSER_EXTENSION_PROTOCOL   FormBrowserEx;
+  EDKII_FORM_BROWSER_EXTENSION_PROTOCOL FormBrowserEx;
 
   EDKII_FORM_BROWSER_EXTENSION2_PROTOCOL FormBrowserEx2;
 
@@ -329,7 +329,10 @@ struct _FORM_BROWSER_STATEMENT{
   BROWSER_STORAGE       *Storage;
   VAR_STORE_INFO        VarStoreInfo;
   UINT16                StorageWidth;
+  UINT16                BitStorageWidth;
+  UINT16                BitVarOffset;
   UINT8                 QuestionFlags;
+  BOOLEAN               QuestionReferToBitField;// Whether the question is stored in a bit field.
   CHAR16                *VariableName;    // Name/Value or EFI Variable name
   CHAR16                *BlockName;       // Buffer storage block name: "OFFSET=...WIDTH=..."
 
@@ -580,7 +583,8 @@ extern EDKII_FORM_DISPLAY_ENGINE_PROTOCOL *mFormDisplay;
 
 extern BOOLEAN               gCallbackReconnect;
 extern BOOLEAN               gFlagReconnect;
-extern BOOLEAN               gResetRequired;
+extern BOOLEAN               gResetRequiredFormLevel;
+extern BOOLEAN               gResetRequiredSystemLevel;
 extern BOOLEAN               gExitRequired;
 extern LIST_ENTRY            gBrowserFormSetList;
 extern LIST_ENTRY            gBrowserHotKeyList;
@@ -1222,8 +1226,8 @@ IsNvUpdateRequiredForFormSet (
   @param Action                The action request.
   @param SkipSaveOrDiscard     Whether skip save or discard action.
 
-  @retval EFI_SUCCESS          The call back function excutes successfully.
-  @return Other value if the call back function failed to excute.  
+  @retval EFI_SUCCESS          The call back function executes successfully.
+  @return Other value if the call back function failed to execute.
 **/
 EFI_STATUS 
 ProcessCallBackFunction (
@@ -1245,8 +1249,8 @@ ProcessCallBackFunction (
   @param Statement             The Question which need to call.
   @param FormSet               The formset this question belong to.
 
-  @retval EFI_SUCCESS          The call back function excutes successfully.
-  @return Other value if the call back function failed to excute.  
+  @retval EFI_SUCCESS          The call back function executes successfully.
+  @return Other value if the call back function failed to execute.
 **/
 EFI_STATUS 
 ProcessRetrieveForQuestion (

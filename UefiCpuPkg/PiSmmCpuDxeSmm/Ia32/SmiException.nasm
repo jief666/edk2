@@ -1,5 +1,5 @@
 ;------------------------------------------------------------------------------ ;
-; Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
+; Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
 ; This program and the accompanying materials
 ; are licensed and made available under the terms and conditions of the BSD License
 ; which accompanies this distribution.  The full text of the license may be found at
@@ -19,11 +19,11 @@
 ;-------------------------------------------------------------------------------
 
 extern  ASM_PFX(FeaturePcdGet (PcdCpuSmmProfileEnable))
-extern  ASM_PFX(gSmiMtrrs)
 extern  ASM_PFX(SmiPFHandler)
 
 global  ASM_PFX(gcSmiIdtr)
 global  ASM_PFX(gcSmiGdtr)
+global  ASM_PFX(gTaskGateDescriptor)
 global  ASM_PFX(gcPsd)
 
     SECTION .data
@@ -242,7 +242,7 @@ ASM_PFX(gcPsd):
             DD      0
             times   24 DB 0
             DD      0
-            DD      ASM_PFX(gSmiMtrrs)
+            DD      0
 PSD_SIZE  equ $ - ASM_PFX(gcPsd)
 
 ASM_PFX(gcSmiGdtr):
@@ -250,21 +250,10 @@ ASM_PFX(gcSmiGdtr):
     DD      NullSeg
 
 ASM_PFX(gcSmiIdtr):
-    DW      IDT_SIZE - 1
-    DD      _SmiIDT
+    DW      0
+    DD      0
 
-_SmiIDT:
-%rep 32
-    DW      0                           ; Offset 0:15
-    DW      CODE_SEL                    ; Segment selector
-    DB      0                           ; Unused
-    DB      0x8e                         ; Interrupt Gate, Present
-    DW      0                           ; Offset 16:31
-%endrep
-
-IDT_SIZE equ $ - _SmiIDT
-
-TaskGateDescriptor:
+ASM_PFX(gTaskGateDescriptor):
     DW      0                           ; Reserved
     DW      EXCEPTION_TSS_SEL           ; TSS Segment selector
     DB      0                           ; Reserved
@@ -393,7 +382,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 ;; FX_SAVE_STATE_IA32 FxSaveState;
     sub     esp, 512
     mov     edi, esp
-    db      0xf, 0xae, 0x7 ;fxsave [edi]
+    fxsave  [edi]
 
 ; UEFI calling convention for IA32 requires that Direction flag in EFLAGs is clear
     cld
@@ -421,7 +410,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 
 ;; FX_SAVE_STATE_IA32 FxSaveState;
     mov     esi, esp
-    db      0xf, 0xae, 0xe ; fxrstor [esi]
+    fxrstor [esi]
     add     esp, 512
 
 ;; UINT32  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;
@@ -593,7 +582,7 @@ PFHandlerEntry:
     clts
     sub     esp, 512
     mov     edi, esp
-    db      0xf, 0xae, 0x7 ;fxsave [edi]
+    fxsave  [edi]
 
 ; UEFI calling convention for IA32 requires that Direction flag in EFLAGs is clear
     cld
@@ -623,7 +612,7 @@ PFHandlerEntry:
 
 ;; FX_SAVE_STATE_IA32 FxSaveState;
     mov     esi, esp
-    db      0xf, 0xae, 0xe ; fxrstor [esi]
+    fxrstor [esi]
     add     esp, 512
 
 ;; UINT32  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;
@@ -717,21 +706,3 @@ ASM_PFX(PageFaultStubFunction):
     clts
     iretd
 
-global ASM_PFX(InitializeIDTSmmStackGuard)
-ASM_PFX(InitializeIDTSmmStackGuard):
-    push    ebx
-;
-; If SMM Stack Guard feature is enabled, the Page Fault Exception entry in IDT
-; is a Task Gate Descriptor so that when a Page Fault Exception occurrs,
-; the processors can use a known good stack in case stack is ran out.
-;
-    lea     ebx, [_SmiIDT + 14 * 8]
-    lea     edx, [TaskGateDescriptor]
-    mov     eax, [edx]
-    mov     [ebx], eax
-    mov     eax, [edx + 4]
-    mov     [ebx + 4], eax
-    pop     ebx
-    ret
-
-    END

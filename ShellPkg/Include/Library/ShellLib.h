@@ -1,7 +1,7 @@
 /** @file
   Provides interface to shell functionality for shell commands and applications.
 
-  Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -21,11 +21,16 @@
 #include <Protocol/LoadedImage.h>
 #include <Protocol/EfiShellInterface.h>
 #include <Protocol/EfiShellEnvironment2.h>
-#include <Protocol/EfiShell.h>
-#include <Protocol/EfiShellParameters.h>
+#include <Protocol/Shell.h>
+#include <Protocol/ShellParameters.h>
 
-// (20 * (6+5+2))+1) unicode characters from EFI FAT spec (doubled for bytes)
-#define MAX_FILE_NAME_LEN 512
+#define SHELL_FREE_NON_NULL(Pointer)  \
+  do {                                \
+    if ((Pointer) != NULL) {          \
+      FreePool((Pointer));            \
+      (Pointer) = NULL;               \
+    }                                 \
+  } while(FALSE)
 
 extern EFI_SHELL_PARAMETERS_PROTOCOL *gEfiShellParametersProtocol;
 extern EFI_SHELL_PROTOCOL            *gEfiShellProtocol;
@@ -1178,7 +1183,7 @@ typedef enum {
   Prompt the user and return the resultant answer to the requestor.
 
   This function will display the requested question on the shell prompt and then
-  wait for an apropriate answer to be input from the console.
+  wait for an appropriate answer to be input from the console.
 
   If the SHELL_PROMPT_REQUEST_TYPE is SHELL_PROMPT_REQUEST_TYPE_YESNO, ShellPromptResponseTypeQuitContinue
   or SHELL_PROMPT_REQUEST_TYPE_YESNOCANCEL then *Response is of type SHELL_PROMPT_RESPONSE.

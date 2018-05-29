@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-8.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.9.
 
 **/
 
@@ -25,6 +25,23 @@
 #define __SANDY_BRIDGE_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel processors based on the Sandy Bridge microarchitecture?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_SANDY_BRIDGE_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x2A || \
+    DisplayModel == 0x2D    \
+    )                       \
+   )
 
 /**
   Thread. SMI Counter (R/O).
@@ -41,6 +58,7 @@
 
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_SMI_COUNT);
   @endcode
+  @note MSR_SANDY_BRIDGE_SMI_COUNT is defined as MSR_SMI_COUNT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_SMI_COUNT               0x00000034
 
@@ -85,6 +103,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PLATFORM_INFO);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PLATFORM_INFO, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PLATFORM_INFO is defined as MSR_PLATFORM_INFO in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PLATFORM_INFO           0x000000CE
 
@@ -153,6 +172,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_CST_CONFIG_CONTROL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_CST_CONFIG_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_CST_CONFIG_CONTROL is defined as MSR_PKG_CST_CONFIG_CONTROL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_CST_CONFIG_CONTROL  0x000000E2
 
@@ -242,6 +262,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PMG_IO_CAPTURE_BASE);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PMG_IO_CAPTURE_BASE, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PMG_IO_CAPTURE_BASE is defined as MSR_PMG_IO_CAPTURE_BASE in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PMG_IO_CAPTURE_BASE     0x000000E4
 
@@ -301,6 +322,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_FEATURE_CONFIG);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_FEATURE_CONFIG, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_FEATURE_CONFIG is defined as MSR_FEATURE_CONFIG in SDM.
 **/
 #define MSR_SANDY_BRIDGE_FEATURE_CONFIG          0x0000013C
 
@@ -350,6 +372,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_PERFEVTSEL4);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_PERFEVTSEL4, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_PERFEVTSEL4 is defined as IA32_PERFEVTSEL4 in SDM.
+        MSR_SANDY_BRIDGE_IA32_PERFEVTSEL5 is defined as IA32_PERFEVTSEL5 in SDM.
+        MSR_SANDY_BRIDGE_IA32_PERFEVTSEL6 is defined as IA32_PERFEVTSEL6 in SDM.
+        MSR_SANDY_BRIDGE_IA32_PERFEVTSEL7 is defined as IA32_PERFEVTSEL7 in SDM.
   @{
 **/
 #define MSR_SANDY_BRIDGE_IA32_PERFEVTSEL4        0x0000018A
@@ -375,6 +401,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PERF_STATUS);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PERF_STATUS, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PERF_STATUS is defined as MSR_PERF_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PERF_STATUS             0x00000198
 
@@ -418,6 +445,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_CLOCK_MODULATION);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_CLOCK_MODULATION, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_CLOCK_MODULATION is defined as IA32_CLOCK_MODULATION in SDM.
 **/
 #define MSR_SANDY_BRIDGE_IA32_CLOCK_MODULATION   0x0000019A
 
@@ -470,6 +498,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_MISC_ENABLE);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_MISC_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_MISC_ENABLE is defined as IA32_MISC_ENABLE in SDM.
 **/
 #define MSR_SANDY_BRIDGE_IA32_MISC_ENABLE        0x000001A0
 
@@ -496,7 +525,7 @@ typedef union {
     ///
     UINT32  BTS:1;
     ///
-    /// [Bit 12] Thread. Precise Event Based Sampling Unavailable (RO) See
+    /// [Bit 12] Thread. Processor Event Based Sampling Unavailable (RO) See
     /// Table 35-2.
     ///
     UINT32  PEBS:1;
@@ -564,6 +593,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_TEMPERATURE_TARGET);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_TEMPERATURE_TARGET, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_TEMPERATURE_TARGET is defined as MSR_TEMPERATURE_TARGET in SDM.
 **/
 #define MSR_SANDY_BRIDGE_TEMPERATURE_TARGET      0x000001A2
 
@@ -611,6 +641,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_MISC_FEATURE_CONTROL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_MISC_FEATURE_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_MISC_FEATURE_CONTROL is defined as MSR_MISC_FEATURE_CONTROL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_MISC_FEATURE_CONTROL    0x000001A4
 
@@ -675,6 +706,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_OFFCORE_RSP_0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_OFFCORE_RSP_0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_OFFCORE_RSP_0 is defined as MSR_OFFCORE_RSP_0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_OFFCORE_RSP_0           0x000001A6
 
@@ -693,6 +725,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_OFFCORE_RSP_1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_OFFCORE_RSP_1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_OFFCORE_RSP_1 is defined as MSR_OFFCORE_RSP_1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_OFFCORE_RSP_1           0x000001A7
 
@@ -711,13 +744,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_MISC_PWR_MGMT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_MISC_PWR_MGMT, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_MISC_PWR_MGMT is defined as MSR_MISC_PWR_MGMT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_MISC_PWR_MGMT           0x000001AA
 
 
 /**
   Thread. Last Branch Record Filtering Select Register (R/W)  See Section
-  17.6.2, "Filtering of Last Branch Records.".
+  17.7.2, "Filtering of Last Branch Records.".
 
   @param  ECX  MSR_SANDY_BRIDGE_LBR_SELECT (0x000001C8)
   @param  EAX  Lower 32-bits of MSR value.
@@ -732,6 +766,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_LBR_SELECT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_LBR_SELECT, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_LBR_SELECT is defined as MSR_LBR_SELECT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_LBR_SELECT              0x000001C8
 
@@ -809,6 +844,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_LASTBRANCH_TOS);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_LASTBRANCH_TOS, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_LASTBRANCH_TOS is defined as MSR_LASTBRANCH_TOS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_LASTBRANCH_TOS          0x000001C9
 
@@ -828,6 +864,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_LER_FROM_LIP);
   @endcode
+  @note MSR_SANDY_BRIDGE_LER_FROM_LIP is defined as MSR_LER_FROM_LIP in SDM.
 **/
 #define MSR_SANDY_BRIDGE_LER_FROM_LIP            0x000001DD
 
@@ -848,6 +885,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_LER_TO_LIP);
   @endcode
+  @note MSR_SANDY_BRIDGE_LER_TO_LIP is defined as MSR_LER_TO_LIP in SDM.
 **/
 #define MSR_SANDY_BRIDGE_LER_TO_LIP              0x000001DE
 
@@ -866,6 +904,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_POWER_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_POWER_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_POWER_CTL is defined as MSR_POWER_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_POWER_CTL               0x000001FC
 
@@ -873,7 +912,7 @@ typedef union {
 /**
   Package. Always 0 (CMCI not supported).
 
-  @param  ECX  MSR_SANDY_BRIDGE_MC4_CTL2 (0x00000284)
+  @param  ECX  MSR_SANDY_BRIDGE_IA32_MC4_CTL2 (0x00000284)
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -881,35 +920,37 @@ typedef union {
   @code
   UINT64  Msr;
 
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_MC4_CTL2);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_MC4_CTL2, Msr);
+  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_MC4_CTL2);
+  AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_MC4_CTL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_MC4_CTL2 is defined as IA32_MC4_CTL2 in SDM.
 **/
-#define MSR_SANDY_BRIDGE_MC4_CTL2                0x00000284
+#define MSR_SANDY_BRIDGE_IA32_MC4_CTL2           0x00000284
 
 
 /**
   See Table 35-2. See Section 18.4.2, "Global Counter Control Facilities.".
 
-  @param  ECX  MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS (0x0000038E)
+  @param  ECX  MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS (0x0000038E)
   @param  EAX  Lower 32-bits of MSR value.
-               Described by the type MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS_REGISTER.
+               Described by the type MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS_REGISTER.
   @param  EDX  Upper 32-bits of MSR value.
-               Described by the type MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS_REGISTER.
+               Described by the type MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS_REGISTER.
 
   <b>Example usage</b>
   @code
-  MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS_REGISTER  Msr;
+  MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS_REGISTER  Msr;
 
-  Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS, Msr.Uint64);
+  Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS);
+  AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS is defined as IA32_PERF_GLOBAL_STATUS in SDM.
 **/
-#define MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS  0x0000038E
+#define MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS 0x0000038E
 
 /**
   MSR information returned for MSR index
-  #MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS
+  #MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS
 **/
 typedef union {
   ///
@@ -979,7 +1020,7 @@ typedef union {
   /// All bit fields as a 64-bit value
   ///
   UINT64  Uint64;
-} MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STAUS_REGISTER;
+} MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_STATUS_REGISTER;
 
 
 /**
@@ -999,6 +1040,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_CTRL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_CTRL is defined as IA32_PERF_GLOBAL_CTRL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_CTRL   0x0000038F
 
@@ -1085,6 +1127,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_OVF_CTRL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_OVF_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_OVF_CTRL is defined as IA32_PERF_GLOBAL_OVF_CTRL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_IA32_PERF_GLOBAL_OVF_CTRL 0x00000390
 
@@ -1164,7 +1207,7 @@ typedef union {
 
 
 /**
-  Thread. See Section 18.7.1.1, "Precise Event Based Sampling (PEBS).".
+  Thread. See Section 18.8.1.1, "Processor Event Based Sampling (PEBS).".
 
   @param  ECX  MSR_SANDY_BRIDGE_PEBS_ENABLE (0x000003F1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1179,6 +1222,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PEBS_ENABLE);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PEBS_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PEBS_ENABLE is defined as MSR_PEBS_ENABLE in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PEBS_ENABLE             0x000003F1
 
@@ -1237,7 +1281,7 @@ typedef union {
 
 
 /**
-  Thread. see See Section 18.7.1.2, "Load Latency Performance Monitoring
+  Thread. see See Section 18.8.1.2, "Load Latency Performance Monitoring
   Facility.".
 
   @param  ECX  MSR_SANDY_BRIDGE_PEBS_LD_LAT (0x000003F6)
@@ -1253,6 +1297,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PEBS_LD_LAT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PEBS_LD_LAT, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PEBS_LD_LAT is defined as MSR_PEBS_LD_LAT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PEBS_LD_LAT             0x000003F6
 
@@ -1300,6 +1345,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_C3_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_C3_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_C3_RESIDENCY is defined as MSR_PKG_C3_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_C3_RESIDENCY        0x000003F8
 
@@ -1321,6 +1367,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_C6_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_C6_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_C6_RESIDENCY is defined as MSR_PKG_C6_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_C6_RESIDENCY        0x000003F9
 
@@ -1342,6 +1389,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_C7_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_C7_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_C7_RESIDENCY is defined as MSR_PKG_C7_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_C7_RESIDENCY        0x000003FA
 
@@ -1363,6 +1411,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_CORE_C3_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_CORE_C3_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_CORE_C3_RESIDENCY is defined as MSR_CORE_C3_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_CORE_C3_RESIDENCY       0x000003FC
 
@@ -1384,6 +1433,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_CORE_C6_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_CORE_C6_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_CORE_C6_RESIDENCY is defined as MSR_CORE_C6_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_CORE_C6_RESIDENCY       0x000003FD
 
@@ -1405,6 +1455,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_CORE_C7_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_CORE_C7_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_CORE_C7_RESIDENCY is defined as MSR_CORE_C7_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_CORE_C7_RESIDENCY       0x000003FE
 
@@ -1412,24 +1463,25 @@ typedef union {
 /**
   Core. See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
 
-  @param  ECX  MSR_SANDY_BRIDGE_MC4_CTL (0x00000410)
+  @param  ECX  MSR_SANDY_BRIDGE_IA32_MC4_CTL (0x00000410)
   @param  EAX  Lower 32-bits of MSR value.
-               Described by the type MSR_SANDY_BRIDGE_MC4_CTL_REGISTER.
+               Described by the type MSR_SANDY_BRIDGE_IA32_MC4_CTL_REGISTER.
   @param  EDX  Upper 32-bits of MSR value.
-               Described by the type MSR_SANDY_BRIDGE_MC4_CTL_REGISTER.
+               Described by the type MSR_SANDY_BRIDGE_IA32_MC4_CTL_REGISTER.
 
   <b>Example usage</b>
   @code
-  MSR_SANDY_BRIDGE_MC4_CTL_REGISTER  Msr;
+  MSR_SANDY_BRIDGE_IA32_MC4_CTL_REGISTER  Msr;
 
-  Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_MC4_CTL);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_MC4_CTL, Msr.Uint64);
+  Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_MC4_CTL);
+  AsmWriteMsr64 (MSR_SANDY_BRIDGE_IA32_MC4_CTL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_MC4_CTL is defined as IA32_MC4_CTL in SDM.
 **/
-#define MSR_SANDY_BRIDGE_MC4_CTL                 0x00000410
+#define MSR_SANDY_BRIDGE_IA32_MC4_CTL            0x00000410
 
 /**
-  MSR information returned for MSR index #MSR_SANDY_BRIDGE_MC4_CTL
+  MSR information returned for MSR index #MSR_SANDY_BRIDGE_IA32_MC4_CTL
 **/
 typedef union {
   ///
@@ -1462,7 +1514,7 @@ typedef union {
   /// All bit fields as a 64-bit value
   ///
   UINT64  Uint64;
-} MSR_SANDY_BRIDGE_MC4_CTL_REGISTER;
+} MSR_SANDY_BRIDGE_IA32_MC4_CTL_REGISTER;
 
 
 /**
@@ -1478,6 +1530,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_IA32_VMX_EPT_VPID_ENUM);
   @endcode
+  @note MSR_SANDY_BRIDGE_IA32_VMX_EPT_VPID_ENUM is defined as IA32_VMX_EPT_VPID_ENUM in SDM.
 **/
 #define MSR_SANDY_BRIDGE_IA32_VMX_EPT_VPID_ENUM  0x0000048C
 
@@ -1496,6 +1549,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_RAPL_POWER_UNIT);
   @endcode
+  @note MSR_SANDY_BRIDGE_RAPL_POWER_UNIT is defined as MSR_RAPL_POWER_UNIT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_RAPL_POWER_UNIT         0x00000606
 
@@ -1518,6 +1572,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKGC3_IRTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKGC3_IRTL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKGC3_IRTL is defined as MSR_PKGC3_IRTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKGC3_IRTL              0x0000060A
 
@@ -1583,6 +1638,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKGC6_IRTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKGC6_IRTL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKGC6_IRTL is defined as MSR_PKGC6_IRTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKGC6_IRTL              0x0000060B
 
@@ -1644,6 +1700,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_C2_RESIDENCY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_C2_RESIDENCY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_C2_RESIDENCY is defined as MSR_PKG_C2_RESIDENCY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_C2_RESIDENCY        0x0000060D
 
@@ -1663,6 +1720,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_POWER_LIMIT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_POWER_LIMIT, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_POWER_LIMIT is defined as MSR_PKG_POWER_LIMIT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_POWER_LIMIT         0x00000610
 
@@ -1680,6 +1738,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_ENERGY_STATUS);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_ENERGY_STATUS is defined as MSR_PKG_ENERGY_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_ENERGY_STATUS       0x00000611
 
@@ -1699,6 +1758,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_POWER_INFO);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKG_POWER_INFO, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_POWER_INFO is defined as MSR_PKG_POWER_INFO in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_POWER_INFO          0x00000614
 
@@ -1718,6 +1778,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PP0_POWER_LIMIT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PP0_POWER_LIMIT, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PP0_POWER_LIMIT is defined as MSR_PP0_POWER_LIMIT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PP0_POWER_LIMIT         0x00000638
 
@@ -1736,6 +1797,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PP0_ENERGY_STATUS);
   @endcode
+  @note MSR_SANDY_BRIDGE_PP0_ENERGY_STATUS is defined as MSR_PP0_ENERGY_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PP0_ENERGY_STATUS       0x00000639
 
@@ -1744,7 +1806,8 @@ typedef union {
   Thread. Last Branch Record n From IP (R/W) One of sixteen pairs of last
   branch record registers on the last branch record stack. This part of the
   stack contains pointers to the source instruction. See also: -  Last Branch
-  Record Stack TOS at 1C9H -  Section 17.6.1, "LBR Stack.".
+  Record Stack TOS at 1C9H -  Section 17.7.1 and record format in Section
+  17.4.8.1.
 
   @param  ECX  MSR_SANDY_BRIDGE_LASTBRANCH_n_FROM_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -1757,6 +1820,22 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_LASTBRANCH_0_FROM_IP);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_LASTBRANCH_0_FROM_IP, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_LASTBRANCH_0_FROM_IP  is defined as MSR_LASTBRANCH_0_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_1_FROM_IP  is defined as MSR_LASTBRANCH_1_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_2_FROM_IP  is defined as MSR_LASTBRANCH_2_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_3_FROM_IP  is defined as MSR_LASTBRANCH_3_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_4_FROM_IP  is defined as MSR_LASTBRANCH_4_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_5_FROM_IP  is defined as MSR_LASTBRANCH_5_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_6_FROM_IP  is defined as MSR_LASTBRANCH_6_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_7_FROM_IP  is defined as MSR_LASTBRANCH_7_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_8_FROM_IP  is defined as MSR_LASTBRANCH_8_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_9_FROM_IP  is defined as MSR_LASTBRANCH_9_FROM_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_10_FROM_IP is defined as MSR_LASTBRANCH_10_FROM_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_11_FROM_IP is defined as MSR_LASTBRANCH_11_FROM_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_12_FROM_IP is defined as MSR_LASTBRANCH_12_FROM_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_13_FROM_IP is defined as MSR_LASTBRANCH_13_FROM_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_14_FROM_IP is defined as MSR_LASTBRANCH_14_FROM_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_15_FROM_IP is defined as MSR_LASTBRANCH_15_FROM_IP in SDM.
   @{
 **/
 #define MSR_SANDY_BRIDGE_LASTBRANCH_0_FROM_IP    0x00000680
@@ -1794,6 +1873,22 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_LASTBRANCH_0_TO_IP);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_LASTBRANCH_0_TO_IP, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_LASTBRANCH_0_TO_IP  is defined as MSR_LASTBRANCH_0_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_1_TO_IP  is defined as MSR_LASTBRANCH_1_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_2_TO_IP  is defined as MSR_LASTBRANCH_2_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_3_TO_IP  is defined as MSR_LASTBRANCH_3_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_4_TO_IP  is defined as MSR_LASTBRANCH_4_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_5_TO_IP  is defined as MSR_LASTBRANCH_5_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_6_TO_IP  is defined as MSR_LASTBRANCH_6_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_7_TO_IP  is defined as MSR_LASTBRANCH_7_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_8_TO_IP  is defined as MSR_LASTBRANCH_8_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_9_TO_IP  is defined as MSR_LASTBRANCH_9_TO_IP  in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_10_TO_IP is defined as MSR_LASTBRANCH_10_TO_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_11_TO_IP is defined as MSR_LASTBRANCH_11_TO_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_12_TO_IP is defined as MSR_LASTBRANCH_12_TO_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_13_TO_IP is defined as MSR_LASTBRANCH_13_TO_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_14_TO_IP is defined as MSR_LASTBRANCH_14_TO_IP in SDM.
+        MSR_SANDY_BRIDGE_LASTBRANCH_15_TO_IP is defined as MSR_LASTBRANCH_15_TO_IP in SDM.
   @{
 **/
 #define MSR_SANDY_BRIDGE_LASTBRANCH_0_TO_IP      0x000006C0
@@ -1831,6 +1926,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_TURBO_RATIO_LIMIT);
   @endcode
+  @note MSR_SANDY_BRIDGE_TURBO_RATIO_LIMIT is defined as MSR_TURBO_RATIO_LIMIT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_TURBO_RATIO_LIMIT       0x000001AD
 
@@ -1906,6 +2002,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_CTRL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_CTRL is defined as MSR_UNC_PERF_GLOBAL_CTRL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_CTRL    0x00000391
 
@@ -1918,22 +2015,26 @@ typedef union {
   ///
   struct {
     ///
-    /// [Bit 0] Core 0 select.
+    /// [Bit 0] Slice 0 select.
     ///
-    UINT32  PMI_Sel_Core0:1;
+    UINT32  PMI_Sel_Slice0:1;
     ///
-    /// [Bit 1] Core 1 select.
+    /// [Bit 1] Slice 1 select.
     ///
-    UINT32  PMI_Sel_Core1:1;
+    UINT32  PMI_Sel_Slice1:1;
     ///
-    /// [Bit 2] Core 2 select.
+    /// [Bit 2] Slice 2 select.
     ///
-    UINT32  PMI_Sel_Core2:1;
+    UINT32  PMI_Sel_Slice2:1;
     ///
-    /// [Bit 3] Core 3 select.
+    /// [Bit 3] Slice 3 select.
     ///
-    UINT32  PMI_Sel_Core3:1;
-    UINT32  Reserved1:15;
+    UINT32  PMI_Sel_Slice3:1;
+    ///
+    /// [Bit 4] Slice 4 select.
+    ///
+    UINT32  PMI_Sel_Slice4:1;
+    UINT32  Reserved1:14;
     UINT32  Reserved2:10;
     ///
     /// [Bit 29] Enable all uncore counters.
@@ -1976,6 +2077,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_STATUS);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_STATUS, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_STATUS is defined as MSR_UNC_PERF_GLOBAL_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_PERF_GLOBAL_STATUS  0x00000392
 
@@ -2031,6 +2133,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTRL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTRL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTRL is defined as MSR_UNC_PERF_FIXED_CTRL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTRL     0x00000394
 
@@ -2082,6 +2185,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTR);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTR, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTR is defined as MSR_UNC_PERF_FIXED_CTR in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_PERF_FIXED_CTR      0x00000395
 
@@ -2125,6 +2229,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_CONFIG);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_CONFIG is defined as MSR_UNC_CBO_CONFIG in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_CONFIG          0x00000396
 
@@ -2137,7 +2242,8 @@ typedef union {
   ///
   struct {
     ///
-    /// [Bits 3:0] Encoded number of C-Box, derive value by "-1".
+    /// [Bits 3:0] Report the number of C-Box units with performance counters,
+    /// including processor cores and processor graphics".
     ///
     UINT32  CBox:4;
     UINT32  Reserved1:28;
@@ -2168,6 +2274,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR0 is defined as MSR_UNC_ARB_PERFCTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR0        0x000003B0
 
@@ -2186,6 +2293,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR1 is defined as MSR_UNC_ARB_PERFCTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_ARB_PERFCTR1        0x000003B1
 
@@ -2204,6 +2312,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL0 is defined as MSR_UNC_ARB_PERFEVTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL0     0x000003B2
 
@@ -2222,6 +2331,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL1 is defined as MSR_UNC_ARB_PERFEVTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_UNC_ARB_PERFEVTSEL1     0x000003B3
 
@@ -2247,6 +2357,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKGC7_IRTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PKGC7_IRTL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKGC7_IRTL is defined as MSR_PKGC7_IRTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKGC7_IRTL              0x0000060C
 
@@ -2306,6 +2417,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PP0_POLICY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PP0_POLICY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PP0_POLICY is defined as MSR_PP0_POLICY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PP0_POLICY              0x0000063A
 
@@ -2325,6 +2437,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PP1_POWER_LIMIT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PP1_POWER_LIMIT, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PP1_POWER_LIMIT is defined as MSR_PP1_POWER_LIMIT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PP1_POWER_LIMIT         0x00000640
 
@@ -2343,6 +2456,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PP1_ENERGY_STATUS);
   @endcode
+  @note MSR_SANDY_BRIDGE_PP1_ENERGY_STATUS is defined as MSR_PP1_ENERGY_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PP1_ENERGY_STATUS       0x00000641
 
@@ -2362,14 +2476,15 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PP1_POLICY);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PP1_POLICY, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PP1_POLICY is defined as MSR_PP1_POLICY in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PP1_POLICY              0x00000642
 
 
 /**
-  Package. Uncore C-Box 0, counter 0 event select MSR.
+  Package. Uncore C-Box 0, counter n event select MSR.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL0 (0x00000700)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSELn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2380,14 +2495,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL0 is defined as MSR_UNC_CBO_0_PERFEVTSEL0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL1 is defined as MSR_UNC_CBO_0_PERFEVTSEL1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL2 is defined as MSR_UNC_CBO_0_PERFEVTSEL2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL3 is defined as MSR_UNC_CBO_0_PERFEVTSEL3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL0   0x00000700
+#define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL1   0x00000701
+#define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL2   0x00000702
+#define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL3   0x00000703
+/// @}
 
 
 /**
-  Package. Uncore C-Box 0, counter 1 event select MSR.
+  Package. Uncore C-Box n, unit status for counter 0-3.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL1 (0x00000701)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_n_UNIT_STATUS
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2395,17 +2519,28 @@ typedef union {
   @code
   UINT64  Msr;
 
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL1, Msr);
+  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_UNIT_STATUS);
+  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_UNIT_STATUS, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_0_UNIT_STATUS is defined as MSR_UNC_CBO_0_UNIT_STATUS in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_UNIT_STATUS is defined as MSR_UNC_CBO_1_UNIT_STATUS in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_UNIT_STATUS is defined as MSR_UNC_CBO_2_UNIT_STATUS in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_UNIT_STATUS is defined as MSR_UNC_CBO_3_UNIT_STATUS in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_UNIT_STATUS is defined as MSR_UNC_CBO_4_UNIT_STATUS in SDM.
+  @{
 **/
-#define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFEVTSEL1   0x00000701
+#define MSR_SANDY_BRIDGE_UNC_CBO_0_UNIT_STATUS   0x00000705
+#define MSR_SANDY_BRIDGE_UNC_CBO_1_UNIT_STATUS   0x00000715
+#define MSR_SANDY_BRIDGE_UNC_CBO_2_UNIT_STATUS   0x00000725
+#define MSR_SANDY_BRIDGE_UNC_CBO_3_UNIT_STATUS   0x00000735
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_UNIT_STATUS   0x00000745
+/// @}
 
 
 /**
-  Package. Uncore C-Box 0, performance counter 0.
+  Package. Uncore C-Box 0, performance counter n.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR0 (0x00000706)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTRn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2416,32 +2551,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR0 is defined as MSR_UNC_CBO_0_PERFCTR0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR1 is defined as MSR_UNC_CBO_0_PERFCTR1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR2 is defined as MSR_UNC_CBO_0_PERFCTR2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR3 is defined as MSR_UNC_CBO_0_PERFCTR3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR0      0x00000706
-
-
-/**
-  Package. Uncore C-Box 0, performance counter 1.
-
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR1 (0x00000707)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR1, Msr);
-  @endcode
-**/
 #define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR1      0x00000707
+#define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR2      0x00000708
+#define MSR_SANDY_BRIDGE_UNC_CBO_0_PERFCTR3      0x00000709
+/// @}
 
 
 /**
-  Package. Uncore C-Box 1, counter 0 event select MSR.
+  Package. Uncore C-Box 1, counter n event select MSR.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL0 (0x00000710)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSELn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2452,32 +2578,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL0 is defined as MSR_UNC_CBO_1_PERFEVTSEL0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL1 is defined as MSR_UNC_CBO_1_PERFEVTSEL1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL2 is defined as MSR_UNC_CBO_1_PERFEVTSEL2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL3 is defined as MSR_UNC_CBO_1_PERFEVTSEL3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL0   0x00000710
-
-
-/**
-  Package. Uncore C-Box 1, counter 1 event select MSR.
-
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL1 (0x00000711)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL1, Msr);
-  @endcode
-**/
 #define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL1   0x00000711
+#define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL2   0x00000712
+#define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFEVTSEL3   0x00000713
+/// @}
 
 
 /**
-  Package. Uncore C-Box 1, performance counter 0.
+  Package. Uncore C-Box 1, performance counter n.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR0 (0x00000716)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTRn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2488,32 +2605,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR0 is defined as MSR_UNC_CBO_1_PERFCTR0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR1 is defined as MSR_UNC_CBO_1_PERFCTR1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR2 is defined as MSR_UNC_CBO_1_PERFCTR2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR3 is defined as MSR_UNC_CBO_1_PERFCTR3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR0      0x00000716
-
-
-/**
-  Package. Uncore C-Box 1, performance counter 1.
-
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR1 (0x00000717)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR1, Msr);
-  @endcode
-**/
 #define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR1      0x00000717
+#define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR2      0x00000718
+#define MSR_SANDY_BRIDGE_UNC_CBO_1_PERFCTR3      0x00000719
+/// @}
 
 
 /**
-  Package. Uncore C-Box 2, counter 0 event select MSR.
+  Package. Uncore C-Box 2, counter n event select MSR.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL0 (0x00000720)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSELn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2524,32 +2632,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL0 is defined as MSR_UNC_CBO_2_PERFEVTSEL0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL1 is defined as MSR_UNC_CBO_2_PERFEVTSEL1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL2 is defined as MSR_UNC_CBO_2_PERFEVTSEL2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL3 is defined as MSR_UNC_CBO_2_PERFEVTSEL3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL0   0x00000720
-
-
-/**
-  Package. Uncore C-Box 2, counter 1 event select MSR.
-
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL1 (0x00000721)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL1, Msr);
-  @endcode
-**/
 #define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL1   0x00000721
+#define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL2   0x00000722
+#define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFEVTSEL3   0x00000723
+/// @}
 
 
 /**
-  Package. Uncore C-Box 2, performance counter 0.
+  Package. Uncore C-Box 2, performance counter n.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR0 (0x00000726)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTRn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2560,32 +2659,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR0 is defined as MSR_UNC_CBO_2_PERFCTR0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR1 is defined as MSR_UNC_CBO_2_PERFCTR1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR2 is defined as MSR_UNC_CBO_2_PERFCTR2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR3 is defined as MSR_UNC_CBO_2_PERFCTR3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR0      0x00000726
-
-
-/**
-  Package. Uncore C-Box 2, performance counter 1.
-
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR1 (0x00000727)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR1, Msr);
-  @endcode
-**/
 #define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR1      0x00000727
+#define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR2      0x00000728
+#define MSR_SANDY_BRIDGE_UNC_CBO_2_PERFCTR3      0x00000729
+/// @}
 
 
 /**
-  Package. Uncore C-Box 3, counter 0 event select MSR.
+  Package. Uncore C-Box 3, counter n event select MSR.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL0 (0x00000730)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSELn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2596,32 +2686,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL0 is defined as MSR_UNC_CBO_3_PERFEVTSEL0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL1 is defined as MSR_UNC_CBO_3_PERFEVTSEL1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL2 is defined as MSR_UNC_CBO_3_PERFEVTSEL2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL3 is defined as MSR_UNC_CBO_3_PERFEVTSEL3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL0   0x00000730
-
-
-/**
-  Package. Uncore C-Box 3, counter 1 event select MSR.
-
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL1 (0x00000731)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL1, Msr);
-  @endcode
-**/
 #define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL1   0x00000731
+#define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL2   0x00000732
+#define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFEVTSEL3   0x00000733
+/// @}
 
 
 /**
-  Package. Uncore C-Box 3, performance counter 0.
+  Package. Uncore C-Box 3, performance counter n.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR0 (0x00000736)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTRn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2632,14 +2713,23 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR0 is defined as MSR_UNC_CBO_3_PERFCTR0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR1 is defined as MSR_UNC_CBO_3_PERFCTR1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR2 is defined as MSR_UNC_CBO_3_PERFCTR2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR3 is defined as MSR_UNC_CBO_3_PERFCTR3 in SDM.
+  @{
 **/
 #define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR0      0x00000736
+#define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR1      0x00000737
+#define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR2      0x00000738
+#define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR3      0x00000739
+/// @}
 
 
 /**
-  Package. Uncore C-Box 3, performance counter 1.
+  Package. Uncore C-Box 4, counter n event select MSR.
 
-  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR1 (0x00000737)
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSELn
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -2647,11 +2737,47 @@ typedef union {
   @code
   UINT64  Msr;
 
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR1);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR1, Msr);
+  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL0);
+  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL0 is defined as MSR_UNC_CBO_4_PERFEVTSEL0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL1 is defined as MSR_UNC_CBO_4_PERFEVTSEL1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL2 is defined as MSR_UNC_CBO_4_PERFEVTSEL2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL3 is defined as MSR_UNC_CBO_4_PERFEVTSEL3 in SDM.
+  @{
 **/
-#define MSR_SANDY_BRIDGE_UNC_CBO_3_PERFCTR1      0x00000737
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL0   0x00000740
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL1   0x00000741
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL2   0x00000742
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFEVTSEL3   0x00000743
+/// @}
+
+
+/**
+  Package. Uncore C-Box 4, performance counter n.
+
+  @param  ECX  MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTRn
+  @param  EAX  Lower 32-bits of MSR value.
+  @param  EDX  Upper 32-bits of MSR value.
+
+  <b>Example usage</b>
+  @code
+  UINT64  Msr;
+
+  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR0);
+  AsmWriteMsr64 (MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR0, Msr);
+  @endcode
+  @note MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR0 is defined as MSR_UNC_CBO_4_PERFCTR0 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR1 is defined as MSR_UNC_CBO_4_PERFCTR1 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR2 is defined as MSR_UNC_CBO_4_PERFCTR2 in SDM.
+        MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR3 is defined as MSR_UNC_CBO_4_PERFCTR3 in SDM.
+  @{
+**/
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR0      0x00000746
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR1      0x00000747
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR2      0x00000748
+#define MSR_SANDY_BRIDGE_UNC_CBO_4_PERFCTR3      0x00000749
+/// @}
 
 
 /**
@@ -2670,6 +2796,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_ERROR_CONTROL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_ERROR_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_ERROR_CONTROL is defined as MSR_ERROR_CONTROL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_ERROR_CONTROL           0x0000017F
 
@@ -2717,6 +2844,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_SANDY_BRIDGE_PEBS_NUM_ALT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PEBS_NUM_ALT, Msr.Uint64);
   @endcode
+  @note MSR_SANDY_BRIDGE_PEBS_NUM_ALT is defined as MSR_PEBS_NUM_ALT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PEBS_NUM_ALT            0x0000039C
 
@@ -2731,7 +2859,7 @@ typedef union {
     ///
     /// [Bit 0] ENABLE_PEBS_NUM_ALT (RW) Write 1 to enable alternate PEBS
     /// counting logic for specific events requiring additional configuration,
-    /// see Table 19-9.
+    /// see Table 19-15.
     ///
     UINT32  ENABLE_PEBS_NUM_ALT:1;
     UINT32  Reserved1:31;
@@ -2749,142 +2877,6 @@ typedef union {
 
 
 /**
-  Package. See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
-
-  @param  ECX  MSR_SANDY_BRIDGE_MCi_CTL
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_MC5_CTL);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_MC5_CTL, Msr);
-  @endcode
-  @{
-**/
-#define MSR_SANDY_BRIDGE_MC5_CTL                 0x00000414
-#define MSR_SANDY_BRIDGE_MC6_CTL                 0x00000418
-#define MSR_SANDY_BRIDGE_MC7_CTL                 0x0000041C
-#define MSR_SANDY_BRIDGE_MC8_CTL                 0x00000420
-#define MSR_SANDY_BRIDGE_MC9_CTL                 0x00000424
-#define MSR_SANDY_BRIDGE_MC10_CTL                0x00000428
-#define MSR_SANDY_BRIDGE_MC11_CTL                0x0000042C
-#define MSR_SANDY_BRIDGE_MC12_CTL                0x00000430
-#define MSR_SANDY_BRIDGE_MC13_CTL                0x00000434
-#define MSR_SANDY_BRIDGE_MC14_CTL                0x00000438
-#define MSR_SANDY_BRIDGE_MC15_CTL                0x0000043C
-#define MSR_SANDY_BRIDGE_MC16_CTL                0x00000440
-#define MSR_SANDY_BRIDGE_MC17_CTL                0x00000444
-#define MSR_SANDY_BRIDGE_MC18_CTL                0x00000448
-#define MSR_SANDY_BRIDGE_MC19_CTL                0x0000044C
-/// @}
-
-
-/**
-  Package. See Section 15.3.2.2, "IA32_MCi_STATUS MSRS," and Chapter 16.
-
-  @param  ECX  MSR_SANDY_BRIDGE_MCi_STATUS
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_MC5_STATUS);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_MC5_STATUS, Msr);
-  @endcode
-  @{
-**/
-#define MSR_SANDY_BRIDGE_MC5_STATUS              0x00000415
-#define MSR_SANDY_BRIDGE_MC6_STATUS              0x00000419
-#define MSR_SANDY_BRIDGE_MC7_STATUS              0x0000041D
-#define MSR_SANDY_BRIDGE_MC8_STATUS              0x00000421
-#define MSR_SANDY_BRIDGE_MC9_STATUS              0x00000425
-#define MSR_SANDY_BRIDGE_MC10_STATUS             0x00000429
-#define MSR_SANDY_BRIDGE_MC11_STATUS             0x0000042D
-#define MSR_SANDY_BRIDGE_MC12_STATUS             0x00000431
-#define MSR_SANDY_BRIDGE_MC13_STATUS             0x00000435
-#define MSR_SANDY_BRIDGE_MC14_STATUS             0x00000439
-#define MSR_SANDY_BRIDGE_MC15_STATUS             0x0000043D
-#define MSR_SANDY_BRIDGE_MC16_STATUS             0x00000441
-#define MSR_SANDY_BRIDGE_MC17_STATUS             0x00000445
-#define MSR_SANDY_BRIDGE_MC18_STATUS             0x00000449
-#define MSR_SANDY_BRIDGE_MC19_STATUS             0x0000044D
-/// @}
-
-
-/**
-  Package. See Section 15.3.2.3, "IA32_MCi_ADDR MSRs.".
-
-  @param  ECX  MSR_SANDY_BRIDGE_MCi_ADDR
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_MC5_ADDR);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_MC5_ADDR, Msr);
-  @endcode
-  @{
-**/
-#define MSR_SANDY_BRIDGE_MC5_ADDR                0x00000416
-#define MSR_SANDY_BRIDGE_MC6_ADDR                0x0000041A
-#define MSR_SANDY_BRIDGE_MC7_ADDR                0x0000041E
-#define MSR_SANDY_BRIDGE_MC8_ADDR                0x00000422
-#define MSR_SANDY_BRIDGE_MC9_ADDR                0x00000426
-#define MSR_SANDY_BRIDGE_MC10_ADDR               0x0000042A
-#define MSR_SANDY_BRIDGE_MC11_ADDR               0x0000042E
-#define MSR_SANDY_BRIDGE_MC12_ADDR               0x00000432
-#define MSR_SANDY_BRIDGE_MC13_ADDR               0x00000436
-#define MSR_SANDY_BRIDGE_MC14_ADDR               0x0000043A
-#define MSR_SANDY_BRIDGE_MC15_ADDR               0x0000043E
-#define MSR_SANDY_BRIDGE_MC16_ADDR               0x00000442
-#define MSR_SANDY_BRIDGE_MC17_ADDR               0x00000446
-#define MSR_SANDY_BRIDGE_MC18_ADDR               0x0000044A
-#define MSR_SANDY_BRIDGE_MC19_ADDR               0x0000044E
-/// @}
-
-
-/**
-  Package. See Section 15.3.2.4, "IA32_MCi_MISC MSRs.".
-
-  @param  ECX  MSR_SANDY_BRIDGE_MCi_MISC
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_MC5_MISC);
-  AsmWriteMsr64 (MSR_SANDY_BRIDGE_MC5_MISC, Msr);
-  @endcode
-  @{
-**/
-#define MSR_SANDY_BRIDGE_MC5_MISC                0x00000417
-#define MSR_SANDY_BRIDGE_MC6_MISC                0x0000041B
-#define MSR_SANDY_BRIDGE_MC7_MISC                0x0000041F
-#define MSR_SANDY_BRIDGE_MC8_MISC                0x00000423
-#define MSR_SANDY_BRIDGE_MC9_MISC                0x00000427
-#define MSR_SANDY_BRIDGE_MC10_MISC               0x0000042B
-#define MSR_SANDY_BRIDGE_MC11_MISC               0x0000042F
-#define MSR_SANDY_BRIDGE_MC12_MISC               0x00000433
-#define MSR_SANDY_BRIDGE_MC13_MISC               0x00000437
-#define MSR_SANDY_BRIDGE_MC14_MISC               0x0000043B
-#define MSR_SANDY_BRIDGE_MC15_MISC               0x0000043F
-#define MSR_SANDY_BRIDGE_MC16_MISC               0x00000443
-#define MSR_SANDY_BRIDGE_MC17_MISC               0x00000447
-#define MSR_SANDY_BRIDGE_MC18_MISC               0x0000044B
-#define MSR_SANDY_BRIDGE_MC19_MISC               0x0000044F
-/// @}
-
-
-/**
   Package. Package RAPL Perf Status (R/O).
 
   @param  ECX  MSR_SANDY_BRIDGE_PKG_PERF_STATUS (0x00000613)
@@ -2897,6 +2889,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PKG_PERF_STATUS);
   @endcode
+  @note MSR_SANDY_BRIDGE_PKG_PERF_STATUS is defined as MSR_PKG_PERF_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PKG_PERF_STATUS         0x00000613
 
@@ -2916,6 +2909,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_DRAM_POWER_LIMIT);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_DRAM_POWER_LIMIT, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_DRAM_POWER_LIMIT is defined as MSR_DRAM_POWER_LIMIT in SDM.
 **/
 #define MSR_SANDY_BRIDGE_DRAM_POWER_LIMIT        0x00000618
 
@@ -2933,6 +2927,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_DRAM_ENERGY_STATUS);
   @endcode
+  @note MSR_SANDY_BRIDGE_DRAM_ENERGY_STATUS is defined as MSR_DRAM_ENERGY_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_DRAM_ENERGY_STATUS      0x00000619
 
@@ -2951,6 +2946,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_DRAM_PERF_STATUS);
   @endcode
+  @note MSR_SANDY_BRIDGE_DRAM_PERF_STATUS is defined as MSR_DRAM_PERF_STATUS in SDM.
 **/
 #define MSR_SANDY_BRIDGE_DRAM_PERF_STATUS        0x0000061B
 
@@ -2969,6 +2965,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_DRAM_POWER_INFO);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_DRAM_POWER_INFO, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_DRAM_POWER_INFO is defined as MSR_DRAM_POWER_INFO in SDM.
 **/
 #define MSR_SANDY_BRIDGE_DRAM_POWER_INFO         0x0000061C
 
@@ -2987,6 +2984,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTL is defined as MSR_U_PMON_UCLK_FIXED_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTL   0x00000C08
 
@@ -3005,6 +3003,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTR);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTR, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTR is defined as MSR_U_PMON_UCLK_FIXED_CTR in SDM.
 **/
 #define MSR_SANDY_BRIDGE_U_PMON_UCLK_FIXED_CTR   0x00000C09
 
@@ -3023,6 +3022,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_U_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_U_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_U_PMON_EVNTSEL0 is defined as MSR_U_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_U_PMON_EVNTSEL0         0x00000C10
 
@@ -3041,6 +3041,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_U_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_U_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_U_PMON_EVNTSEL1 is defined as MSR_U_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_U_PMON_EVNTSEL1         0x00000C11
 
@@ -3059,6 +3060,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_U_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_U_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_U_PMON_CTR0 is defined as MSR_U_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_U_PMON_CTR0             0x00000C16
 
@@ -3077,6 +3079,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_U_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_U_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_U_PMON_CTR1 is defined as MSR_U_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_U_PMON_CTR1             0x00000C17
 
@@ -3095,6 +3098,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_BOX_CTL is defined as MSR_PCU_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_BOX_CTL        0x00000C24
 
@@ -3113,6 +3117,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL0 is defined as MSR_PCU_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL0       0x00000C30
 
@@ -3131,6 +3136,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL1 is defined as MSR_PCU_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL1       0x00000C31
 
@@ -3149,6 +3155,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL2 is defined as MSR_PCU_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL2       0x00000C32
 
@@ -3167,6 +3174,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL3 is defined as MSR_PCU_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_EVNTSEL3       0x00000C33
 
@@ -3185,6 +3193,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_BOX_FILTER is defined as MSR_PCU_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_BOX_FILTER     0x00000C34
 
@@ -3203,6 +3212,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_CTR0 is defined as MSR_PCU_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_CTR0           0x00000C36
 
@@ -3221,6 +3231,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_CTR1 is defined as MSR_PCU_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_CTR1           0x00000C37
 
@@ -3239,6 +3250,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_CTR2 is defined as MSR_PCU_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_CTR2           0x00000C38
 
@@ -3257,6 +3269,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_PCU_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_PCU_PMON_CTR3 is defined as MSR_PCU_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_PCU_PMON_CTR3           0x00000C39
 
@@ -3275,6 +3288,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_BOX_CTL is defined as MSR_C0_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_BOX_CTL         0x00000D04
 
@@ -3293,6 +3307,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL0 is defined as MSR_C0_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL0        0x00000D10
 
@@ -3311,6 +3326,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL1 is defined as MSR_C0_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL1        0x00000D11
 
@@ -3329,6 +3345,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL2 is defined as MSR_C0_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL2        0x00000D12
 
@@ -3347,6 +3364,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL3 is defined as MSR_C0_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_EVNTSEL3        0x00000D13
 
@@ -3365,6 +3383,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_BOX_FILTER is defined as MSR_C0_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_BOX_FILTER      0x00000D14
 
@@ -3383,6 +3402,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_CTR0 is defined as MSR_C0_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_CTR0            0x00000D16
 
@@ -3401,6 +3421,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_CTR1 is defined as MSR_C0_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_CTR1            0x00000D17
 
@@ -3419,6 +3440,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_CTR2 is defined as MSR_C0_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_CTR2            0x00000D18
 
@@ -3437,6 +3459,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C0_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C0_PMON_CTR3 is defined as MSR_C0_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C0_PMON_CTR3            0x00000D19
 
@@ -3455,6 +3478,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_BOX_CTL is defined as MSR_C1_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_BOX_CTL         0x00000D24
 
@@ -3473,6 +3497,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL0 is defined as MSR_C1_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL0        0x00000D30
 
@@ -3491,6 +3516,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL1 is defined as MSR_C1_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL1        0x00000D31
 
@@ -3509,6 +3535,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL2 is defined as MSR_C1_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL2        0x00000D32
 
@@ -3527,6 +3554,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL3 is defined as MSR_C1_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_EVNTSEL3        0x00000D33
 
@@ -3545,6 +3573,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_BOX_FILTER is defined as MSR_C1_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_BOX_FILTER      0x00000D34
 
@@ -3563,6 +3592,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_CTR0 is defined as MSR_C1_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_CTR0            0x00000D36
 
@@ -3581,6 +3611,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_CTR1 is defined as MSR_C1_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_CTR1            0x00000D37
 
@@ -3599,6 +3630,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_CTR2 is defined as MSR_C1_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_CTR2            0x00000D38
 
@@ -3617,6 +3649,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C1_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C1_PMON_CTR3 is defined as MSR_C1_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C1_PMON_CTR3            0x00000D39
 
@@ -3635,6 +3668,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_BOX_CTL is defined as MSR_C2_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_BOX_CTL         0x00000D44
 
@@ -3653,6 +3687,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL0 is defined as MSR_C2_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL0        0x00000D50
 
@@ -3671,6 +3706,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL1 is defined as MSR_C2_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL1        0x00000D51
 
@@ -3689,6 +3725,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL2 is defined as MSR_C2_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL2        0x00000D52
 
@@ -3707,6 +3744,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL3 is defined as MSR_C2_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_EVNTSEL3        0x00000D53
 
@@ -3725,6 +3763,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_BOX_FILTER is defined as MSR_C2_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_BOX_FILTER      0x00000D54
 
@@ -3743,6 +3782,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_CTR0 is defined as MSR_C2_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_CTR0            0x00000D56
 
@@ -3761,6 +3801,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_CTR1 is defined as MSR_C2_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_CTR1            0x00000D57
 
@@ -3779,6 +3820,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_CTR2 is defined as MSR_C2_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_CTR2            0x00000D58
 
@@ -3797,6 +3839,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C2_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C2_PMON_CTR3 is defined as MSR_C2_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C2_PMON_CTR3            0x00000D59
 
@@ -3815,6 +3858,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_BOX_CTL is defined as MSR_C3_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_BOX_CTL         0x00000D64
 
@@ -3833,6 +3877,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL0 is defined as MSR_C3_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL0        0x00000D70
 
@@ -3851,6 +3896,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL1 is defined as MSR_C3_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL1        0x00000D71
 
@@ -3869,6 +3915,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL2 is defined as MSR_C3_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL2        0x00000D72
 
@@ -3887,6 +3934,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL3 is defined as MSR_C3_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_EVNTSEL3        0x00000D73
 
@@ -3905,6 +3953,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_BOX_FILTER is defined as MSR_C3_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_BOX_FILTER      0x00000D74
 
@@ -3923,6 +3972,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_CTR0 is defined as MSR_C3_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_CTR0            0x00000D76
 
@@ -3941,6 +3991,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_CTR1 is defined as MSR_C3_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_CTR1            0x00000D77
 
@@ -3959,6 +4010,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_CTR2 is defined as MSR_C3_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_CTR2            0x00000D78
 
@@ -3977,6 +4029,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C3_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C3_PMON_CTR3 is defined as MSR_C3_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C3_PMON_CTR3            0x00000D79
 
@@ -3995,6 +4048,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_BOX_CTL is defined as MSR_C4_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_BOX_CTL         0x00000D84
 
@@ -4013,6 +4067,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL0 is defined as MSR_C4_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL0        0x00000D90
 
@@ -4031,6 +4086,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL1 is defined as MSR_C4_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL1        0x00000D91
 
@@ -4049,6 +4105,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL2 is defined as MSR_C4_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL2        0x00000D92
 
@@ -4067,6 +4124,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL3 is defined as MSR_C4_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_EVNTSEL3        0x00000D93
 
@@ -4085,6 +4143,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_BOX_FILTER is defined as MSR_C4_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_BOX_FILTER      0x00000D94
 
@@ -4103,6 +4162,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_CTR0 is defined as MSR_C4_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_CTR0            0x00000D96
 
@@ -4121,6 +4181,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_CTR1 is defined as MSR_C4_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_CTR1            0x00000D97
 
@@ -4139,6 +4200,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_CTR2 is defined as MSR_C4_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_CTR2            0x00000D98
 
@@ -4157,6 +4219,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C4_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C4_PMON_CTR3 is defined as MSR_C4_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C4_PMON_CTR3            0x00000D99
 
@@ -4175,6 +4238,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_BOX_CTL is defined as MSR_C5_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_BOX_CTL         0x00000DA4
 
@@ -4193,6 +4257,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL0 is defined as MSR_C5_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL0        0x00000DB0
 
@@ -4211,6 +4276,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL1 is defined as MSR_C5_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL1        0x00000DB1
 
@@ -4229,6 +4295,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL2 is defined as MSR_C5_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL2        0x00000DB2
 
@@ -4247,6 +4314,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL3 is defined as MSR_C5_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_EVNTSEL3        0x00000DB3
 
@@ -4265,6 +4333,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_BOX_FILTER is defined as MSR_C5_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_BOX_FILTER      0x00000DB4
 
@@ -4283,6 +4352,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_CTR0 is defined as MSR_C5_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_CTR0            0x00000DB6
 
@@ -4301,6 +4371,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_CTR1 is defined as MSR_C5_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_CTR1            0x00000DB7
 
@@ -4319,6 +4390,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_CTR2 is defined as MSR_C5_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_CTR2            0x00000DB8
 
@@ -4337,6 +4409,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C5_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C5_PMON_CTR3 is defined as MSR_C5_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C5_PMON_CTR3            0x00000DB9
 
@@ -4355,6 +4428,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_BOX_CTL is defined as MSR_C6_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_BOX_CTL         0x00000DC4
 
@@ -4373,6 +4447,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL0 is defined as MSR_C6_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL0        0x00000DD0
 
@@ -4391,6 +4466,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL1 is defined as MSR_C6_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL1        0x00000DD1
 
@@ -4409,6 +4485,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL2 is defined as MSR_C6_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL2        0x00000DD2
 
@@ -4427,6 +4504,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL3 is defined as MSR_C6_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_EVNTSEL3        0x00000DD3
 
@@ -4445,6 +4523,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_BOX_FILTER is defined as MSR_C6_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_BOX_FILTER      0x00000DD4
 
@@ -4463,6 +4542,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_CTR0 is defined as MSR_C6_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_CTR0            0x00000DD6
 
@@ -4481,6 +4561,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_CTR1 is defined as MSR_C6_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_CTR1            0x00000DD7
 
@@ -4499,6 +4580,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_CTR2 is defined as MSR_C6_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_CTR2            0x00000DD8
 
@@ -4517,6 +4599,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C6_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C6_PMON_CTR3 is defined as MSR_C6_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C6_PMON_CTR3            0x00000DD9
 
@@ -4535,6 +4618,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_BOX_CTL);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_BOX_CTL, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_BOX_CTL is defined as MSR_C7_PMON_BOX_CTL in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_BOX_CTL         0x00000DE4
 
@@ -4553,6 +4637,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL0 is defined as MSR_C7_PMON_EVNTSEL0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL0        0x00000DF0
 
@@ -4571,6 +4656,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL1 is defined as MSR_C7_PMON_EVNTSEL1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL1        0x00000DF1
 
@@ -4589,6 +4675,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL2 is defined as MSR_C7_PMON_EVNTSEL2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL2        0x00000DF2
 
@@ -4607,6 +4694,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL3 is defined as MSR_C7_PMON_EVNTSEL3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_EVNTSEL3        0x00000DF3
 
@@ -4625,6 +4713,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_BOX_FILTER);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_BOX_FILTER, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_BOX_FILTER is defined as MSR_C7_PMON_BOX_FILTER in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_BOX_FILTER      0x00000DF4
 
@@ -4643,6 +4732,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR0);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR0, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_CTR0 is defined as MSR_C7_PMON_CTR0 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_CTR0            0x00000DF6
 
@@ -4661,6 +4751,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR1);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR1, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_CTR1 is defined as MSR_C7_PMON_CTR1 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_CTR1            0x00000DF7
 
@@ -4679,6 +4770,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR2);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR2, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_CTR2 is defined as MSR_C7_PMON_CTR2 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_CTR2            0x00000DF8
 
@@ -4697,6 +4789,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR3);
   AsmWriteMsr64 (MSR_SANDY_BRIDGE_C7_PMON_CTR3, Msr);
   @endcode
+  @note MSR_SANDY_BRIDGE_C7_PMON_CTR3 is defined as MSR_C7_PMON_CTR3 in SDM.
 **/
 #define MSR_SANDY_BRIDGE_C7_PMON_CTR3            0x00000DF9
 

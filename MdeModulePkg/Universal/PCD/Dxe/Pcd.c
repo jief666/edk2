@@ -3,7 +3,7 @@
   produce the implementation of native PCD protocol and EFI_PCD_PROTOCOL defined in
   PI 1.4a Vol3.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -239,7 +239,7 @@ DxeGetPcdInfoGetSku (
   VOID
   )
 {
-  return mPcdDatabase.DxeDb->SystemSkuId;
+  return (UINTN) mPcdDatabase.DxeDb->SystemSkuId;
 }
 
 /**
@@ -269,22 +269,49 @@ DxePcdSetSku (
   IN  UINTN         SkuId
   )
 {
-  SKU_ID    *SkuIdTable;
-  UINTN     Index;
+  SKU_ID     *SkuIdTable;
+  UINTN      Index;
+  EFI_STATUS Status;
+
+  DEBUG ((DEBUG_INFO, "PcdDxe - SkuId 0x%lx is to be set.\n", (SKU_ID) SkuId));
+
+  if (SkuId == mPcdDatabase.DxeDb->SystemSkuId) {
+    //
+    // The input SKU Id is equal to current SKU Id, return directly.
+    //
+    DEBUG ((DEBUG_INFO, "PcdDxe - SkuId is same to current system Sku.\n"));
+    return;
+  }
+
+  if (mPcdDatabase.DxeDb->SystemSkuId != (SKU_ID) 0) {
+    DEBUG ((DEBUG_ERROR, "PcdDxe - The SKU Id could be changed only once."));
+    DEBUG ((
+      DEBUG_ERROR,
+      "PcdDxe - The SKU Id was set to 0x%lx already, it could not be set to 0x%lx any more.",
+      mPcdDatabase.DxeDb->SystemSkuId,
+      (SKU_ID) SkuId
+      ));
+    ASSERT (FALSE);
+    return;
+  }
 
   SkuIdTable = (SKU_ID *) ((UINT8 *) mPcdDatabase.DxeDb + mPcdDatabase.DxeDb->SkuIdTableOffset);
   for (Index = 0; Index < SkuIdTable[0]; Index++) {
     if (SkuId == SkuIdTable[Index + 1]) {
-      mPcdDatabase.DxeDb->SystemSkuId = (SKU_ID) SkuId;
-      return;
+      DEBUG ((DEBUG_INFO, "PcdDxe - SkuId is found in SkuId table.\n"));
+      Status = UpdatePcdDatabase (SkuId, TRUE);
+      if (!EFI_ERROR (Status)) {
+        mPcdDatabase.DxeDb->SystemSkuId = (SKU_ID) SkuId;
+        DEBUG ((DEBUG_INFO, "PcdDxe - Set current SKU Id to 0x%lx.\n", (SKU_ID) SkuId));
+        return;
+      }
     }
   }
 
   //
-  // Invalid input SkuId, the default SKU Id will be used for the system.
+  // Invalid input SkuId, the default SKU Id will be still used for the system.
   //
-  DEBUG ((EFI_D_INFO, "PcdDxe - Invalid input SkuId, the default SKU Id will be used.\n"));
-  mPcdDatabase.DxeDb->SystemSkuId = (SKU_ID) 0;
+  DEBUG ((DEBUG_ERROR, "PcdDxe - Invalid input SkuId, the default SKU Id will be still used.\n"));
   return;
 }
 
@@ -1277,6 +1304,7 @@ DxePcdGetNextTokenSpace (
                             (EFI_GUID *)((UINT8 *)mPcdDatabase.PeiDb + mPcdDatabase.PeiDb->GuidTableOffset)
                             );
       CopyMem (TmpTokenSpaceBuffer, PeiTokenSpaceTable, sizeof (EFI_GUID*) * PeiTokenSpaceTableSize);
+      TmpTokenSpaceBufferCount = PeiTokenSpaceTableSize;
       FreePool (PeiTokenSpaceTable);
     }
 

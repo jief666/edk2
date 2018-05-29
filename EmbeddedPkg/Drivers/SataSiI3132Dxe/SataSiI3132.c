@@ -384,7 +384,7 @@ SataSiI3132DriverBindingStart (
                   &Supports
                   );
   if (!EFI_ERROR (Status)) {
-      Supports &= EFI_PCI_DEVICE_ENABLE;
+      Supports &= EFI_PCI_DEVICE_ENABLE | EFI_PCI_IO_ATTRIBUTE_DUAL_ADDRESS_CYCLE;
       Status = PciIo->Attributes (
                         PciIo,
                         EfiPciIoAttributeOperationEnable,
@@ -490,7 +490,7 @@ CLOSE_PCIIO:
 }
 
 /**
-  Stop this driver on ControllerHandle. Support stoping any child handles
+  Stop this driver on ControllerHandle. Support stopping any child handles
   created by this driver.
 
   @param  This                 Protocol instance pointer.

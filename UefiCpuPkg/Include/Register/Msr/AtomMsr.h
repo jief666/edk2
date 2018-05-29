@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-3.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.3.
 
 **/
 
@@ -25,6 +25,26 @@
 #define __ATOM_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel(R) Atom(TM) Processor Family?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_ATOM_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x1C || \
+    DisplayModel == 0x26 || \
+    DisplayModel == 0x27 || \
+    DisplayModel == 0x35 || \
+    DisplayModel == 0x36    \
+    )                       \
+   )
 
 /**
   Shared. Model Specific Platform ID (R).
@@ -41,6 +61,7 @@
 
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_PLATFORM_ID);
   @endcode
+  @note MSR_ATOM_PLATFORM_ID is defined as MSR_PLATFORM_ID in SDM.
 **/
 #define MSR_ATOM_PLATFORM_ID                     0x00000017
 
@@ -88,6 +109,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_EBL_CR_POWERON);
   AsmWriteMsr64 (MSR_ATOM_EBL_CR_POWERON, Msr.Uint64);
   @endcode
+  @note MSR_ATOM_EBL_CR_POWERON is defined as MSR_EBL_CR_POWERON in SDM.
 **/
 #define MSR_ATOM_EBL_CR_POWERON                  0x0000002A
 
@@ -175,12 +197,10 @@ typedef union {
 
 
 /**
-  Unique. Last Branch Record 0 From IP (R/W) One of eight pairs of last branch
-  record registers on the last branch record stack. This part of the stack
-  contains pointers to the source instruction for one of the last eight
-  branches, exceptions, or interrupts taken by the processor. See also: -
-  Last Branch Record Stack TOS at 1C9H -  Section 17.12, "Last Branch,
-  Interrupt, and Exception Recording (Pentium M Processors).".
+  Unique. Last Branch Record n From IP (R/W) One of eight pairs of last branch
+  record registers on the last branch record stack. The From_IP part of the
+  stack contains pointers to the source instruction . See also: -  Last Branch
+  Record Stack TOS at 1C9H -  Section 17.5.
 
   @param  ECX  MSR_ATOM_LASTBRANCH_n_FROM_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -193,6 +213,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_ATOM_LASTBRANCH_0_FROM_IP);
   AsmWriteMsr64 (MSR_ATOM_LASTBRANCH_0_FROM_IP, Msr);
   @endcode
+  @note MSR_ATOM_LASTBRANCH_0_FROM_IP is defined as MSR_LASTBRANCH_0_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_1_FROM_IP is defined as MSR_LASTBRANCH_1_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_2_FROM_IP is defined as MSR_LASTBRANCH_2_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_3_FROM_IP is defined as MSR_LASTBRANCH_3_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_4_FROM_IP is defined as MSR_LASTBRANCH_4_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_5_FROM_IP is defined as MSR_LASTBRANCH_5_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_6_FROM_IP is defined as MSR_LASTBRANCH_6_FROM_IP in SDM.
+        MSR_ATOM_LASTBRANCH_7_FROM_IP is defined as MSR_LASTBRANCH_7_FROM_IP in SDM.
   @{
 **/
 #define MSR_ATOM_LASTBRANCH_0_FROM_IP            0x00000040
@@ -207,10 +235,9 @@ typedef union {
 
 
 /**
-  Unique. Last Branch Record 0 To IP (R/W) One of eight pairs of last branch
-  record registers on the last branch record stack. This part of the stack
-  contains pointers to the destination instruction for one of the last eight
-  branches, exceptions, or interrupts taken by the processor.
+  Unique. Last Branch Record n To IP (R/W) One of eight pairs of last branch
+  record registers on the last branch record stack. The To_IP part of the
+  stack contains pointers to the destination instruction.
 
   @param  ECX  MSR_ATOM_LASTBRANCH_n_TO_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -223,6 +250,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_ATOM_LASTBRANCH_0_TO_IP);
   AsmWriteMsr64 (MSR_ATOM_LASTBRANCH_0_TO_IP, Msr);
   @endcode
+  @note MSR_ATOM_LASTBRANCH_0_TO_IP is defined as MSR_LASTBRANCH_0_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_1_TO_IP is defined as MSR_LASTBRANCH_1_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_2_TO_IP is defined as MSR_LASTBRANCH_2_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_3_TO_IP is defined as MSR_LASTBRANCH_3_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_4_TO_IP is defined as MSR_LASTBRANCH_4_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_5_TO_IP is defined as MSR_LASTBRANCH_5_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_6_TO_IP is defined as MSR_LASTBRANCH_6_TO_IP in SDM.
+        MSR_ATOM_LASTBRANCH_7_TO_IP is defined as MSR_LASTBRANCH_7_TO_IP in SDM.
   @{
 **/
 #define MSR_ATOM_LASTBRANCH_0_TO_IP              0x00000060
@@ -252,6 +287,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_FSB_FREQ);
   @endcode
+  @note MSR_ATOM_FSB_FREQ is defined as MSR_FSB_FREQ in SDM.
 **/
 #define MSR_ATOM_FSB_FREQ                        0x000000CD
 
@@ -310,6 +346,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_BBL_CR_CTL3);
   AsmWriteMsr64 (MSR_ATOM_BBL_CR_CTL3, Msr.Uint64);
   @endcode
+  @note MSR_ATOM_BBL_CR_CTL3 is defined as MSR_BBL_CR_CTL3 in SDM.
 **/
 #define MSR_ATOM_BBL_CR_CTL3                     0x0000011E
 
@@ -368,6 +405,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_PERF_STATUS);
   AsmWriteMsr64 (MSR_ATOM_PERF_STATUS, Msr.Uint64);
   @endcode
+  @note MSR_ATOM_PERF_STATUS is defined as MSR_PERF_STATUS in SDM.
 **/
 #define MSR_ATOM_PERF_STATUS                     0x00000198
 
@@ -415,6 +453,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_THERM2_CTL);
   AsmWriteMsr64 (MSR_ATOM_THERM2_CTL, Msr.Uint64);
   @endcode
+  @note MSR_ATOM_THERM2_CTL is defined as MSR_THERM2_CTL in SDM.
 **/
 #define MSR_ATOM_THERM2_CTL                      0x0000019D
 
@@ -466,6 +505,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_IA32_MISC_ENABLE);
   AsmWriteMsr64 (MSR_ATOM_IA32_MISC_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_ATOM_IA32_MISC_ENABLE is defined as IA32_MISC_ENABLE in SDM.
 **/
 #define MSR_ATOM_IA32_MISC_ENABLE                0x000001A0
 
@@ -484,7 +524,7 @@ typedef union {
     UINT32  Reserved1:2;
     ///
     /// [Bit 3] Unique. Automatic Thermal Control Circuit Enable (R/W) See
-    /// Table 35-2.
+    /// Table 35-2. Default value is 0.
     ///
     UINT32  AutomaticThermalControlCircuit:1;
     UINT32  Reserved2:3;
@@ -506,7 +546,7 @@ typedef union {
     ///
     UINT32  BTS:1;
     ///
-    /// [Bit 12] Shared. Precise Event Based Sampling Unavailable (RO) See
+    /// [Bit 12] Shared. Processor Event Based Sampling Unavailable (RO) See
     /// Table 35-2.
     ///
     UINT32  PEBS:1;
@@ -586,6 +626,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_ATOM_LASTBRANCH_TOS);
   AsmWriteMsr64 (MSR_ATOM_LASTBRANCH_TOS, Msr);
   @endcode
+  @note MSR_ATOM_LASTBRANCH_TOS is defined as MSR_LASTBRANCH_TOS in SDM.
 **/
 #define MSR_ATOM_LASTBRANCH_TOS                  0x000001C9
 
@@ -605,6 +646,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_ATOM_LER_FROM_LIP);
   @endcode
+  @note MSR_ATOM_LER_FROM_LIP is defined as MSR_LER_FROM_LIP in SDM.
 **/
 #define MSR_ATOM_LER_FROM_LIP                    0x000001DD
 
@@ -625,31 +667,13 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_ATOM_LER_TO_LIP);
   @endcode
+  @note MSR_ATOM_LER_TO_LIP is defined as MSR_LER_TO_LIP in SDM.
 **/
 #define MSR_ATOM_LER_TO_LIP                      0x000001DE
 
 
 /**
-  Unique. See Table 35-2. See Section 18.4.2, "Global Counter Control
-  Facilities.".
-
-  @param  ECX  MSR_ATOM_IA32_PERF_GLOBAL_STAUS (0x0000038E)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_IA32_PERF_GLOBAL_STAUS);
-  AsmWriteMsr64 (MSR_ATOM_IA32_PERF_GLOBAL_STAUS, Msr);
-  @endcode
-**/
-#define MSR_ATOM_IA32_PERF_GLOBAL_STAUS          0x0000038E
-
-
-/**
-  Unique. See Table 35-2. See Section 18.4.4, "Precise Event Based Sampling
+  Unique. See Table 35-2. See Section 18.4.4, "Processor Event Based Sampling
   (PEBS).".
 
   @param  ECX  MSR_ATOM_PEBS_ENABLE (0x000003F1)
@@ -665,6 +689,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_ATOM_PEBS_ENABLE);
   AsmWriteMsr64 (MSR_ATOM_PEBS_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_ATOM_PEBS_ENABLE is defined as MSR_PEBS_ENABLE in SDM.
 **/
 #define MSR_ATOM_PEBS_ENABLE                     0x000003F1
 
@@ -695,122 +720,6 @@ typedef union {
 
 
 /**
-  Shared. See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
-
-  @param  ECX  MSR_ATOM_MC3_CTL (0x0000040C)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_MC3_CTL);
-  AsmWriteMsr64 (MSR_ATOM_MC3_CTL, Msr);
-  @endcode
-**/
-#define MSR_ATOM_MC3_CTL                         0x0000040C
-
-
-/**
-  Shared. See Section 15.3.2.2, "IA32_MCi_STATUS MSRS.".
-
-  @param  ECX  MSR_ATOM_MC3_STATUS (0x0000040D)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_MC3_STATUS);
-  AsmWriteMsr64 (MSR_ATOM_MC3_STATUS, Msr);
-  @endcode
-**/
-#define MSR_ATOM_MC3_STATUS                      0x0000040D
-
-
-/**
-  Shared. See Section 15.3.2.3, "IA32_MCi_ADDR MSRs." The MSR_MC3_ADDR
-  register is either not implemented or contains no address if the ADDRV flag
-  in the MSR_MC3_STATUS register is clear. When not implemented in the
-  processor, all reads and writes to this MSR will cause a general-protection
-  exception.
-
-  @param  ECX  MSR_ATOM_MC3_ADDR (0x0000040E)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_MC3_ADDR);
-  AsmWriteMsr64 (MSR_ATOM_MC3_ADDR, Msr);
-  @endcode
-**/
-#define MSR_ATOM_MC3_ADDR                        0x0000040E
-
-
-/**
-  Shared. See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
-
-  @param  ECX  MSR_ATOM_MC4_CTL (0x00000410)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_MC4_CTL);
-  AsmWriteMsr64 (MSR_ATOM_MC4_CTL, Msr);
-  @endcode
-**/
-#define MSR_ATOM_MC4_CTL                         0x00000410
-
-
-/**
-  Shared. See Section 15.3.2.2, "IA32_MCi_STATUS MSRS.".
-
-  @param  ECX  MSR_ATOM_MC4_STATUS (0x00000411)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_MC4_STATUS);
-  AsmWriteMsr64 (MSR_ATOM_MC4_STATUS, Msr);
-  @endcode
-**/
-#define MSR_ATOM_MC4_STATUS                      0x00000411
-
-
-/**
-  Shared. See Section 15.3.2.3, "IA32_MCi_ADDR MSRs." The MSR_MC4_ADDR
-  register is either not implemented or contains no address if the ADDRV flag
-  in the MSR_MC4_STATUS register is clear. When not implemented in the
-  processor, all reads and writes to this MSR will cause a general-protection
-  exception.
-
-  @param  ECX  MSR_ATOM_MC4_ADDR (0x00000412)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_ATOM_MC4_ADDR);
-  AsmWriteMsr64 (MSR_ATOM_MC4_ADDR, Msr);
-  @endcode
-**/
-#define MSR_ATOM_MC4_ADDR                        0x00000412
-
-
-/**
   Package. Package C2 Residency Note: C-state values are processor specific
   C-state code names, unrelated to MWAIT extension C-state parameters or ACPI
   C-States. Package. Package C2 Residency Counter. (R/O) Time that this
@@ -828,6 +737,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_ATOM_PKG_C2_RESIDENCY);
   AsmWriteMsr64 (MSR_ATOM_PKG_C2_RESIDENCY, Msr);
   @endcode
+  @note MSR_ATOM_PKG_C2_RESIDENCY is defined as MSR_PKG_C2_RESIDENCY in SDM.
 **/
 #define MSR_ATOM_PKG_C2_RESIDENCY                0x000003F8
 
@@ -850,6 +760,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_ATOM_PKG_C4_RESIDENCY);
   AsmWriteMsr64 (MSR_ATOM_PKG_C4_RESIDENCY, Msr);
   @endcode
+  @note MSR_ATOM_PKG_C4_RESIDENCY is defined as MSR_PKG_C4_RESIDENCY in SDM.
 **/
 #define MSR_ATOM_PKG_C4_RESIDENCY                0x000003F9
 
@@ -872,6 +783,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_ATOM_PKG_C6_RESIDENCY);
   AsmWriteMsr64 (MSR_ATOM_PKG_C6_RESIDENCY, Msr);
   @endcode
+  @note MSR_ATOM_PKG_C6_RESIDENCY is defined as MSR_PKG_C6_RESIDENCY in SDM.
 **/
 #define MSR_ATOM_PKG_C6_RESIDENCY                0x000003FA
 

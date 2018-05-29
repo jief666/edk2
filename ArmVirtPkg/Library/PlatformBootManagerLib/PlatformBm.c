@@ -16,16 +16,19 @@
 **/
 
 #include <IndustryStandard/Pci22.h>
+#include <IndustryStandard/Virtio095.h>
 #include <Library/BootLogoLib.h>
 #include <Library/DevicePathLib.h>
 #include <Library/PcdLib.h>
 #include <Library/QemuBootOrderLib.h>
 #include <Library/UefiBootManagerLib.h>
 #include <Protocol/DevicePath.h>
+#include <Protocol/FirmwareVolume2.h>
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/LoadedImage.h>
 #include <Protocol/PciIo.h>
 #include <Protocol/PciRootBridgeIo.h>
+#include <Protocol/VirtioDevice.h>
 #include <Guid/EventGroup.h>
 #include <Guid/RootBridgesConnectedEventGroup.h>
 
@@ -260,6 +263,121 @@ IsPciDisplay (
 
 
 /**
+  This FILTER_FUNCTION checks if a handle corresponds to a Virtio RNG device at
+  the VIRTIO_DEVICE_PROTOCOL level.
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsVirtioRng (
+  IN EFI_HANDLE   Handle,
+  IN CONST CHAR16 *ReportText
+  )
+{
+  EFI_STATUS             Status;
+  VIRTIO_DEVICE_PROTOCOL *VirtIo;
+
+  Status = gBS->HandleProtocol (Handle, &gVirtioDeviceProtocolGuid,
+                  (VOID**)&VirtIo);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+  return (BOOLEAN)(VirtIo->SubSystemDeviceId ==
+                   VIRTIO_SUBSYSTEM_ENTROPY_SOURCE);
+}
+
+
+/**
+  This FILTER_FUNCTION checks if a handle corresponds to a Virtio RNG device at
+  the EFI_PCI_IO_PROTOCOL level.
+**/
+STATIC
+BOOLEAN
+EFIAPI
+IsVirtioPciRng (
+  IN EFI_HANDLE   Handle,
+  IN CONST CHAR16 *ReportText
+  )
+{
+  EFI_STATUS          Status;
+  EFI_PCI_IO_PROTOCOL *PciIo;
+  UINT16              VendorId;
+  UINT16              DeviceId;
+  UINT8               RevisionId;
+  BOOLEAN             Virtio10;
+  UINT16              SubsystemId;
+
+  Status = gBS->HandleProtocol (Handle, &gEfiPciIoProtocolGuid,
+                  (VOID**)&PciIo);
+  if (EFI_ERROR (Status)) {
+    return FALSE;
+  }
+
+  //
+  // Read and check VendorId.
+  //
+  Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint16, PCI_VENDOR_ID_OFFSET,
+                        1, &VendorId);
+  if (EFI_ERROR (Status)) {
+    goto PciError;
+  }
+  if (VendorId != VIRTIO_VENDOR_ID) {
+    return FALSE;
+  }
+
+  //
+  // Read DeviceId and RevisionId.
+  //
+  Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint16, PCI_DEVICE_ID_OFFSET,
+                        1, &DeviceId);
+  if (EFI_ERROR (Status)) {
+    goto PciError;
+  }
+  Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint8, PCI_REVISION_ID_OFFSET,
+                        1, &RevisionId);
+  if (EFI_ERROR (Status)) {
+    goto PciError;
+  }
+
+  //
+  // From DeviceId and RevisionId, determine whether the device is a
+  // modern-only Virtio 1.0 device. In case of Virtio 1.0, DeviceId can
+  // immediately be restricted to VIRTIO_SUBSYSTEM_ENTROPY_SOURCE, and
+  // SubsystemId will only play a sanity-check role. Otherwise, DeviceId can
+  // only be sanity-checked, and SubsystemId will decide.
+  //
+  if (DeviceId == 0x1040 + VIRTIO_SUBSYSTEM_ENTROPY_SOURCE &&
+      RevisionId >= 0x01) {
+    Virtio10 = TRUE;
+  } else if (DeviceId >= 0x1000 && DeviceId <= 0x103F && RevisionId == 0x00) {
+    Virtio10 = FALSE;
+  } else {
+    return FALSE;
+  }
+
+  //
+  // Read and check SubsystemId as dictated by Virtio10.
+  //
+  Status = PciIo->Pci.Read (PciIo, EfiPciIoWidthUint16,
+                        PCI_SUBSYSTEM_ID_OFFSET, 1, &SubsystemId);
+  if (EFI_ERROR (Status)) {
+    goto PciError;
+  }
+  if (Virtio10 && SubsystemId >= 0x40) {
+    return TRUE;
+  }
+  if (!Virtio10 && SubsystemId == VIRTIO_SUBSYSTEM_ENTROPY_SOURCE) {
+    return TRUE;
+  }
+  return FALSE;
+
+PciError:
+  DEBUG ((DEBUG_ERROR, "%a: %s: %r\n", __FUNCTION__, ReportText, Status));
+  return FALSE;
+}
+
+
+/**
   This CALLBACK_FUNCTION attempts to connect a handle non-recursively, asking
   the matching driver to produce all first-level child handles.
 **/
@@ -387,6 +505,136 @@ PlatformRegisterFvBootOption (
 }
 
 
+/**
+  Remove all MemoryMapped(...)/FvFile(...) and Fv(...)/FvFile(...) boot options
+  whose device paths do not resolve exactly to an FvFile in the system.
+
+  This removes any boot options that point to binaries built into the firmware
+  and have become stale due to any of the following:
+  - FvMain's base address or size changed (historical),
+  - FvMain's FvNameGuid changed,
+  - the FILE_GUID of the pointed-to binary changed,
+  - the referenced binary is no longer built into the firmware.
+
+  EfiBootManagerFindLoadOption() used in PlatformRegisterFvBootOption() only
+  avoids exact duplicates.
+**/
+STATIC
+VOID
+RemoveStaleFvFileOptions (
+  VOID
+  )
+{
+  EFI_BOOT_MANAGER_LOAD_OPTION *BootOptions;
+  UINTN                        BootOptionCount;
+  UINTN                        Index;
+
+  BootOptions = EfiBootManagerGetLoadOptions (&BootOptionCount,
+                  LoadOptionTypeBoot);
+
+  for (Index = 0; Index < BootOptionCount; ++Index) {
+    EFI_DEVICE_PATH_PROTOCOL *Node1, *Node2, *SearchNode;
+    EFI_STATUS               Status;
+    EFI_HANDLE               FvHandle;
+
+    //
+    // If the device path starts with neither MemoryMapped(...) nor Fv(...),
+    // then keep the boot option.
+    //
+    Node1 = BootOptions[Index].FilePath;
+    if (!(DevicePathType (Node1) == HARDWARE_DEVICE_PATH &&
+          DevicePathSubType (Node1) == HW_MEMMAP_DP) &&
+        !(DevicePathType (Node1) == MEDIA_DEVICE_PATH &&
+          DevicePathSubType (Node1) == MEDIA_PIWG_FW_VOL_DP)) {
+      continue;
+    }
+
+    //
+    // If the second device path node is not FvFile(...), then keep the boot
+    // option.
+    //
+    Node2 = NextDevicePathNode (Node1);
+    if (DevicePathType (Node2) != MEDIA_DEVICE_PATH ||
+        DevicePathSubType (Node2) != MEDIA_PIWG_FW_FILE_DP) {
+      continue;
+    }
+
+    //
+    // Locate the Firmware Volume2 protocol instance that is denoted by the
+    // boot option. If this lookup fails (i.e., the boot option references a
+    // firmware volume that doesn't exist), then we'll proceed to delete the
+    // boot option.
+    //
+    SearchNode = Node1;
+    Status = gBS->LocateDevicePath (&gEfiFirmwareVolume2ProtocolGuid,
+                    &SearchNode, &FvHandle);
+
+    if (!EFI_ERROR (Status)) {
+      //
+      // The firmware volume was found; now let's see if it contains the FvFile
+      // identified by GUID.
+      //
+      EFI_FIRMWARE_VOLUME2_PROTOCOL     *FvProtocol;
+      MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *FvFileNode;
+      UINTN                             BufferSize;
+      EFI_FV_FILETYPE                   FoundType;
+      EFI_FV_FILE_ATTRIBUTES            FileAttributes;
+      UINT32                            AuthenticationStatus;
+
+      Status = gBS->HandleProtocol (FvHandle, &gEfiFirmwareVolume2ProtocolGuid,
+                      (VOID **)&FvProtocol);
+      ASSERT_EFI_ERROR (Status);
+
+      FvFileNode = (MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *)Node2;
+      //
+      // Buffer==NULL means we request metadata only: BufferSize, FoundType,
+      // FileAttributes.
+      //
+      Status = FvProtocol->ReadFile (
+                             FvProtocol,
+                             &FvFileNode->FvFileName, // NameGuid
+                             NULL,                    // Buffer
+                             &BufferSize,
+                             &FoundType,
+                             &FileAttributes,
+                             &AuthenticationStatus
+                             );
+      if (!EFI_ERROR (Status)) {
+        //
+        // The FvFile was found. Keep the boot option.
+        //
+        continue;
+      }
+    }
+
+    //
+    // Delete the boot option.
+    //
+    Status = EfiBootManagerDeleteLoadOptionVariable (
+               BootOptions[Index].OptionNumber, LoadOptionTypeBoot);
+    DEBUG_CODE (
+      CHAR16 *DevicePathString;
+
+      DevicePathString = ConvertDevicePathToText(BootOptions[Index].FilePath,
+                           FALSE, FALSE);
+      DEBUG ((
+        EFI_ERROR (Status) ? EFI_D_WARN : EFI_D_VERBOSE,
+        "%a: removing stale Boot#%04x %s: %r\n",
+        __FUNCTION__,
+        (UINT32)BootOptions[Index].OptionNumber,
+        DevicePathString == NULL ? L"<unavailable>" : DevicePathString,
+        Status
+        ));
+      if (DevicePathString != NULL) {
+        FreePool (DevicePathString);
+      }
+      );
+  }
+
+  EfiBootManagerFreeLoadOptions (BootOptions, BootOptionCount);
+}
+
+
 STATIC
 VOID
 PlatformRegisterOptionsAndKeys (
@@ -424,12 +672,6 @@ PlatformRegisterOptionsAndKeys (
              NULL, (UINT16) BootOption.OptionNumber, 0, &Esc, NULL
              );
   ASSERT (Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
-  //
-  // Register UEFI Shell
-  //
-  PlatformRegisterFvBootOption (
-    PcdGetPtr (PcdShellFile), L"EFI Internal Shell", LOAD_OPTION_ACTIVE
-    );
 }
 
 
@@ -453,10 +695,17 @@ PlatformBootManagerBeforeConsole (
   VOID
   )
 {
+  RETURN_STATUS PcdStatus;
+
   //
   // Signal EndOfDxe PI Event
   //
   EfiEventGroupSignal (&gEfiEndOfDxeEventGroupGuid);
+
+  //
+  // Dispatch deferred images after EndOfDxe event.
+  //
+  EfiBootManagerDispatchDeferredImages ();
 
   //
   // Locate the PCI root bridges and make the PCI bus driver connect each,
@@ -504,12 +753,26 @@ PlatformBootManagerBeforeConsole (
   //
   // Set the front page timeout from the QEMU configuration.
   //
-  PcdSet16 (PcdPlatformBootTimeOut, GetFrontPageTimeoutFromQemu ());
+  PcdStatus = PcdSet16S (PcdPlatformBootTimeOut,
+                GetFrontPageTimeoutFromQemu ());
+  ASSERT_RETURN_ERROR (PcdStatus);
 
   //
   // Register platform-specific boot options and keyboard shortcuts.
   //
   PlatformRegisterOptionsAndKeys ();
+
+  //
+  // At this point, VIRTIO_DEVICE_PROTOCOL instances exist only for Virtio MMIO
+  // transports. Install EFI_RNG_PROTOCOL instances on Virtio MMIO RNG devices.
+  //
+  FilterAndProcess (&gVirtioDeviceProtocolGuid, IsVirtioRng, Connect);
+
+  //
+  // Install both VIRTIO_DEVICE_PROTOCOL and (dependent) EFI_RNG_PROTOCOL
+  // instances on Virtio PCI RNG devices.
+  //
+  FilterAndProcess (&gEfiPciIoProtocolGuid, IsVirtioPciRng, Connect);
 }
 
 /**
@@ -529,35 +792,46 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
+  RETURN_STATUS Status;
+
   //
   // Show the splash screen.
   //
-  BootLogoEnableLogo (
-    ImageFormatBmp,                          // ImageFormat
-    PcdGetPtr (PcdLogoFile),                 // Logo
-    EdkiiPlatformLogoDisplayAttributeCenter, // Attribute
-    0,                                       // OffsetX
-    0                                        // OffsetY
-    );
+  BootLogoEnableLogo ();
 
   //
-  // Connect the rest of the devices.
-  //
-  EfiBootManagerConnectAll ();
-
-  //
-  // Process QEMU's -kernel command line option. Note that the kernel booted
-  // this way should receive ACPI tables, which is why we connect all devices
-  // first (see above) -- PCI enumeration blocks ACPI table installation, if
-  // there is a PCI host.
+  // Process QEMU's -kernel command line option. The kernel booted this way
+  // will receive ACPI tables: in PlatformBootManagerBeforeConsole(), we
+  // connected any and all PCI root bridges, and then signaled the ACPI
+  // platform driver.
   //
   TryRunningQemuKernel ();
+
+  //
+  // Connect the purported boot devices.
+  //
+  Status = ConnectDevicesFromQemu ();
+  if (RETURN_ERROR (Status)) {
+    //
+    // Connect the rest of the devices.
+    //
+    EfiBootManagerConnectAll ();
+  }
 
   //
   // Enumerate all possible boot options, then filter and reorder them based on
   // the QEMU configuration.
   //
   EfiBootManagerRefreshAllBootOption ();
+
+  //
+  // Register UEFI Shell
+  //
+  PlatformRegisterFvBootOption (
+    &gUefiShellFileGuid, L"EFI Internal Shell", LOAD_OPTION_ACTIVE
+    );
+
+  RemoveStaleFvFileOptions ();
   SetBootOrderFromQemu ();
 }
 

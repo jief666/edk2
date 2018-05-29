@@ -1,7 +1,7 @@
 /** @file
   Internal library implementation for PCI Bus module.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2015 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
@@ -28,6 +28,43 @@ CHAR16 *mBarTypeStr[] = {
   L"   Mem",
   L"Unknow"
   };
+
+/**
+  Retrieve the max bus number that is assigned to the Root Bridge hierarchy.
+  It can support the case that there are multiple bus ranges.
+
+  @param  Bridge           Bridge device instance.
+
+  @retval                  The max bus number that is assigned to this Root Bridge hierarchy.
+
+**/
+UINT16
+PciGetMaxBusNumber (
+  IN PCI_IO_DEVICE                      *Bridge
+  )
+{
+  PCI_IO_DEVICE                      *RootBridge;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *BusNumberRanges;
+  UINT64                             MaxNumberInRange;
+
+  //
+  // Get PCI Root Bridge device
+  //
+  RootBridge = Bridge;
+  while (RootBridge->Parent != NULL) {
+    RootBridge = RootBridge->Parent;
+  }
+  MaxNumberInRange = 0;
+  //
+  // Iterate the bus number ranges to get max PCI bus number
+  //
+  BusNumberRanges = RootBridge->BusNumberRanges;
+  while (BusNumberRanges->Desc != ACPI_END_TAG_DESCRIPTOR) {
+    MaxNumberInRange = BusNumberRanges->AddrRangeMin + BusNumberRanges->AddrLen - 1;
+    BusNumberRanges++;
+  }
+  return (UINT16) MaxNumberInRange;
+}
 
 /**
   Retrieve the PCI Card device BAR information via PciIo interface.
@@ -429,7 +466,7 @@ PciHostBridgeResourceAllocator (
       //
 
       //
-      // If non-stardard PCI Bridge I/O window alignment is supported,
+      // If non-standard PCI Bridge I/O window alignment is supported,
       // set I/O aligment to minimum possible alignment for root bridge.
       //
       IoBridge = CreateResourceNode (
@@ -522,7 +559,7 @@ PciHostBridgeResourceAllocator (
       }
 
       //
-      // Based on the all the resource tree, contruct ACPI resource node to
+      // Based on the all the resource tree, construct ACPI resource node to
       // submit the resource aperture to pci host bridge protocol
       //
       Status = ConstructAcpiResourceRequestor (
@@ -868,7 +905,7 @@ PciHostBridgeResourceAllocator (
       Resources[2] = PMem32Bridge;
       Resources[3] = Mem64Bridge;
       Resources[4] = PMem64Bridge;
-      DumpResourceMap (RootBridgeDev, Resources, sizeof (Resources) / sizeof (Resources[0]));
+      DumpResourceMap (RootBridgeDev, Resources, ARRAY_SIZE (Resources));
     );
 
     FreePool (AcpiConfig);
@@ -986,6 +1023,7 @@ PciScanBus (
   UINT64                            PciAddress;
   EFI_HPC_PADDING_ATTRIBUTES        Attributes;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Descriptors;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *NextDescriptors;
   UINT16                            BusRange;
   EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL   *PciRootBridgeIo;
   BOOLEAN                           BusPadding;
@@ -1124,14 +1162,14 @@ PciScanBus (
           BusPadding = FALSE;
           if (gPciHotPlugInit != NULL) {
 
-            if (IsRootPciHotPlugBus (PciDevice->DevicePath, &HpIndex)) {
+            if (IsPciHotPlugBus (PciDevice)) {
 
               //
               // If it is initialized, get the padded bus range
               //
               Status = gPciHotPlugInit->GetResourcePadding (
                                           gPciHotPlugInit,
-                                          gPciRootHpcPool[HpIndex].HpbDevicePath,
+                                          PciDevice->DevicePath,
                                           PciAddress,
                                           &State,
                                           (VOID **) &Descriptors,
@@ -1143,8 +1181,9 @@ PciScanBus (
               }
 
               BusRange = 0;
+              NextDescriptors = Descriptors;
               Status = PciGetBusRange (
-                        &Descriptors,
+                        &NextDescriptors,
                         NULL,
                         NULL,
                         &BusRange
@@ -1152,11 +1191,14 @@ PciScanBus (
 
               FreePool (Descriptors);
 
-              if (EFI_ERROR (Status)) {
+              if (!EFI_ERROR (Status)) {
+                BusPadding = TRUE;
+              } else if (Status != EFI_NOT_FOUND) {
+                //
+                // EFI_NOT_FOUND is not a real error. It indicates no bus number padding requested.
+                //
                 return Status;
               }
-
-              BusPadding = TRUE;
             }
           }
         }
@@ -1188,7 +1230,7 @@ PciScanBus (
           // Temporarily initialize SubBusNumber to maximum bus number to ensure the
           // PCI configuration transaction to go through any PPB
           //
-          Register  = 0xFF;
+          Register  = PciGetMaxBusNumber (Bridge);
           Address   = EFI_PCI_ADDRESS (StartBusNumber, Device, Func, PCI_BRIDGE_SUBORDINATE_BUS_REGISTER_OFFSET);
           Status = PciRootBridgeIo->Pci.Write (
                                           PciRootBridgeIo,

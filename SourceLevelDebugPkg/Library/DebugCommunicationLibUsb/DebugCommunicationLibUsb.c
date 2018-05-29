@@ -1,7 +1,7 @@
 /** @file
   Debug Port Library implementation based on usb debug port.
 
-  Copyright (c) 2010 - 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2010 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -511,7 +511,7 @@ UsbDebugPortControlTransfer (
   Check if it needs to re-initialize usb debug port hardware.
 
   During different phases switch, such as SEC to PEI or PEI to DXE or DXE to SMM, we should check
-  whether the usb debug port hardware configuration is changed. Such case can be triggerred by
+  whether the usb debug port hardware configuration is changed. Such case can be triggered by
   Pci bus resource allocation and so on.
 
   @param  Handle           Debug port handle.
@@ -559,7 +559,7 @@ NeedReinitializeHardware(
   //
   // If the owner and in_use bit is not set, it means system is doing cold/warm boot or EHCI host controller is reset by system software.
   //
-  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)(UINTN)(Handle->UsbDebugPortMemoryBase + Handle->DebugPortOffset);
+  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)((UINTN)Handle->UsbDebugPortMemoryBase + Handle->DebugPortOffset);
   if ((MmioRead32((UINTN)&UsbDebugPortRegister->ControlStatus) & (USB_DEBUG_PORT_OWNER | USB_DEBUG_PORT_ENABLE | USB_DEBUG_PORT_IN_USE))
        != (USB_DEBUG_PORT_OWNER | USB_DEBUG_PORT_ENABLE | USB_DEBUG_PORT_IN_USE)) {
     Status = TRUE;
@@ -604,10 +604,10 @@ InitializeUsbDebugHardware (
   UINT8                     DebugPortNumber;
   UINT8                     Length;
 
-  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)(UINTN)(Handle->UsbDebugPortMemoryBase + Handle->DebugPortOffset);
-  UsbHCSParam = (UINT32 *)(UINTN)(Handle->EhciMemoryBase + 0x04);
-  UsbCmd      = (UINT32 *)(UINTN)(Handle->EhciMemoryBase + 0x20);
-  UsbStatus   = (UINT32 *)(UINTN)(Handle->EhciMemoryBase + 0x24);
+  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)((UINTN)Handle->UsbDebugPortMemoryBase + Handle->DebugPortOffset);
+  UsbHCSParam = (UINT32 *)((UINTN)Handle->EhciMemoryBase + 0x04);
+  UsbCmd      = (UINT32 *)((UINTN)Handle->EhciMemoryBase + 0x20);
+  UsbStatus   = (UINT32 *)((UINTN)Handle->EhciMemoryBase + 0x24);
 
   //
   // Check if the debug port is enabled and owned by myself.
@@ -652,7 +652,7 @@ InitializeUsbDebugHardware (
   //
   // Should find a device is connected at debug port
   //
-  PortStatus = (UINT32 *)(UINTN)(Handle->EhciMemoryBase + 0x64 + (DebugPortNumber - 1) * 4);
+  PortStatus = (UINT32 *)((UINTN)Handle->EhciMemoryBase + 0x64 + (DebugPortNumber - 1) * 4);
   if (!(MmioRead32((UINTN)PortStatus) & BIT0)) {
     Handle->Initialized = USBDBG_NO_DEV;
     return RETURN_NOT_FOUND;
@@ -870,7 +870,7 @@ DebugPortWriteBuffer (
     }
   }
 
-  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)(UINTN)(UsbDebugPortHandle->UsbDebugPortMemoryBase + UsbDebugPortHandle->DebugPortOffset);
+  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)((UINTN)UsbDebugPortHandle->UsbDebugPortMemoryBase + UsbDebugPortHandle->DebugPortOffset);
 
   while ((Total < NumberOfBytes)) {
     if (NumberOfBytes - Total > USB_DEBUG_PORT_MAX_PACKET_SIZE) {
@@ -950,7 +950,7 @@ DebugPortPollBuffer (
     return TRUE;
   }
 
-  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)(UINTN)(UsbDebugPortHandle->UsbDebugPortMemoryBase + UsbDebugPortHandle->DebugPortOffset);
+  UsbDebugPortRegister = (USB_DEBUG_PORT_REGISTER *)((UINTN)UsbDebugPortHandle->UsbDebugPortMemoryBase + UsbDebugPortHandle->DebugPortOffset);
 
   UsbDebugPortRegister->TokenPid = INPUT_PID;
   if (UsbDebugPortHandle->BulkInToggle == 0) {
@@ -1007,7 +1007,7 @@ DebugPortPollBuffer (
 /**
   Initialize the debug port.
 
-  If Function is not NULL, Debug Communication Libary will call this function
+  If Function is not NULL, Debug Communication Library will call this function
   by passing in the Context to be the first parameter. If needed, Debug Communication
   Library will create one debug port handle to be the second argument passing in
   calling the Function, otherwise it will pass NULL to be the second argument of

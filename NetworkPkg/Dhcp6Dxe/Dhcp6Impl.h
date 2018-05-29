@@ -1,7 +1,7 @@
 /** @file
   Dhcp6 internal data structure and definition declaration.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -37,6 +37,7 @@
 #include <Library/BaseLib.h>
 #include <Library/NetLib.h>
 #include <Library/PrintLib.h>
+#include <Guid/ZeroGuid.h>
 
 
 typedef struct _DHCP6_IA_CB    DHCP6_IA_CB;
@@ -60,6 +61,8 @@ typedef struct _DHCP6_INSTANCE DHCP6_INSTANCE;
 
 #define DHCP6_PORT_CLIENT         546
 #define DHCP6_PORT_SERVER         547
+
+#define DHCP_CHECK_MEDIA_WAITING_TIME    EFI_TIMER_PERIOD_SECONDS(20)
 
 #define DHCP6_INSTANCE_FROM_THIS(Instance) CR ((Instance), DHCP6_INSTANCE, Dhcp6, DHCP6_INSTANCE_SIGNATURE)
 #define DHCP6_SERVICE_FROM_THIS(Service)   CR ((Service), DHCP6_SERVICE, ServiceBinding, DHCP6_SERVICE_SIGNATURE)

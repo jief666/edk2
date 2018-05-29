@@ -30,7 +30,7 @@
 STATIC
 VOID
 PcatPciRootBridgeBarExisted (
-  IN  UINT64                         Address,
+  IN  UINTN                          Address,
   OUT UINT32                         *OriginalValue,
   OUT UINT32                         *Value
   )
@@ -180,7 +180,7 @@ ScanForRootBridges (
   UINT8      Device;
   UINT8      Function;
   UINTN      NumberOfDevices;
-  UINT64     Address;
+  UINTN      Address;
   PCI_TYPE01 Pci;
   UINT64     Attributes;
   UINT64     Base;
@@ -202,8 +202,13 @@ ScanForRootBridges (
   for (PrimaryBus = 0; PrimaryBus <= PCI_MAX_BUS; PrimaryBus = SubBus + 1) {
     SubBus = PrimaryBus;
     Attributes = 0;
+
+    ZeroMem (&Io, sizeof (Io));
+    ZeroMem (&Mem, sizeof (Mem));
+    ZeroMem (&MemAbove4G, sizeof (MemAbove4G));
+    ZeroMem (&PMem, sizeof (PMem));
+    ZeroMem (&PMemAbove4G, sizeof (PMemAbove4G));
     Io.Base = Mem.Base = MemAbove4G.Base = PMem.Base = PMemAbove4G.Base = MAX_UINT64;
-    Io.Limit = Mem.Limit = MemAbove4G.Limit = PMem.Limit = PMemAbove4G.Limit = 0;
     //
     // Scan all the PCI devices on the primary bus of the PCI root bridge
     //

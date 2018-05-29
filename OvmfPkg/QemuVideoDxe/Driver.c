@@ -14,8 +14,10 @@
 
 **/
 
-#include "Qemu.h"
+#include <IndustryStandard/VmwareSvga.h>
 #include <IndustryStandard/Acpi.h>
+#include "Qemu.h"
+#include "UnalignedIoInternal.h"
 
 EFI_DRIVER_BINDING_PROTOCOL gQemuVideoDriverBinding = {
   QemuVideoControllerDriverSupported,
@@ -28,35 +30,53 @@ EFI_DRIVER_BINDING_PROTOCOL gQemuVideoDriverBinding = {
 
 QEMU_VIDEO_CARD gQemuVideoCardList[] = {
     {
+        PCI_CLASS_DISPLAY_VGA,
         CIRRUS_LOGIC_VENDOR_ID,
         CIRRUS_LOGIC_5430_DEVICE_ID,
         QEMU_VIDEO_CIRRUS_5430,
         L"Cirrus 5430"
     },{
+        PCI_CLASS_DISPLAY_VGA,
         CIRRUS_LOGIC_VENDOR_ID,
         CIRRUS_LOGIC_5430_ALTERNATE_DEVICE_ID,
         QEMU_VIDEO_CIRRUS_5430,
         L"Cirrus 5430"
     },{
+        PCI_CLASS_DISPLAY_VGA,
         CIRRUS_LOGIC_VENDOR_ID,
         CIRRUS_LOGIC_5446_DEVICE_ID,
         QEMU_VIDEO_CIRRUS_5446,
         L"Cirrus 5446"
     },{
+        PCI_CLASS_DISPLAY_VGA,
         0x1234,
         0x1111,
         QEMU_VIDEO_BOCHS_MMIO,
         L"QEMU Standard VGA"
     },{
+        PCI_CLASS_DISPLAY_OTHER,
+        0x1234,
+        0x1111,
+        QEMU_VIDEO_BOCHS_MMIO,
+        L"QEMU Standard VGA (secondary)"
+    },{
+        PCI_CLASS_DISPLAY_VGA,
         0x1b36,
         0x0100,
         QEMU_VIDEO_BOCHS,
         L"QEMU QXL VGA"
     },{
+        PCI_CLASS_DISPLAY_VGA,
         0x1af4,
         0x1050,
         QEMU_VIDEO_BOCHS_MMIO,
         L"QEMU VirtIO VGA"
+    },{
+        PCI_CLASS_DISPLAY_VGA,
+        VMWARE_PCI_VENDOR_ID_VMWARE,
+        VMWARE_PCI_DEVICE_ID_VMWARE_SVGA2,
+        QEMU_VIDEO_VMWARE_SVGA,
+        L"QEMU VMWare SVGA"
     },{
         0 /* end of list */
     }
@@ -64,6 +84,7 @@ QEMU_VIDEO_CARD gQemuVideoCardList[] = {
 
 static QEMU_VIDEO_CARD*
 QemuVideoDetect(
+  IN UINT8 SubClass,
   IN UINT16 VendorId,
   IN UINT16 DeviceId
   )
@@ -71,7 +92,8 @@ QemuVideoDetect(
   UINTN Index = 0;
 
   while (gQemuVideoCardList[Index].VendorId != 0) {
-    if (gQemuVideoCardList[Index].VendorId == VendorId &&
+    if (gQemuVideoCardList[Index].SubClass == SubClass &&
+        gQemuVideoCardList[Index].VendorId == VendorId &&
         gQemuVideoCardList[Index].DeviceId == DeviceId) {
       return gQemuVideoCardList + Index;
     }
@@ -134,7 +156,10 @@ QemuVideoControllerDriverSupported (
   }
 
   Status = EFI_UNSUPPORTED;
-  Card = QemuVideoDetect(Pci.Hdr.VendorId, Pci.Hdr.DeviceId);
+  if (!IS_PCI_DISPLAY (&Pci)) {
+    goto Done;
+  }
+  Card = QemuVideoDetect(Pci.Hdr.ClassCode[1], Pci.Hdr.VendorId, Pci.Hdr.DeviceId);
   if (Card != NULL) {
     DEBUG ((EFI_D_INFO, "QemuVideo: %s detected\n", Card->Name));
     Status = EFI_SUCCESS;
@@ -233,12 +258,13 @@ QemuVideoControllerDriverStart (
   //
   // Determine card variant.
   //
-  Card = QemuVideoDetect(Pci.Hdr.VendorId, Pci.Hdr.DeviceId);
+  Card = QemuVideoDetect(Pci.Hdr.ClassCode[1], Pci.Hdr.VendorId, Pci.Hdr.DeviceId);
   if (Card == NULL) {
     Status = EFI_DEVICE_ERROR;
     goto ClosePciIo;
   }
   Private->Variant = Card->Variant;
+  Private->FrameBufferVramBarIndex = PCI_BAR_IDX0;
 
   //
   // IsQxl is based on the detected Card->Variant, which at a later point might
@@ -314,6 +340,58 @@ QemuVideoControllerDriverStart (
   }
 
   //
+  // Check if accessing Vmware SVGA interface works
+  //
+  if (Private->Variant == QEMU_VIDEO_VMWARE_SVGA) {
+    EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *IoDesc;
+    UINT32                            TargetId;
+    UINT32                            SvgaIdRead;
+
+    IoDesc = NULL;
+    Status = Private->PciIo->GetBarAttributes (
+                               Private->PciIo,
+                               PCI_BAR_IDX0,
+                               NULL,
+                               (VOID**) &IoDesc
+                               );
+    if (EFI_ERROR (Status) ||
+        IoDesc->ResType != ACPI_ADDRESS_SPACE_TYPE_IO ||
+        IoDesc->AddrRangeMin > MAX_UINT16 + 1 - (VMWARE_SVGA_VALUE_PORT + 4)) {
+      if (IoDesc != NULL) {
+        FreePool (IoDesc);
+      }
+      Status = EFI_DEVICE_ERROR;
+      goto RestoreAttributes;
+    }
+    Private->VmwareSvgaBasePort = (UINT16) IoDesc->AddrRangeMin;
+    FreePool (IoDesc);
+
+    TargetId = VMWARE_SVGA_ID_2;
+    while (TRUE) {
+      VmwareSvgaWrite (Private, VmwareSvgaRegId, TargetId);
+      SvgaIdRead = VmwareSvgaRead (Private, VmwareSvgaRegId);
+      if ((SvgaIdRead == TargetId) || (TargetId <= VMWARE_SVGA_ID_0)) {
+        break;
+      }
+      TargetId--;
+    }
+
+    if (SvgaIdRead != TargetId) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "QemuVideo: QEMU_VIDEO_VMWARE_SVGA ID mismatch "
+        "(got 0x%x, base address 0x%x)\n",
+        SvgaIdRead,
+        Private->VmwareSvgaBasePort
+        ));
+      Status = EFI_DEVICE_ERROR;
+      goto RestoreAttributes;
+    }
+
+    Private->FrameBufferVramBarIndex = PCI_BAR_IDX1;
+  }
+
+  //
   // Get ParentDevicePath
   //
   Status = gBS->HandleProtocol (
@@ -367,6 +445,9 @@ QemuVideoControllerDriverStart (
   case QEMU_VIDEO_BOCHS_MMIO:
   case QEMU_VIDEO_BOCHS:
     Status = QemuVideoBochsModeSetup (Private, IsQxl);
+    break;
+  case QEMU_VIDEO_VMWARE_SVGA:
+    Status = QemuVideoVmwareSvgaModeSetup (Private);
     break;
   default:
     ASSERT (FALSE);
@@ -429,6 +510,9 @@ DestructQemuVideoGraphics:
 
 FreeModeData:
   FreePool (Private->ModeData);
+  if (Private->VmwareSvgaModeInfo != NULL) {
+    FreePool (Private->VmwareSvgaModeInfo);
+  }
 
 UninstallGopDevicePath:
   gBS->UninstallProtocolInterface (Private->Handle,
@@ -550,6 +634,9 @@ QemuVideoControllerDriverStop (
         );
 
   FreePool (Private->ModeData);
+  if (Private->VmwareSvgaModeInfo != NULL) {
+    FreePool (Private->VmwareSvgaModeInfo);
+  }
   gBS->UninstallProtocolInterface (Private->Handle,
          &gEfiDevicePathProtocolGuid, Private->GopDevicePath);
   FreePool (Private->GopDevicePath);
@@ -747,7 +834,7 @@ ClearScreen (
   Private->PciIo->Mem.Write (
                         Private->PciIo,
                         EfiPciIoWidthFillUint32,
-                        0,
+                        Private->FrameBufferVramBarIndex,
                         0,
                         0x400000 >> 2,
                         &Color
@@ -885,6 +972,38 @@ BochsRead (
 }
 
 VOID
+VmwareSvgaWrite (
+  QEMU_VIDEO_PRIVATE_DATA   *Private,
+  UINT16                    Register,
+  UINT32                    Value
+  )
+{
+  UnalignedIoWrite32 (
+    Private->VmwareSvgaBasePort + VMWARE_SVGA_INDEX_PORT,
+    Register
+    );
+  UnalignedIoWrite32 (
+    Private->VmwareSvgaBasePort + VMWARE_SVGA_VALUE_PORT,
+    Value
+    );
+}
+
+UINT32
+VmwareSvgaRead (
+  QEMU_VIDEO_PRIVATE_DATA   *Private,
+  UINT16                    Register
+  )
+{
+  UnalignedIoWrite32 (
+    Private->VmwareSvgaBasePort + VMWARE_SVGA_INDEX_PORT,
+    Register
+    );
+  return UnalignedIoRead32 (
+           Private->VmwareSvgaBasePort + VMWARE_SVGA_VALUE_PORT
+           );
+}
+
+VOID
 VgaOutb (
   QEMU_VIDEO_PRIVATE_DATA  *Private,
   UINTN                    Reg,
@@ -933,6 +1052,35 @@ InitializeBochsGraphicsMode (
 
   BochsWrite (Private, VBE_DISPI_INDEX_ENABLE,
               VBE_DISPI_ENABLED | VBE_DISPI_LFB_ENABLED);
+
+  SetDefaultPalette (Private);
+  ClearScreen (Private);
+}
+
+VOID
+InitializeVmwareSvgaGraphicsMode (
+  QEMU_VIDEO_PRIVATE_DATA  *Private,
+  QEMU_VIDEO_BOCHS_MODES   *ModeData
+  )
+{
+  UINT32 Capabilities;
+
+  VmwareSvgaWrite (Private, VmwareSvgaRegWidth, ModeData->Width);
+  VmwareSvgaWrite (Private, VmwareSvgaRegHeight, ModeData->Height);
+
+  Capabilities = VmwareSvgaRead (
+                   Private,
+                   VmwareSvgaRegCapabilities
+                   );
+  if ((Capabilities & VMWARE_SVGA_CAP_8BIT_EMULATION) != 0) {
+    VmwareSvgaWrite (
+      Private,
+      VmwareSvgaRegBitsPerPixel,
+      ModeData->ColorDepth
+      );
+  }
+
+  VmwareSvgaWrite (Private, VmwareSvgaRegEnable, 1);
 
   SetDefaultPalette (Private);
   ClearScreen (Private);

@@ -1197,7 +1197,7 @@ BOOLEAN
                             - 01 = ROM Found.
                             - 02 = ROM is a valid legacy ROM.
 
-  @retval EFI_SUCCESS       The Legacy Option ROM availible for this device
+  @retval EFI_SUCCESS       The Legacy Option ROM available for this device
   @retval EFI_UNSUPPORTED   The Legacy Option ROM is not supported.
 
 **/
@@ -1517,6 +1517,42 @@ struct _EFI_LEGACY_BIOS_PROTOCOL {
   ///
   EFI_LEGACY_BIOS_BOOT_UNCONVENTIONAL_DEVICE  BootUnconventionalDevice;
 };
+
+//
+// Legacy BIOS needs to access memory in page 0 (0-4095), which is disabled if
+// NULL pointer detection feature is enabled. Following macro can be used to
+// enable/disable page 0 before/after accessing it.
+//
+#define ACCESS_PAGE0_CODE(statements)                           \
+  do {                                                          \
+    EFI_STATUS                            Status_;              \
+    EFI_GCD_MEMORY_SPACE_DESCRIPTOR       Desc_;                \
+                                                                \
+    Desc_.Attributes = 0;                                       \
+    Status_ = gDS->GetMemorySpaceDescriptor (0, &Desc_);        \
+    ASSERT_EFI_ERROR (Status_);                                 \
+    if ((Desc_.Attributes & EFI_MEMORY_RP) != 0) {              \
+      Status_ = gDS->SetMemorySpaceAttributes (                 \
+                      0,                                        \
+                      EFI_PAGES_TO_SIZE(1),                     \
+                      Desc_.Attributes & ~(UINT64)EFI_MEMORY_RP \
+                      );                                        \
+      ASSERT_EFI_ERROR (Status_);                               \
+    }                                                           \
+                                                                \
+    {                                                           \
+      statements;                                               \
+    }                                                           \
+                                                                \
+    if ((Desc_.Attributes & EFI_MEMORY_RP) != 0) {              \
+      Status_ = gDS->SetMemorySpaceAttributes (                 \
+                      0,                                        \
+                      EFI_PAGES_TO_SIZE(1),                     \
+                      Desc_.Attributes                          \
+                      );                                        \
+      ASSERT_EFI_ERROR (Status_);                               \
+    }                                                           \
+  } while (FALSE)
 
 extern EFI_GUID gEfiLegacyBiosProtocolGuid;
 

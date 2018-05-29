@@ -93,11 +93,11 @@ Returns: (VOID)
 
 --*/
 {
-  Sd->mBitBuf = (UINT32) (Sd->mBitBuf << NumOfBits);
+  Sd->mBitBuf = (UINT32) LShiftU64 (((UINT64)Sd->mBitBuf), NumOfBits);
 
   while (NumOfBits > Sd->mBitCount) {
-
-    Sd->mBitBuf |= (UINT32) (Sd->mSubBitBuf << (NumOfBits = (UINT16) (NumOfBits - Sd->mBitCount)));
+    NumOfBits = (UINT16) (NumOfBits - Sd->mBitCount);
+    Sd->mBitBuf |= (UINT32) LShiftU64 (((UINT64)Sd->mSubBitBuf), NumOfBits);
 
     if (Sd->mCompSize > 0) {
       //
@@ -675,7 +675,7 @@ Arguments:
 
 Returns:
 
-  EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successull retrieved.
+  EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successfully retrieved.
   EFI_INVALID_PARAMETER - The source data is corrupted
 
 --*/
@@ -844,7 +844,7 @@ Arguments:
 
 Returns:
 
-  EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successull retrieved.
+  EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successfully retrieved.
   EFI_INVALID_PARAMETER - The source data is corrupted
 
 --*/
@@ -928,7 +928,7 @@ Arguments:
 
 Returns:
 
-  EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successull retrieved.
+  EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successfully retrieved.
   EFI_INVALID_PARAMETER - The source data is corrupted
 
 --*/

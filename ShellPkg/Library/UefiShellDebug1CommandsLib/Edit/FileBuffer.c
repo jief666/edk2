@@ -72,7 +72,6 @@ extern BOOLEAN          EditorMouseAction;
   @param EFI_OUT_OF_RESOURCES   A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferInit (
   VOID
   )
@@ -121,7 +120,6 @@ FileBufferInit (
   @retval EFI_SUCCESS           The backup operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferBackup (
   VOID
   )
@@ -155,7 +153,6 @@ FileBufferBackup (
   @return  The line structure after the advance.
 **/
 EFI_EDITOR_LINE *
-EFIAPI
 InternalEditorMiscLineAdvance (
   IN CONST UINTN            Count,
   IN CONST EFI_EDITOR_LINE  *CurrentLine,
@@ -195,7 +192,6 @@ InternalEditorMiscLineAdvance (
   @return  The line structure after the retreat.
 **/
 EFI_EDITOR_LINE *
-EFIAPI
 InternalEditorMiscLineRetreat (
   IN CONST UINTN            Count,
   IN CONST EFI_EDITOR_LINE  *CurrentLine,
@@ -257,77 +253,11 @@ MoveLine (
 }
 
 /**
-  Decide if a point is in the already selected area.
-
-  @param[in] MouseRow     The row of the point to test.
-  @param[in] MouseCol     The col of the point to test.
-
-  @retval TRUE      The point is in the selected area.
-  @retval FALSE     The point is not in the selected area.
-**/
-BOOLEAN
-FileBufferIsInSelectedArea (
-  IN UINTN MouseRow,
-  IN UINTN MouseCol
-  )
-{
-  UINTN FRow;
-  UINTN RowStart;
-  UINTN RowEnd;
-  UINTN ColStart;
-  UINTN ColEnd;
-  UINTN MouseColStart;
-  UINTN MouseColEnd;
-
-  //
-  // judge mouse position whether is in selected area
-  //
-  //
-  // not select
-  //
-  if (MainEditor.SelectStart == 0 || MainEditor.SelectEnd == 0) {
-    return FALSE;
-  }
-  //
-  // calculate the select area
-  //
-  RowStart  = (MainEditor.SelectStart - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-  RowEnd    = (MainEditor.SelectEnd - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-
-  ColStart  = (MainEditor.SelectStart - 1) % SHELL_EDIT_MAX_LINE_SIZE + 1;
-  ColEnd    = (MainEditor.SelectEnd - 1) % SHELL_EDIT_MAX_LINE_SIZE + 1;
-
-  FRow      = FileBuffer.LowVisibleRange.Row + MouseRow - 2;
-  if (FRow < RowStart || FRow > RowEnd) {
-    return FALSE;
-  }
-
-  if (FRow > RowStart) {
-    ColStart = 1;
-  }
-
-  if (FRow < RowEnd) {
-    ColEnd = SHELL_EDIT_MAX_LINE_SIZE;
-  }
-
-  MouseColStart = ColStart;
-
-  MouseColEnd = ColEnd;
-
-  if (MouseCol < MouseColStart || MouseCol > MouseColEnd) {
-    return FALSE;
-  }
-
-  return TRUE;
-}
-
-/**
   Function to update the 'screen' to display the mouse position.
 
   @retval EFI_SUCCESS           The backup operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferRestoreMousePosition (
   VOID
   )
@@ -376,29 +306,6 @@ FileBufferRestoreMousePosition (
 
       FColumn       = FileBuffer.LowVisibleRange.Column + FileBufferBackupVar.MousePosition.Column - 1;
 
-      if (FRow <= FileBuffer.NumLines) {
-        CurrentLine = FileBuffer.CurrentLine;
-        Line        = MoveLine (FRow - FileBuffer.FilePosition.Row);
-        FileBuffer.CurrentLine = CurrentLine;
-      }
-
-      //
-      // if in selected area,
-      // so do not need to refresh mouse
-      //
-      if (!FileBufferIsInSelectedArea (
-            FileBufferBackupVar.MousePosition.Row,
-            FileBufferBackupVar.MousePosition.Column
-            ) ||
-          (Line == NULL || FColumn > Line->Size)
-      ) {
-        gST->ConOut->SetAttribute (gST->ConOut, Orig.Data);
-      } else {
-        gST->ConOut->SetAttribute (gST->ConOut, New.Data & 0x7F);
-      }
-
-      Line = NULL;
-
       HasCharacter  = TRUE;
       if (FRow > FileBuffer.NumLines) {
         HasCharacter = FALSE;
@@ -431,15 +338,8 @@ FileBufferRestoreMousePosition (
       //
       // set the new mouse position
       //
-      if (!FileBufferIsInSelectedArea (
-            FileBuffer.MousePosition.Row,
-            FileBuffer.MousePosition.Column
-            )
-      ) {
-        gST->ConOut->SetAttribute (gST->ConOut, New.Data & 0x7F);
-      } else {
-        gST->ConOut->SetAttribute (gST->ConOut, Orig.Data);
-      }
+      gST->ConOut->SetAttribute (gST->ConOut, New.Data & 0x7F);
+
       //
       // clear the old mouse position
       //
@@ -501,7 +401,6 @@ FileBufferRestoreMousePosition (
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferFreeLines (
   VOID
   )
@@ -545,7 +444,6 @@ FileBufferFreeLines (
   @retval EFI_SUCCESS   The cleanup was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferCleanup (
   VOID
   )
@@ -567,25 +465,18 @@ FileBufferCleanup (
 
 }
 
-
 /**
-  Print Line on Row
+  Print a line specified by Line on a row specified by Row of the screen.
 
-  @param[in] Line     The lline to print.
-  @param[in] Row      The row on screen ( begin from 1 ).
-  @param[in] FRow     The FRow.
-  @param[in] Orig     The original color.
-  @param[in] New      The color to print with.
+  @param[in] Line               The line to print.
+  @param[in] Row                The row on the screen to print onto (begin from 1).
 
-  @retval EFI_SUCCESS The operation was successful.
+  @retval EFI_SUCCESS           The printing was successful.
 **/
 EFI_STATUS
 FileBufferPrintLine (
-  IN CONST EFI_EDITOR_LINE        *Line,
-  IN CONST  UINTN                 Row,
-  IN CONST  UINTN                 FRow,
-  IN EFI_EDITOR_COLOR_UNION       Orig,
-  IN EFI_EDITOR_COLOR_UNION       New
+  IN CONST EFI_EDITOR_LINE  *Line,
+  IN CONST UINTN            Row
   )
 {
 
@@ -593,42 +484,7 @@ FileBufferPrintLine (
   UINTN   Limit;
   CHAR16  *PrintLine;
   CHAR16  *PrintLine2;
-  CHAR16  *TempString;
-  UINTN   BufLen;
-  BOOLEAN Selected;
-  UINTN   RowStart;
-  UINTN   RowEnd;
-  UINTN   ColStart;
-  UINTN   ColEnd;
-
-  ColStart    = 0;
-  ColEnd      = 0;
-  Selected    = FALSE;
-  TempString  = NULL;
-
-  //
-  // print the selected area in opposite color
-  //
-  if (MainEditor.SelectStart != 0 && MainEditor.SelectEnd != 0) {
-    RowStart  = (MainEditor.SelectStart - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-    RowEnd    = (MainEditor.SelectEnd - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-
-    ColStart  = (MainEditor.SelectStart - 1) % SHELL_EDIT_MAX_LINE_SIZE + 1;
-    ColEnd    = (MainEditor.SelectEnd - 1) % SHELL_EDIT_MAX_LINE_SIZE + 1;
-
-    if (FRow >= RowStart && FRow <= RowEnd) {
-      Selected = TRUE;
-    }
-
-    if (FRow > RowStart) {
-      ColStart = 1;
-    }
-
-    if (FRow < RowEnd) {
-      ColEnd = Line->Size + 1;
-    }
-
-  }
+  UINTN   BufLen; 
 
   //
   // print start from correct character
@@ -642,78 +498,28 @@ FileBufferPrintLine (
 
   BufLen = (MainEditor.ScreenSize.Column + 1) * sizeof (CHAR16);
   PrintLine = AllocatePool (BufLen);
-  ASSERT (PrintLine != NULL);
+  if (PrintLine != NULL) {
+    StrnCpyS (PrintLine, BufLen/sizeof(CHAR16), Buffer, MIN(Limit, MainEditor.ScreenSize.Column));
+    for (; Limit < MainEditor.ScreenSize.Column; Limit++) {
+      PrintLine[Limit] = L' ';
+    }
 
-  StrnCpyS (PrintLine, BufLen/sizeof(CHAR16), Buffer, MIN(Limit, MainEditor.ScreenSize.Column));
-  for (; Limit < MainEditor.ScreenSize.Column; Limit++) {
-    PrintLine[Limit] = L' ';
-  }
+    PrintLine[MainEditor.ScreenSize.Column] = CHAR_NULL;
 
-  PrintLine[MainEditor.ScreenSize.Column] = CHAR_NULL;
+    PrintLine2 = AllocatePool (BufLen * 2);
+    if (PrintLine2 != NULL) {
+      ShellCopySearchAndReplace(PrintLine, PrintLine2, BufLen * 2, L"%", L"^%", FALSE, FALSE);
 
-  PrintLine2 = AllocatePool (BufLen * 2);
-  ASSERT (PrintLine2 != NULL);
-
-  ShellCopySearchAndReplace(PrintLine, PrintLine2, BufLen * 2, L"%", L"^%", FALSE, FALSE);
-
-  if (!Selected) {
-    ShellPrintEx (
-      0,
-      (INT32)Row - 1,
-      L"%s",
-      PrintLine2
-      );
-  } else {
-    //
-    // If the current line is selected.
-    //
-    if (ColStart != 1) {
-      gST->ConOut->SetAttribute (gST->ConOut, Orig.Data & 0x7F);
-      TempString = AllocateCopyPool ((ColStart - 1) * sizeof(CHAR16), PrintLine2);
-      ASSERT (TempString != NULL);
       ShellPrintEx (
         0,
         (INT32)Row - 1,
         L"%s",
-        TempString
-      );
-      FreePool (TempString);
+        PrintLine2
+        );
+      FreePool (PrintLine2);
     }
-
-    gST->ConOut->SetAttribute (gST->ConOut, New.Data & 0x7F);
-    TempString = AllocateCopyPool (
-                  (ColEnd - ColStart + 1)  * sizeof(CHAR16),
-                  PrintLine2 + ColStart - 1
-                  );
-    ASSERT (TempString != NULL);
-    ShellPrintEx (
-      (INT32)ColStart - 1,
-      (INT32)Row - 1,
-      L"%s",
-      TempString
-      );
-    FreePool (TempString);
-
-    if (ColEnd != SHELL_EDIT_MAX_LINE_SIZE) {
-      gST->ConOut->SetAttribute (gST->ConOut, Orig.Data & 0x7F);
-      TempString = AllocateCopyPool (
-                    (SHELL_EDIT_MAX_LINE_SIZE - ColEnd + 1)  * sizeof(CHAR16),
-                    PrintLine2 + ColEnd - 1
-                    );
-      ASSERT (TempString != NULL);
-      ShellPrintEx (
-        (INT32)ColEnd - 1,
-        (INT32)Row - 1,
-        L"%s",
-        TempString
-      );
-      FreePool (TempString);
-    }
+    FreePool (PrintLine);
   }
-
-  FreePool (PrintLine);
-  FreePool (PrintLine2);
-  gST->ConOut->SetAttribute (gST->ConOut, Orig.Data & 0x7F);
 
   return EFI_SUCCESS;
 }
@@ -724,7 +530,6 @@ FileBufferPrintLine (
   @retval EFI_SUCCESS           The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferRestorePosition (
   VOID
   )
@@ -746,7 +551,6 @@ FileBufferRestorePosition (
   @retval EFI_LOAD_ERROR  There was an error finding what to write.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferRefresh (
   VOID
   )
@@ -754,17 +558,6 @@ FileBufferRefresh (
   LIST_ENTRY  *Link;
   EFI_EDITOR_LINE *Line;
   UINTN           Row;
-  EFI_EDITOR_COLOR_UNION Orig;
-  EFI_EDITOR_COLOR_UNION New;
-
-  UINTN                   StartRow;
-  UINTN                   EndRow;
-  UINTN                   Tmp;
-
-  Orig                  = MainEditor.ColorAttributes;
-  New.Data              = 0;
-  New.Colors.Foreground = Orig.Colors.Background;
-  New.Colors.Background = Orig.Colors.Foreground;
 
   //
   // if it's the first time after editor launch, so should refresh
@@ -776,10 +569,13 @@ FileBufferRefresh (
     //
     if (!FileBufferNeedRefresh &&
         !FileBufferOnlyLineNeedRefresh &&
-        FileBufferBackupVar.LowVisibleRange.Row == FileBuffer.LowVisibleRange.Row
+        FileBufferBackupVar.LowVisibleRange.Row == FileBuffer.LowVisibleRange.Row &&
+        FileBufferBackupVar.LowVisibleRange.Column == FileBuffer.LowVisibleRange.Column
         ) {
+
       FileBufferRestoreMousePosition ();
       FileBufferRestorePosition ();
+
       return EFI_SUCCESS;
     }
   }
@@ -790,57 +586,19 @@ FileBufferRefresh (
   // only need to refresh current line
   //
   if (FileBufferOnlyLineNeedRefresh &&
-      FileBufferBackupVar.LowVisibleRange.Row == FileBuffer.LowVisibleRange.Row
+      FileBufferBackupVar.LowVisibleRange.Row == FileBuffer.LowVisibleRange.Row &&
+      FileBufferBackupVar.LowVisibleRange.Column == FileBuffer.LowVisibleRange.Column
       ) {
 
     EditorClearLine (FileBuffer.DisplayPosition.Row, MainEditor.ScreenSize.Column, MainEditor.ScreenSize.Row);
     FileBufferPrintLine (
       FileBuffer.CurrentLine,
-      FileBuffer.DisplayPosition.Row,
-      FileBuffer.FilePosition.Row,
-      Orig,
-      New
+      FileBuffer.DisplayPosition.Row
       );
   } else {
     //
     // the whole edit area need refresh
     //
-    if (EditorMouseAction && MainEditor.SelectStart != 0 && MainEditor.SelectEnd != 0) {
-      if (MainEditor.SelectStart != MainEditorBackupVar.SelectStart) {
-        if (MainEditor.SelectStart >= MainEditorBackupVar.SelectStart && MainEditorBackupVar.SelectStart != 0) {
-          StartRow = (MainEditorBackupVar.SelectStart - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-        } else {
-          StartRow = (MainEditor.SelectStart - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-        }
-      } else {
-        StartRow = (MainEditor.SelectStart - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-      }
-
-      if (MainEditor.SelectEnd <= MainEditorBackupVar.SelectEnd) {
-        EndRow = (MainEditorBackupVar.SelectEnd - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-      } else {
-        EndRow = (MainEditor.SelectEnd - 1) / SHELL_EDIT_MAX_LINE_SIZE + 1;
-      }
-
-      //
-      // swap
-      //
-      if (StartRow > EndRow) {
-        Tmp       = StartRow;
-        StartRow  = EndRow;
-        EndRow    = Tmp;
-      }
-
-      StartRow  = 2 + StartRow - FileBuffer.LowVisibleRange.Row;
-      EndRow    = 2 + EndRow - FileBuffer.LowVisibleRange.Row;
-
-    } else {
-      //
-      // not mouse selection actions
-      //
-      StartRow  = 2;
-      EndRow    = (MainEditor.ScreenSize.Row - 1);
-    }
 
     //
     // no line
@@ -870,20 +628,15 @@ FileBufferRefresh (
       //
       // print line at row
       //
-      FileBufferPrintLine (Line,
-        Row,
-        FileBuffer.LowVisibleRange.Row + Row - 2,
-        Orig,
-        New
-        );
+      FileBufferPrintLine (Line, Row);
 
       Link = Link->ForwardLink;
       Row++;
-    } while (Link != FileBuffer.ListHead && Row <= EndRow);
+    } while (Link != FileBuffer.ListHead && Row <= (MainEditor.ScreenSize.Row - 1));
     //
     // while not file end and not screen full
     //
-    while (Row <= EndRow) {
+    while (Row <= (MainEditor.ScreenSize.Row - 1)) {
       EditorClearLine (Row, MainEditor.ScreenSize.Column, MainEditor.ScreenSize.Row);
       Row++;
     }
@@ -909,7 +662,6 @@ FileBufferRefresh (
   @return         The line created.
 **/
 EFI_EDITOR_LINE *
-EFIAPI
 FileBufferCreateLine (
   VOID
   )
@@ -964,7 +716,6 @@ FileBufferCreateLine (
   @retval EFI_INVALID_PARAMETER Str is not a valid filename.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferSetFileName (
   IN CONST CHAR16 *Str
   )
@@ -996,7 +747,6 @@ FileBufferSetFileName (
   @retval EFI_SUCCESS           The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferFree (
   VOID
   )
@@ -1023,7 +773,6 @@ FileBufferFree (
   @retval EFI_INVALID_PARAMETER  FileName is a directory.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferRead (
   IN CONST CHAR16  *FileName,
   IN CONST BOOLEAN Recover
@@ -1518,7 +1267,6 @@ Done:
   @param[out] Size              The amount of the buffer used on return.
 **/
 VOID
-EFIAPI
 GetNewLine (
   IN CONST EE_NEWLINE_TYPE Type,
   OUT CHAR8           *Buffer,
@@ -1625,7 +1373,6 @@ GetNewLine (
   @return The actuall length.
 **/
 UINTN
-EFIAPI
 UnicodeToAscii (
   IN CONST CHAR16   *UStr,
   IN CONST UINTN    Length,
@@ -1654,7 +1401,6 @@ UnicodeToAscii (
   @retval EFI_OUT_OF_RESOURCES  There were not enough resources to write the file.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferSave (
   IN CONST CHAR16 *FileName
   )
@@ -1894,7 +1640,6 @@ FileBufferSave (
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferScrollLeft (
   VOID
   )
@@ -1941,7 +1686,6 @@ FileBufferScrollLeft (
   @param[in] Pos         Position to delete the char at ( start from 0 ).
 **/
 VOID
-EFIAPI
 LineDeleteAt (
   IN  OUT EFI_EDITOR_LINE       *Line,
   IN      UINTN                 Pos
@@ -1966,7 +1710,6 @@ LineDeleteAt (
   @param[in] Src         Src String.
 **/
 VOID
-EFIAPI
 LineCat (
   IN  OUT EFI_EDITOR_LINE *Dest,
   IN      EFI_EDITOR_LINE *Src
@@ -2007,7 +1750,6 @@ LineCat (
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferDoBackspace (
   VOID
   )
@@ -2079,7 +1821,6 @@ FileBufferDoBackspace (
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferDoReturn (
   VOID
   )
@@ -2176,7 +1917,6 @@ FileBufferDoReturn (
   @retval EFI_SUCCESS
 **/
 EFI_STATUS
-EFIAPI
 FileBufferDoDelete (
   VOID
   )
@@ -2239,7 +1979,6 @@ FileBufferDoDelete (
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferScrollRight (
   VOID
   )
@@ -2293,7 +2032,6 @@ FileBufferScrollRight (
   @return The new string size ( include CHAR_NULL ) ( unit is Unicode character ).
 **/
 UINTN
-EFIAPI
 LineStrInsert (
   IN      EFI_EDITOR_LINE  *Line,
   IN      CHAR16           Char,
@@ -2346,7 +2084,6 @@ LineStrInsert (
   @retval EFI_SUCCESS           The input was succesful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferAddChar (
   IN  CHAR16  Char
   )
@@ -2394,7 +2131,6 @@ FileBufferAddChar (
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferDoCharInput (
   IN CONST CHAR16 Char
   )
@@ -2445,7 +2181,6 @@ FileBufferDoCharInput (
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferScrollDown (
   VOID
   )
@@ -2491,7 +2226,6 @@ FileBufferScrollDown (
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferScrollUp (
   VOID
   )
@@ -2534,7 +2268,6 @@ FileBufferScrollUp (
   @retval EFI_SUCCESS     The operation wa successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferPageDown (
   VOID
   )
@@ -2585,7 +2318,6 @@ FileBufferPageDown (
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferPageUp (
   VOID
   )
@@ -2641,7 +2373,6 @@ FileBufferPageUp (
   @retval EFI_SUCCESS       The operation was successful.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferEnd (
   VOID
   )
@@ -2679,7 +2410,6 @@ FileBufferEnd (
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferHandleInput (
   IN CONST EFI_INPUT_KEY *Key
   )
@@ -2795,7 +2525,6 @@ FileBufferHandleInput (
   @retval FALSE   It is not above the current screen.
 **/
 BOOLEAN
-EFIAPI
 AboveCurrentScreen (
   IN UINTN FileRow
   )
@@ -2819,7 +2548,6 @@ AboveCurrentScreen (
   @retval FALSE     It is not under the current screen.
 **/
 BOOLEAN
-EFIAPI
 UnderCurrentScreen (
   IN UINTN FileRow
   )
@@ -2843,7 +2571,6 @@ UnderCurrentScreen (
   @retval FALSE   It is not to the left.
 **/
 BOOLEAN
-EFIAPI
 LeftCurrentScreen (
   IN UINTN FileCol
   )
@@ -2867,7 +2594,6 @@ LeftCurrentScreen (
   @retval FALSE   It is not to the right.
 **/
 BOOLEAN
-EFIAPI
 RightCurrentScreen (
   IN UINTN FileCol
   )
@@ -2893,7 +2619,6 @@ RightCurrentScreen (
   @return The line after advance/retreat.
 **/
 EFI_EDITOR_LINE *
-EFIAPI
 MoveCurrentLine (
   IN  INTN Count
   )
@@ -2924,7 +2649,6 @@ MoveCurrentLine (
   @param[in] NewFilePosCol    The column of file position ( start from 1 ).
 **/
 VOID
-EFIAPI
 FileBufferMovePosition (
   IN CONST UINTN NewFilePosRow,
   IN CONST UINTN NewFilePosCol
@@ -3040,7 +2764,6 @@ FileBufferMovePosition (
   @retval EFI_OUT_OF_RESOURCES    A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferCutLine (
   OUT EFI_EDITOR_LINE **CutLine
   )
@@ -3120,7 +2843,6 @@ FileBufferCutLine (
   @retval EFI_OUT_OF_RESOURCES    A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferPasteLine (
   VOID
   )
@@ -3192,7 +2914,6 @@ FileBufferPasteLine (
   @retval EFI_NOT_FOUND     The string Str was not found.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferSearch (
   IN CONST CHAR16  *Str,
   IN CONST UINTN Offset
@@ -3298,7 +3019,6 @@ FileBufferSearch (
   @retval EFI_OUT_OF_RESOURCES    A memory allocation failed.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferReplace (
   IN CONST CHAR16   *Replace,
   IN CONST UINTN    SearchLen
@@ -3403,7 +3123,6 @@ FileBufferReplace (
   @param[in] TextY      The new y-coordinate.
 **/
 VOID
-EFIAPI
 FileBufferAdjustMousePosition (
   IN CONST INT32 TextX,
   IN CONST INT32 TextY
@@ -3480,7 +3199,6 @@ FileBufferAdjustMousePosition (
   @param[in] Offset       The column to start at.
 **/
 EFI_STATUS
-EFIAPI
 FileBufferReplaceAll (
   IN CHAR16 *SearchStr,
   IN CHAR16 *ReplaceStr,
@@ -3598,47 +3316,10 @@ FileBufferReplaceAll (
   Set the modified state to TRUE.
 **/
 VOID
-EFIAPI
 FileBufferSetModified (
   VOID
   )
 {
   FileBuffer.FileModified = TRUE;
-}
-
-
-/**
-  Get the size of the open buffer.
-
-  @retval The size in bytes.
-**/
-UINTN
-FileBufferGetTotalSize (
-  VOID
-  )
-{
-  UINTN             Size;
-
-  EFI_EDITOR_LINE   *Line;
-
-  //
-  // calculate the total size of whole line list's buffer
-  //
-  if (FileBuffer.Lines == NULL) {
-    return 0;
-  }
-
-  Line = CR (
-          FileBuffer.ListHead->BackLink,
-          EFI_EDITOR_LINE,
-          Link,
-          LINE_LIST_SIGNATURE
-          );
-  //
-  // one line at most 0x50
-  //
-  Size = SHELL_EDIT_MAX_LINE_SIZE * (FileBuffer.NumLines - 1) + Line->Size;
-
-  return Size;
 }
 

@@ -2,6 +2,7 @@
   Definitions from the VirtIo 1.0 specification (csprd05).
 
   Copyright (C) 2016, Red Hat, Inc.
+  Copyright (C) 2017, AMD, Inc.
 
   This program and the accompanying materials are licensed and made available
   under the terms and conditions of the BSD License which accompanies this
@@ -15,7 +16,13 @@
 #ifndef _VIRTIO_1_0_H_
 #define _VIRTIO_1_0_H_
 
+#include <IndustryStandard/Pci23.h>
 #include <IndustryStandard/Virtio095.h>
+
+//
+// Subsystem Device IDs (to be) introduced in VirtIo 1.0
+//
+#define VIRTIO_SUBSYSTEM_GPU_DEVICE         16
 
 //
 // Structures for parsing the VirtIo 1.0 specific PCI capabilities from the
@@ -23,11 +30,7 @@
 //
 #pragma pack (1)
 typedef struct {
-  UINT8 CapId;   // Capability identifier (generic)
-  UINT8 CapNext; // Link to next capability (generic)
-} VIRTIO_PCI_CAP_LINK;
-
-typedef struct {
+  EFI_PCI_CAPABILITY_VENDOR_HDR VendorHdr;
   UINT8  ConfigType; // Identifies the specific VirtIo 1.0 config structure
   UINT8  Bar;        // The BAR that contains the structure
   UINT8  Padding[3];
@@ -76,6 +79,7 @@ typedef struct {
 //
 // VirtIo 1.0 reserved (device-independent) feature bits
 //
-#define VIRTIO_F_VERSION_1 BIT32
+#define VIRTIO_F_VERSION_1      BIT32
+#define VIRTIO_F_IOMMU_PLATFORM BIT33
 
 #endif // _VIRTIO_1_0_H_

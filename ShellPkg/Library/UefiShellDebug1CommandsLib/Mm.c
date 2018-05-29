@@ -2,7 +2,7 @@
   Main file for Mm shell Debug1 function.
 
   (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
-  Copyright (c) 2005 - 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2005 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -58,10 +58,10 @@ CONST EFI_CPU_IO_PROTOCOL_WIDTH mShellMmCpuIoWidth[] = {
 
 /**
   Extract the PCI segment, bus, device, function, register from
-  from a SHELL_MM_PCI or SHELL_MM_PCIE format of address..
+  from a PCI or PCIE format of address..
 
   @param[in]  PciFormat      Whether the address is of PCI format of PCIE format.
-  @param[in]  Address        SHELL_MM_PCI or SHELL_MM_PCIE address.
+  @param[in]  Address        PCI or PCIE address.
   @param[out] Segment        PCI segment number.
   @param[out] Bus            PCI bus number.
   @param[out] Device         PCI device number.
@@ -69,7 +69,6 @@ CONST EFI_CPU_IO_PROTOCOL_WIDTH mShellMmCpuIoWidth[] = {
   @param[out] Register       PCI register offset.
 **/
 VOID
-EFIAPI
 ShellMmDecodePciAddress (
   IN BOOLEAN                PciFormat,
   IN UINT64                 Address,
@@ -82,10 +81,10 @@ ShellMmDecodePciAddress (
 {
   if (PciFormat) {
     //
-    // PCI Configuration Space.The address will have the format 0x000000ssbbddffrr,
-    // where ss = Segment, bb = Bus, dd = Device, ff = Function and rr = Register.
+    // PCI Configuration Space.The address will have the format ssssbbddffrr,
+    // where ssss = Segment, bb = Bus, dd = Device, ff = Function and rr = Register.
     //
-    *Segment = (UINT32) (RShiftU64 (Address, 32) & 0xFF);
+    *Segment = (UINT32) (RShiftU64 (Address, 32) & 0xFFFF);
     *Bus = (UINT8) (((UINT32) Address) >> 24);
 
     if (Device != NULL) {
@@ -99,10 +98,10 @@ ShellMmDecodePciAddress (
     }
   } else {
     //
-    // PCI Express Configuration Space.The address will have the format 0x0000000ssbbddffrrr,
-    // where ss = Segment, bb = Bus, dd = Device, ff = Function and rrr = Register.
+    // PCI Express Configuration Space.The address will have the format ssssssbbddffrrr,
+    // where ssss = Segment, bb = Bus, dd = Device, ff = Function and rrr = Register.
     //
-    *Segment = (UINT32) (RShiftU64 (Address, 36) & 0xFF);
+    *Segment = (UINT32) (RShiftU64 (Address, 36) & 0xFFFF);
     *Bus = (UINT8) RShiftU64 (Address, 28);
     if (Device != NULL) {
       *Device = (UINT8) (((UINT32) Address) >> 20);
@@ -526,12 +525,6 @@ ShellCommandRunMm (
       goto Done;
     }
 
-    if ((AccessType == ShellMmIo) && (Address + Size > MAX_UINT16 + 1)) {
-      ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_MM_IO_ADDRESS_RANGE), gShellDebug1HiiHandle, L"mm");
-      ShellStatus = SHELL_INVALID_PARAMETER;
-      goto Done;
-    }
-
     //
     // locate IO protocol interface
     //
@@ -593,11 +586,6 @@ ShellCommandRunMm (
     //
     Complete = FALSE;
     do {
-      if ((AccessType == ShellMmIo) && (Address + Size > MAX_UINT16 + 1)) {
-        ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_MM_ADDRESS_RANGE2), gShellDebug1HiiHandle, L"mm");
-        break;
-      }
-
       ShellMmAccess (AccessType, PciRootBridgeIo, CpuIo, TRUE, Address, Size, &Buffer);
       ShellPrintHiiEx (-1, -1, NULL, mShellMmAccessTypeStr[AccessType], gShellDebug1HiiHandle);
       ShellPrintHiiEx (-1, -1, NULL, STRING_TOKEN (STR_MM_ADDRESS), gShellDebug1HiiHandle, Address);

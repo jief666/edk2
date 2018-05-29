@@ -1,7 +1,7 @@
 /** @file
   SCSI disk driver that layers on every SCSI IO protocol in the system.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -568,6 +568,7 @@ ScsiDiskReadBlocks (
   MediaChange    = FALSE;
   OldTpl         = gBS->RaiseTPL (TPL_CALLBACK);
   ScsiDiskDevice = SCSI_DISK_DEV_FROM_BLKIO (This);
+  Media          = ScsiDiskDevice->BlkIo.Media;
 
   if (!IS_DEVICE_FIXED(ScsiDiskDevice)) {
 
@@ -598,14 +599,17 @@ ScsiDiskReadBlocks (
                &ScsiDiskDevice->EraseBlock
                );
       }
-      Status = EFI_MEDIA_CHANGED;
+      if (Media->MediaPresent) {
+        Status = EFI_MEDIA_CHANGED;
+      } else {
+        Status = EFI_NO_MEDIA;
+      }
       goto Done;
     }
   }
   //
   // Get the intrinsic block size
   //
-  Media           = ScsiDiskDevice->BlkIo.Media;
   BlockSize       = Media->BlockSize;
 
   NumberOfBlocks  = BufferSize / BlockSize;
@@ -700,6 +704,7 @@ ScsiDiskWriteBlocks (
   MediaChange    = FALSE;
   OldTpl         = gBS->RaiseTPL (TPL_CALLBACK);
   ScsiDiskDevice = SCSI_DISK_DEV_FROM_BLKIO (This);
+  Media          = ScsiDiskDevice->BlkIo.Media;
 
   if (!IS_DEVICE_FIXED(ScsiDiskDevice)) {
 
@@ -730,14 +735,17 @@ ScsiDiskWriteBlocks (
                &ScsiDiskDevice->EraseBlock
                );
       }
-      Status = EFI_MEDIA_CHANGED;
+      if (Media->MediaPresent) {
+        Status = EFI_MEDIA_CHANGED;
+      } else {
+        Status = EFI_NO_MEDIA;
+      }
       goto Done;
     }
   }
   //
   // Get the intrinsic block size
   //
-  Media           = ScsiDiskDevice->BlkIo.Media;
   BlockSize       = Media->BlockSize;
 
   NumberOfBlocks  = BufferSize / BlockSize;
@@ -922,6 +930,7 @@ ScsiDiskReadBlocksEx (
   MediaChange    = FALSE;
   OldTpl         = gBS->RaiseTPL (TPL_CALLBACK);
   ScsiDiskDevice = SCSI_DISK_DEV_FROM_BLKIO2 (This);
+  Media          = ScsiDiskDevice->BlkIo.Media;
 
   if (!IS_DEVICE_FIXED(ScsiDiskDevice)) {
 
@@ -952,14 +961,17 @@ ScsiDiskReadBlocksEx (
                &ScsiDiskDevice->EraseBlock
                );
       }
-      Status = EFI_MEDIA_CHANGED;
+      if (Media->MediaPresent) {
+        Status = EFI_MEDIA_CHANGED;
+      } else {
+        Status = EFI_NO_MEDIA;
+      }
       goto Done;
     }
   }
   //
   // Get the intrinsic block size
   //
-  Media           = ScsiDiskDevice->BlkIo2.Media;
   BlockSize       = Media->BlockSize;
 
   NumberOfBlocks  = BufferSize / BlockSize;
@@ -1081,6 +1093,7 @@ ScsiDiskWriteBlocksEx (
   MediaChange    = FALSE;
   OldTpl         = gBS->RaiseTPL (TPL_CALLBACK);
   ScsiDiskDevice = SCSI_DISK_DEV_FROM_BLKIO2 (This);
+  Media          = ScsiDiskDevice->BlkIo.Media;
 
   if (!IS_DEVICE_FIXED(ScsiDiskDevice)) {
 
@@ -1111,14 +1124,17 @@ ScsiDiskWriteBlocksEx (
                &ScsiDiskDevice->EraseBlock
                );
       }
-      Status = EFI_MEDIA_CHANGED;
+      if (Media->MediaPresent) {
+        Status = EFI_MEDIA_CHANGED;
+      } else {
+        Status = EFI_NO_MEDIA;
+      }
       goto Done;
     }
   }
   //
   // Get the intrinsic block size
   //
-  Media           = ScsiDiskDevice->BlkIo2.Media;
   BlockSize       = Media->BlockSize;
 
   NumberOfBlocks  = BufferSize / BlockSize;
@@ -1230,6 +1246,7 @@ ScsiDiskFlushBlocksEx (
   MediaChange    = FALSE;
   OldTpl         = gBS->RaiseTPL (TPL_CALLBACK);
   ScsiDiskDevice = SCSI_DISK_DEV_FROM_BLKIO2 (This);
+  Media          = ScsiDiskDevice->BlkIo.Media;
 
   if (!IS_DEVICE_FIXED(ScsiDiskDevice)) {
 
@@ -1260,12 +1277,14 @@ ScsiDiskFlushBlocksEx (
                &ScsiDiskDevice->EraseBlock
                );
       }
-      Status = EFI_MEDIA_CHANGED;
+      if (Media->MediaPresent) {
+        Status = EFI_MEDIA_CHANGED;
+      } else {
+        Status = EFI_NO_MEDIA;
+      }
       goto Done;
     }
   }
-
-  Media = ScsiDiskDevice->BlkIo2.Media;
 
   if (!(Media->MediaPresent)) {
     Status = EFI_NO_MEDIA;
@@ -2754,7 +2773,7 @@ GetMediaInfo (
   UINT8       *Ptr;
 
   if (!ScsiDiskDevice->Cdb16Byte) {
-    ScsiDiskDevice->BlkIo.Media->LastBlock =  (Capacity10->LastLba3 << 24) |
+    ScsiDiskDevice->BlkIo.Media->LastBlock =  ((UINT32) Capacity10->LastLba3 << 24) |
                                               (Capacity10->LastLba2 << 16) |
                                               (Capacity10->LastLba1 << 8)  |
                                                Capacity10->LastLba0;

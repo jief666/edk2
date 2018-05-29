@@ -53,6 +53,11 @@ AddressWidthInitialization (
   VOID
   );
 
+VOID
+Q35TsegMbytesInitialization (
+  VOID
+  );
+
 EFI_STATUS
 PublishPeiMemory (
   VOID
@@ -73,6 +78,11 @@ PeiFvInitialization (
   VOID
   );
 
+VOID
+InstallFeatureControlCallback (
+  VOID
+  );
+
 EFI_STATUS
 InitializeXen (
   VOID
@@ -80,6 +90,11 @@ InitializeXen (
 
 BOOLEAN
 XenDetect (
+  VOID
+  );
+
+VOID
+AmdSevInitialize (
   VOID
   );
 
@@ -95,5 +110,9 @@ extern EFI_BOOT_MODE mBootMode;
 extern BOOLEAN mS3Supported;
 
 extern UINT8 mPhysMemAddressWidth;
+
+extern UINT32 mMaxCpuCount;
+
+extern UINT16 mHostBridgeDevId;
 
 #endif // _PLATFORM_PEI_H_INCLUDED_

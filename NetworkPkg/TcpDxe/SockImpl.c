@@ -1,7 +1,7 @@
 /** @file
   Implementation of the Socket.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -522,7 +522,7 @@ SockWakeListenToken (
 
     Parent->ConnCnt--;
     DEBUG (
-      (EFI_D_INFO,
+      (EFI_D_NET,
       "SockWakeListenToken: accept a socket, now conncnt is %d",
       Parent->ConnCnt)
       );
@@ -776,7 +776,7 @@ SockCreate (
     Parent->ConnCnt++;
 
     DEBUG (
-      (EFI_D_INFO,
+      (EFI_D_NET,
       "SockCreate: Create a new socket and add to parent, now conncnt is %d\n",
       Parent->ConnCnt)
       );
@@ -828,15 +828,7 @@ SockDestroy (
   IN OUT SOCKET *Sock
   )
 {
-  VOID        *SockProtocol;
-  EFI_GUID    *TcpProtocolGuid;
-  EFI_STATUS  Status;
-
   ASSERT (SockStream == Sock->Type);
-
-  if (Sock->DestroyCallback != NULL) {
-    Sock->DestroyCallback (Sock, Sock->Context);
-  }
 
   //
   // Flush the completion token buffered
@@ -871,52 +863,6 @@ SockDestroy (
 
     Sock->Parent = NULL;
   }
-
-  //
-  // Set the protocol guid and driver binding handle
-  // in the light of Sock->SockType
-  //
-  if (Sock->IpVersion == IP_VERSION_4) {
-    TcpProtocolGuid = &gEfiTcp4ProtocolGuid;
-  } else {
-    TcpProtocolGuid = &gEfiTcp6ProtocolGuid;
-  }
-
-  //
-  // Retrieve the protocol installed on this sock
-  //
-  Status = gBS->OpenProtocol (
-                  Sock->SockHandle,
-                  TcpProtocolGuid,
-                  &SockProtocol,
-                  Sock->DriverBinding,
-                  Sock->SockHandle,
-                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                  );
-
-  if (EFI_ERROR (Status)) {
-
-    DEBUG (
-      (EFI_D_ERROR,
-      "SockDestroy: Open protocol installed on socket failed with %r\n",
-      Status)
-      );
-
-    goto FreeSock;
-  }
-
-  //
-  // Uninstall the protocol installed on this sock
-  // in the light of Sock->SockType
-  //
-  gBS->UninstallMultipleProtocolInterfaces (
-        Sock->SockHandle,
-        TcpProtocolGuid,
-        SockProtocol,
-        NULL
-        );
-
-FreeSock:
 
   FreePool (Sock);
 }

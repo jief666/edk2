@@ -1,7 +1,7 @@
 /** @file
   The platform device manager reference implementation
 
-Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -388,7 +388,14 @@ GetMacAddressString(
   //
   HwAddress = &MacAddressNode->MacAddress.Addr[0];
   for (Index = 0; Index < HwAddressSize; Index++) {
-    String += UnicodeValueToString (String, PREFIX_ZERO | RADIX_HEX, *(HwAddress++), 2);
+    UnicodeValueToStringS (
+      String,
+      BufferLen - ((UINTN)String - (UINTN)*PBuffer),
+      PREFIX_ZERO | RADIX_HEX,
+      *(HwAddress++),
+      2
+      );
+    String += StrnLenS (String, (BufferLen - ((UINTN)String - (UINTN)*PBuffer)) / sizeof (CHAR16));
     if (Index < HwAddressSize - 1) {
       *String++ = L':';
     }
@@ -408,7 +415,14 @@ GetMacAddressString(
 
   if (VlanId != 0) {
     *String++ = L'\\';
-    String += UnicodeValueToString (String, PREFIX_ZERO | RADIX_HEX, VlanId, 4);
+    UnicodeValueToStringS (
+      String,
+      BufferLen - ((UINTN)String - (UINTN)*PBuffer),
+      PREFIX_ZERO | RADIX_HEX,
+      VlanId,
+      4
+      );
+    String += StrnLenS (String, (BufferLen - ((UINTN)String - (UINTN)*PBuffer)) / sizeof (CHAR16));
   }
 
   //
@@ -466,7 +480,11 @@ AddIdToMacDeviceList (
   } else {
     mMacDeviceList.MaxListLen += MAX_MAC_ADDRESS_NODE_LIST_LEN;
     if (mMacDeviceList.CurListLen != 0) {
-      TempDeviceList = (MENU_INFO_ITEM *)AllocateCopyPool (sizeof (MENU_INFO_ITEM) * mMacDeviceList.MaxListLen, (VOID *)mMacDeviceList.NodeList);
+      TempDeviceList = ReallocatePool (
+                         sizeof (MENU_INFO_ITEM) * mMacDeviceList.CurListLen,
+                         sizeof (MENU_INFO_ITEM) * mMacDeviceList.MaxListLen,
+                         mMacDeviceList.NodeList
+                         );
     } else {
       TempDeviceList = (MENU_INFO_ITEM *)AllocatePool (sizeof (MENU_INFO_ITEM) * mMacDeviceList.MaxListLen);
     }
@@ -476,10 +494,6 @@ AddIdToMacDeviceList (
     }
     TempDeviceList[mMacDeviceList.CurListLen].PromptId = PromptId;  
     TempDeviceList[mMacDeviceList.CurListLen].QuestionId = (EFI_QUESTION_ID) (mMacDeviceList.CurListLen + NETWORK_DEVICE_LIST_KEY_OFFSET);
-    
-    if (mMacDeviceList.CurListLen > 0) {
-      FreePool(mMacDeviceList.NodeList);
-    }
     
     mMacDeviceList.NodeList = TempDeviceList;
   }

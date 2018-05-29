@@ -221,6 +221,10 @@ PciHostBridgeGetRootBridges (
     return ScanForRootBridges (Count);
   }
 
+  ZeroMem (&Io, sizeof (Io));
+  ZeroMem (&Mem, sizeof (Mem));
+  ZeroMem (&MemAbove4G, sizeof (MemAbove4G));
+
   Attributes = EFI_PCI_ATTRIBUTE_IDE_PRIMARY_IO |
     EFI_PCI_ATTRIBUTE_IDE_SECONDARY_IO |
     EFI_PCI_ATTRIBUTE_ISA_IO_16 |
@@ -419,9 +423,7 @@ PciHostBridgeResourceConflict (
     DEBUG ((EFI_D_ERROR, "RootBridge[%d]:\n", RootBridgeIndex++));
     for (; Descriptor->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR; Descriptor++) {
       ASSERT (Descriptor->ResType <
-              (sizeof (mPciHostBridgeLibAcpiAddressSpaceTypeStr) /
-               sizeof (mPciHostBridgeLibAcpiAddressSpaceTypeStr[0])
-               )
+              ARRAY_SIZE (mPciHostBridgeLibAcpiAddressSpaceTypeStr)
               );
       DEBUG ((EFI_D_ERROR, " %s: Length/Alignment = 0x%lx / 0x%lx\n",
               mPciHostBridgeLibAcpiAddressSpaceTypeStr[Descriptor->ResType],

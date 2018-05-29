@@ -3,6 +3,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Portions copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
+  Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -41,35 +42,22 @@
         cbnz   SAFE_XREG, 1f        ;\
         b      .                    ;// We should never get here
 
-#if defined(__clang__)
+#define _ASM_FUNC(Name, Section)    \
+  .global   Name                  ; \
+  .section  #Section, "ax"        ; \
+  .type     Name, %function       ; \
+  Name:
 
-// load x0 with _Data
-#define LoadConstant(_Data)              \
-  ldr  x0, 1f                          ; \
-  b    2f                              ; \
-.align(8)                              ; \
-1:                                       \
-  .8byte (_Data)                       ; \
-2:
+#define ASM_FUNC(Name)            _ASM_FUNC(ASM_PFX(Name), .text. ## Name)
 
-// load _Reg with _Data
-#define LoadConstantToReg(_Data, _Reg)    \
-  ldr  _Reg, 1f                         ; \
-  b    2f                               ; \
-.align(8)                               ; \
-1:                                        \
-  .8byte (_Data)                        ; \
-2:
+#define MOV32(Reg, Val)                   \
+  movz      Reg, (Val) >> 16, lsl #16   ; \
+  movk      Reg, (Val) & 0xffff
 
-#elif defined (__GNUC__)
-
-#define LoadConstant(Data) \
-  ldr  x0, =Data
-
-#define LoadConstantToReg(Data, Reg) \
-  ldr  Reg, =Data
-
-#endif // __GNUC__
+#define MOV64(Reg, Val)                             \
+  movz      Reg, (Val) >> 48, lsl #48             ; \
+  movk      Reg, ((Val) >> 32) & 0xffff, lsl #32  ; \
+  movk      Reg, ((Val) >> 16) & 0xffff, lsl #16  ; \
+  movk      Reg, (Val) & 0xffff
 
 #endif // __MACRO_IO_LIBV8_H__
-

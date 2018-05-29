@@ -1,7 +1,7 @@
 /** @file
   EFI PEI Core dispatch services
   
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
@@ -14,11 +14,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 
 #include "PeiMain.h"
-
-///
-/// temporary memory is filled with this initial value during SEC phase
-///
-#define INIT_CAR_VALUE 0x5AA55AA5
 
 /**
 
@@ -671,26 +666,39 @@ PeiCheckAndSwitchStack (
 
   if (Private->SwitchStackSignal) {
     //
-    // Before switch stack from temporary memory to permenent memory, calculate the heap and stack
-    // usage in temporary memory for debuging.
+    // Before switch stack from temporary memory to permanent memory, calculate the heap and stack
+    // usage in temporary memory for debugging.
     //
     DEBUG_CODE_BEGIN ();
-      UINT32  *StackPointer;
+      UINT32                *StackPointer;
+      EFI_PEI_HOB_POINTERS  Hob;
 
       for (StackPointer = (UINT32*)SecCoreData->StackBase;
            (StackPointer < (UINT32*)((UINTN)SecCoreData->StackBase + SecCoreData->StackSize)) \
-           && (*StackPointer == INIT_CAR_VALUE);
-           StackPointer ++);
+           && (*StackPointer == PcdGet32 (PcdInitValueInTempStack));
+           StackPointer ++) {
+      }
 
-      DEBUG ((EFI_D_INFO, "Temp Stack : BaseAddress=0x%p Length=0x%X\n", SecCoreData->StackBase, (UINT32)SecCoreData->StackSize));
-      DEBUG ((EFI_D_INFO, "Temp Heap  : BaseAddress=0x%p Length=0x%X\n", Private->HobList.Raw, (UINT32)((UINTN) Private->HobList.HandoffInformationTable->EfiFreeMemoryTop - (UINTN) Private->HobList.Raw)));
-      DEBUG ((EFI_D_INFO, "Total temporary memory:    %d bytes.\n", (UINT32)SecCoreData->TemporaryRamSize));
-      DEBUG ((EFI_D_INFO, "  temporary memory stack ever used: %d bytes.\n",
+      DEBUG ((DEBUG_INFO, "Temp Stack : BaseAddress=0x%p Length=0x%X\n", SecCoreData->StackBase, (UINT32)SecCoreData->StackSize));
+      DEBUG ((DEBUG_INFO, "Temp Heap  : BaseAddress=0x%p Length=0x%X\n", SecCoreData->PeiTemporaryRamBase, (UINT32)SecCoreData->PeiTemporaryRamSize));
+      DEBUG ((DEBUG_INFO, "Total temporary memory:    %d bytes.\n", (UINT32)SecCoreData->TemporaryRamSize));
+      DEBUG ((DEBUG_INFO, "  temporary memory stack ever used:       %d bytes.\n",
              (UINT32)(SecCoreData->StackSize - ((UINTN) StackPointer - (UINTN)SecCoreData->StackBase))
             ));
-      DEBUG ((EFI_D_INFO, "  temporary memory heap used:       %d bytes.\n",
+      DEBUG ((DEBUG_INFO, "  temporary memory heap used for HobList: %d bytes.\n",
              (UINT32)((UINTN)Private->HobList.HandoffInformationTable->EfiFreeMemoryBottom - (UINTN)Private->HobList.Raw)
             ));
+      DEBUG ((DEBUG_INFO, "  temporary memory heap occupied by memory pages: %d bytes.\n",
+             (UINT32)(UINTN)(Private->HobList.HandoffInformationTable->EfiMemoryTop - Private->HobList.HandoffInformationTable->EfiFreeMemoryTop)
+            ));
+      for (Hob.Raw = Private->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
+        if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_MEMORY_ALLOCATION) {
+          DEBUG ((DEBUG_INFO, "Memory Allocation 0x%08x 0x%0lx - 0x%0lx\n", \
+            Hob.MemoryAllocation->AllocDescriptor.MemoryType,               \
+            Hob.MemoryAllocation->AllocDescriptor.MemoryBaseAddress,        \
+            Hob.MemoryAllocation->AllocDescriptor.MemoryBaseAddress + Hob.MemoryAllocation->AllocDescriptor.MemoryLength - 1));
+        }
+      }
     DEBUG_CODE_END ();
 
     if (PcdGet64(PcdLoadModuleAtFixAddressEnable) != 0 && (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME)) {
@@ -709,10 +717,10 @@ PeiCheckAndSwitchStack (
     //
     // Reserve the size of new stack at bottom of physical memory
     //
-    // The size of new stack in permenent memory must be the same size 
+    // The size of new stack in permanent memory must be the same size
     // or larger than the size of old stack in temporary memory.
     // But if new stack is smaller than the size of old stack, we also reserve
-    // the size of old stack at bottom of permenent memory.
+    // the size of old stack at bottom of permanent memory.
     //
     NewStackSize = RShiftU64 (Private->PhysicalMemoryLength, 1);
     NewStackSize = ALIGN_VALUE (NewStackSize, EFI_PAGE_SIZE);
@@ -789,7 +797,7 @@ PeiCheckAndSwitchStack (
 
       //
       // Temporary Ram Support PPI is provided by platform, it will copy 
-      // temporary memory to permenent memory and do stack switching.
+      // temporary memory to permanent memory and do stack switching.
       // After invoking Temporary Ram Support PPI, the following code's 
       // stack is in permanent memory.
       //
@@ -801,15 +809,27 @@ PeiCheckAndSwitchStack (
                                 );
 
       //
+      // Migrate memory pages allocated in pre-memory phase.
+      // It could not be called before calling TemporaryRamSupportPpi->TemporaryRamMigration()
+      // as the migrated memory pages may be overridden by TemporaryRamSupportPpi->TemporaryRamMigration().
+      //
+      MigrateMemoryPages (Private, TRUE);
+
+      //
       // Entry PEI Phase 2
       //
       PeiCore (SecCoreData, NULL, Private);
     } else {
       //
+      // Migrate memory pages allocated in pre-memory phase.
+      //
+      MigrateMemoryPages (Private, FALSE);
+
+      //
       // Migrate the PEI Services Table pointer from temporary RAM to permanent RAM.
       //
       MigratePeiServicesTablePointer ();
-                
+
       //
       // Heap Offset
       //
@@ -837,7 +857,7 @@ PeiCheckAndSwitchStack (
       //
       HeapTemporaryRamSize = (UINTN) (Private->HobList.HandoffInformationTable->EfiFreeMemoryBottom - Private->HobList.HandoffInformationTable->EfiMemoryBottom);
       ASSERT (BaseOfNewHeap + HeapTemporaryRamSize <= Private->FreePhysicalMemoryTop);
-      CopyMem ((UINT8 *) (UINTN) BaseOfNewHeap, (UINT8 *) PeiTemporaryRamBase, HeapTemporaryRamSize);
+      CopyMem ((UINT8 *) (UINTN) BaseOfNewHeap, PeiTemporaryRamBase, HeapTemporaryRamSize);
 
       //
       // Migrate Stack
@@ -846,7 +866,6 @@ PeiCheckAndSwitchStack (
 
       //
       // Copy Hole Range Data
-      // Convert PPI from Hole. 
       //
       if (HoleMemSize != 0) {
         //
@@ -951,15 +970,15 @@ PeiDispatcher (
   if ((Private->PeiMemoryInstalled) && (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME || PcdGetBool (PcdShadowPeimOnS3Boot))) {
     //
     // Once real memory is available, shadow the RegisterForShadow modules. And meanwhile
-    // update the modules' status from PEIM_STATE_REGISITER_FOR_SHADOW to PEIM_STATE_DONE.
+    // update the modules' status from PEIM_STATE_REGISTER_FOR_SHADOW to PEIM_STATE_DONE.
     //
     SaveCurrentPeimCount  = Private->CurrentPeimCount;
     SaveCurrentFvCount    = Private->CurrentPeimFvCount;
     SaveCurrentFileHandle =  Private->CurrentFileHandle;
 
-    for (Index1 = 0; Index1 <= SaveCurrentFvCount; Index1++) {
+    for (Index1 = 0; Index1 < Private->FvCount; Index1++) {
       for (Index2 = 0; (Index2 < PcdGet32 (PcdPeiCoreMaxPeimPerFv)) && (Private->Fv[Index1].FvFileHandles[Index2] != NULL); Index2++) {
-        if (Private->Fv[Index1].PeimState[Index2] == PEIM_STATE_REGISITER_FOR_SHADOW) {
+        if (Private->Fv[Index1].PeimState[Index2] == PEIM_STATE_REGISTER_FOR_SHADOW) {
           PeimFileHandle = Private->Fv[Index1].FvFileHandles[Index2];
           Private->CurrentFileHandle   = PeimFileHandle;
           Private->CurrentPeimFvCount  = Index1;
@@ -967,13 +986,13 @@ PeiDispatcher (
           Status = PeiLoadImage (
                     (CONST EFI_PEI_SERVICES **) &Private->Ps,
                     PeimFileHandle,
-                    PEIM_STATE_REGISITER_FOR_SHADOW,
+                    PEIM_STATE_REGISTER_FOR_SHADOW,
                     &EntryPoint,
                     &AuthenticationState
                     );
           if (Status == EFI_SUCCESS) {
             //
-            // PEIM_STATE_REGISITER_FOR_SHADOW move to PEIM_STATE_DONE
+            // PEIM_STATE_REGISTER_FOR_SHADOW move to PEIM_STATE_DONE
             //
             Private->Fv[Index1].PeimState[Index2]++;
             //
@@ -1111,6 +1130,13 @@ PeiDispatcher (
                   PeimEntryPoint = (EFI_PEIM_ENTRY_POINT2)(UINTN)EntryPoint;
                   PeimEntryPoint (PeimFileHandle, (const EFI_PEI_SERVICES **) PeiServices);
                   Private->PeimDispatchOnThisPass = TRUE;
+                } else {
+                  //
+                  // The related GuidedSectionExtraction PPI for the
+                  // signed PEIM image section may be installed in the rest
+                  // of this do-while loop, so need to make another pass.
+                  //
+                  Private->PeimNeedingDispatch = TRUE;
                 }
 
                 REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
@@ -1139,10 +1165,10 @@ PeiDispatcher (
             //
             PeiCheckAndSwitchStack (SecCoreData, Private);
 
-            if ((Private->PeiMemoryInstalled) && (Private->Fv[FvCount].PeimState[PeimCount] == PEIM_STATE_REGISITER_FOR_SHADOW) &&   \
+            if ((Private->PeiMemoryInstalled) && (Private->Fv[FvCount].PeimState[PeimCount] == PEIM_STATE_REGISTER_FOR_SHADOW) &&   \
                 (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME || PcdGetBool (PcdShadowPeimOnS3Boot))) {
               //
-              // If memory is availble we shadow images by default for performance reasons.
+              // If memory is available we shadow images by default for performance reasons.
               // We call the entry point a 2nd time so the module knows it's shadowed.
               //
               //PERF_START (PeiServices, L"PEIM", PeimFileHandle, 0);
@@ -1153,7 +1179,7 @@ PeiDispatcher (
                 Status = PeiLoadImage (
                            PeiServices,
                            PeimFileHandle,
-                           PEIM_STATE_REGISITER_FOR_SHADOW,
+                           PEIM_STATE_REGISTER_FOR_SHADOW,
                            &EntryPoint,
                            &AuthenticationState
                            );
@@ -1166,7 +1192,7 @@ PeiDispatcher (
               //PERF_END (PeiServices, L"PEIM", PeimFileHandle, 0);
 
               //
-              // PEIM_STATE_REGISITER_FOR_SHADOW move to PEIM_STATE_DONE
+              // PEIM_STATE_REGISTER_FOR_SHADOW move to PEIM_STATE_DONE
               //
               Private->Fv[FvCount].PeimState[PeimCount]++;
 
@@ -1330,14 +1356,14 @@ PeiRegisterForShadow (
     return EFI_NOT_FOUND;
   }
 
-  if (Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] >= PEIM_STATE_REGISITER_FOR_SHADOW) {
+  if (Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] >= PEIM_STATE_REGISTER_FOR_SHADOW) {
     //
     // If the PEIM has already entered the PEIM_STATE_REGISTER_FOR_SHADOW or PEIM_STATE_DONE then it's already been started
     //
     return EFI_ALREADY_STARTED;
   }
 
-  Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] = PEIM_STATE_REGISITER_FOR_SHADOW;
+  Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] = PEIM_STATE_REGISTER_FOR_SHADOW;
 
   return EFI_SUCCESS;
 }

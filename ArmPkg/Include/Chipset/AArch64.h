@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
-  Copyright (c) 2011 - 2015, ARM Ltd. All rights reserved.<BR>
+  Copyright (c) 2011 - 2017, ARM Ltd. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -17,7 +17,6 @@
 #define __AARCH64_H__
 
 #include <Chipset/AArch64Mmu.h>
-#include <Chipset/ArmArchTimer.h>
 
 // ARM Interrupt ID in Exception Table
 #define ARM_ARCH_EXCEPTION_IRQ            EXCEPT_AARCH64_IRQ
@@ -49,6 +48,7 @@
 #define ARM_CPU_TYPE_AEMv8      0xD0F
 #define ARM_CPU_TYPE_A53        0xD03
 #define ARM_CPU_TYPE_A57        0xD07
+#define ARM_CPU_TYPE_A72        0xD08
 #define ARM_CPU_TYPE_A15        0xC0F
 #define ARM_CPU_TYPE_A9         0xC09
 #define ARM_CPU_TYPE_A7         0xC07
@@ -194,6 +194,18 @@ ArmEnableAlignmentCheck (
 
 VOID
 EFIAPI
+ArmDisableStackAlignmentCheck (
+  VOID
+  );
+
+VOID
+EFIAPI
+ArmEnableStackAlignmentCheck (
+  VOID
+  );
+
+VOID
+EFIAPI
 ArmDisableAllExceptions (
   VOID
   );
@@ -221,6 +233,16 @@ PageAttributeToGcdAttribute (
 UINTN
 ArmWriteCptr (
   IN  UINT64 Cptr
+  );
+
+UINT32
+ArmReadCntHctl (
+  VOID
+  );
+
+VOID
+ArmWriteCntHctl (
+  IN UINT32 CntHctl
   );
 
 #endif // __AARCH64_H__

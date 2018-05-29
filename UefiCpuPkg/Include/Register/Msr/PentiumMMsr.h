@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-18.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.20.
 
 **/
 
@@ -27,7 +27,23 @@
 #include <Register/ArchitecturalMsr.h>
 
 /**
-  See Section 35.20, "MSRs in Pentium Processors.".
+  Is Pentium M Processors?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_PENTIUM_M_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   ( \
+    DisplayModel == 0x0D \
+    ) \
+   )
+
+/**
+  See Section 35.22, "MSRs in Pentium Processors.".
 
   @param  ECX  MSR_PENTIUM_M_P5_MC_ADDR (0x00000000)
   @param  EAX  Lower 32-bits of MSR value.
@@ -40,12 +56,13 @@
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_P5_MC_ADDR);
   AsmWriteMsr64 (MSR_PENTIUM_M_P5_MC_ADDR, Msr);
   @endcode
+  @note MSR_PENTIUM_M_P5_MC_ADDR is defined as P5_MC_ADDR in SDM.
 **/
 #define MSR_PENTIUM_M_P5_MC_ADDR                 0x00000000
 
 
 /**
-  See Section 35.20, "MSRs in Pentium Processors.".
+  See Section 35.22, "MSRs in Pentium Processors.".
 
   @param  ECX  MSR_PENTIUM_M_P5_MC_TYPE (0x00000001)
   @param  EAX  Lower 32-bits of MSR value.
@@ -58,6 +75,7 @@
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_P5_MC_TYPE);
   AsmWriteMsr64 (MSR_PENTIUM_M_P5_MC_TYPE, Msr);
   @endcode
+  @note MSR_PENTIUM_M_P5_MC_TYPE is defined as P5_MC_TYPE in SDM.
 **/
 #define MSR_PENTIUM_M_P5_MC_TYPE                 0x00000001
 
@@ -79,6 +97,7 @@
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_M_EBL_CR_POWERON);
   AsmWriteMsr64 (MSR_PENTIUM_M_EBL_CR_POWERON, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_M_EBL_CR_POWERON is defined as MSR_EBL_CR_POWERON in SDM.
 **/
 #define MSR_PENTIUM_M_EBL_CR_POWERON             0x0000002A
 
@@ -181,7 +200,7 @@ typedef union {
   Last Branch Record n (R/W) One of 8 last branch record registers on the last
   branch record stack: bits 31-0 hold the 'from' address and bits 63-32 hold
   the to address. See also: -  Last Branch Record Stack TOS at 1C9H -  Section
-  17.12, "Last Branch, Interrupt, and Exception Recording (Pentium M
+  17.13, "Last Branch, Interrupt, and Exception Recording (Pentium M
   Processors)".
 
   @param  ECX  MSR_PENTIUM_M_LASTBRANCH_n
@@ -195,6 +214,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_LASTBRANCH_0);
   AsmWriteMsr64 (MSR_PENTIUM_M_LASTBRANCH_0, Msr);
   @endcode
+  @note MSR_PENTIUM_M_LASTBRANCH_0 is defined as MSR_LASTBRANCH_0 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_1 is defined as MSR_LASTBRANCH_1 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_2 is defined as MSR_LASTBRANCH_2 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_3 is defined as MSR_LASTBRANCH_3 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_4 is defined as MSR_LASTBRANCH_4 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_5 is defined as MSR_LASTBRANCH_5 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_6 is defined as MSR_LASTBRANCH_6 in SDM.
+        MSR_PENTIUM_M_LASTBRANCH_7 is defined as MSR_LASTBRANCH_7 in SDM.
   @{
 **/
 #define MSR_PENTIUM_M_LASTBRANCH_0               0x00000040
@@ -222,6 +249,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_BBL_CR_CTL);
   AsmWriteMsr64 (MSR_PENTIUM_M_BBL_CR_CTL, Msr);
   @endcode
+  @note MSR_PENTIUM_M_BBL_CR_CTL is defined as MSR_BBL_CR_CTL in SDM.
 **/
 #define MSR_PENTIUM_M_BBL_CR_CTL                 0x00000119
 
@@ -242,6 +270,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_M_BBL_CR_CTL3);
   AsmWriteMsr64 (MSR_PENTIUM_M_BBL_CR_CTL3, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_M_BBL_CR_CTL3 is defined as MSR_BBL_CR_CTL3 in SDM.
 **/
 #define MSR_PENTIUM_M_BBL_CR_CTL3                0x0000011E
 
@@ -308,6 +337,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_M_THERM2_CTL);
   AsmWriteMsr64 (MSR_PENTIUM_M_THERM2_CTL, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_M_THERM2_CTL is defined as MSR_THERM2_CTL in SDM.
 **/
 #define MSR_PENTIUM_M_THERM2_CTL                 0x0000019D
 
@@ -359,6 +389,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_M_IA32_MISC_ENABLE);
   AsmWriteMsr64 (MSR_PENTIUM_M_IA32_MISC_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_M_IA32_MISC_ENABLE is defined as IA32_MISC_ENABLE in SDM.
 **/
 #define MSR_PENTIUM_M_IA32_MISC_ENABLE           0x000001A0
 
@@ -409,9 +440,9 @@ typedef union {
     ///
     UINT32  BTS:1;
     ///
-    /// [Bit 12] Precise Event Based Sampling Unavailable (RO)  1 = Processor
-    /// does not support precise event-based sampling (PEBS); 0 = PEBS is
-    /// supported. The Pentium M processor does not support PEBS.
+    /// [Bit 12] Processor Event Based Sampling Unavailable (RO)  1 =
+    /// Processor does not support processor event based sampling (PEBS); 0 =
+    /// PEBS is supported. The Pentium M processor does not support PEBS.
     ///
     UINT32  PEBS:1;
     UINT32  Reserved5:3;
@@ -446,7 +477,7 @@ typedef union {
 /**
   Last Branch Record Stack TOS (R/W)  Contains an index (bits 0-3) that points
   to the MSR containing the most recent branch record. See also: -
-  MSR_LASTBRANCH_0_FROM_IP (at 40H) -  Section 17.12, "Last Branch, Interrupt,
+  MSR_LASTBRANCH_0_FROM_IP (at 40H) -  Section 17.13, "Last Branch, Interrupt,
   and Exception Recording (Pentium M Processors)".
 
   @param  ECX  MSR_PENTIUM_M_LASTBRANCH_TOS (0x000001C9)
@@ -460,13 +491,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_LASTBRANCH_TOS);
   AsmWriteMsr64 (MSR_PENTIUM_M_LASTBRANCH_TOS, Msr);
   @endcode
+  @note MSR_PENTIUM_M_LASTBRANCH_TOS is defined as MSR_LASTBRANCH_TOS in SDM.
 **/
 #define MSR_PENTIUM_M_LASTBRANCH_TOS             0x000001C9
 
 
 /**
   Debug Control (R/W)  Controls how several debug features are used. Bit
-  definitions are discussed in the referenced section. See Section 17.12,
+  definitions are discussed in the referenced section. See Section 17.13,
   "Last Branch, Interrupt, and Exception Recording (Pentium M Processors).".
 
   @param  ECX  MSR_PENTIUM_M_DEBUGCTLB (0x000001D9)
@@ -480,6 +512,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_DEBUGCTLB);
   AsmWriteMsr64 (MSR_PENTIUM_M_DEBUGCTLB, Msr);
   @endcode
+  @note MSR_PENTIUM_M_DEBUGCTLB is defined as MSR_DEBUGCTLB in SDM.
 **/
 #define MSR_PENTIUM_M_DEBUGCTLB                  0x000001D9
 
@@ -488,8 +521,8 @@ typedef union {
   Last Exception Record To Linear IP (R)  This area contains a pointer to the
   target of the last branch instruction that the processor executed prior to
   the last exception that was generated or the last interrupt that was
-  handled. See Section 17.12, "Last Branch, Interrupt, and Exception Recording
-  (Pentium M Processors)" and Section 17.13.2, "Last Branch and Last Exception
+  handled. See Section 17.13, "Last Branch, Interrupt, and Exception Recording
+  (Pentium M Processors)" and Section 17.14.2, "Last Branch and Last Exception
   MSRs.".
 
   @param  ECX  MSR_PENTIUM_M_LER_TO_LIP (0x000001DD)
@@ -502,6 +535,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_LER_TO_LIP);
   @endcode
+  @note MSR_PENTIUM_M_LER_TO_LIP is defined as MSR_LER_TO_LIP in SDM.
 **/
 #define MSR_PENTIUM_M_LER_TO_LIP                 0x000001DD
 
@@ -510,8 +544,8 @@ typedef union {
   Last Exception Record From Linear IP (R)  Contains a pointer to the last
   branch instruction that the processor executed prior to the last exception
   that was generated or the last interrupt that was handled. See Section
-  17.12, "Last Branch, Interrupt, and Exception Recording (Pentium M
-  Processors)" and Section 17.13.2, "Last Branch and Last Exception MSRs.".
+  17.13, "Last Branch, Interrupt, and Exception Recording (Pentium M
+  Processors)" and Section 17.14.2, "Last Branch and Last Exception MSRs.".
 
   @param  ECX  MSR_PENTIUM_M_LER_FROM_LIP (0x000001DE)
   @param  EAX  Lower 32-bits of MSR value.
@@ -523,6 +557,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_LER_FROM_LIP);
   @endcode
+  @note MSR_PENTIUM_M_LER_FROM_LIP is defined as MSR_LER_FROM_LIP in SDM.
 **/
 #define MSR_PENTIUM_M_LER_FROM_LIP               0x000001DE
 
@@ -541,6 +576,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_MC4_CTL);
   AsmWriteMsr64 (MSR_PENTIUM_M_MC4_CTL, Msr);
   @endcode
+  @note MSR_PENTIUM_M_MC4_CTL is defined as MSR_MC4_CTL in SDM.
 **/
 #define MSR_PENTIUM_M_MC4_CTL                    0x0000040C
 
@@ -559,6 +595,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_MC4_STATUS);
   AsmWriteMsr64 (MSR_PENTIUM_M_MC4_STATUS, Msr);
   @endcode
+  @note MSR_PENTIUM_M_MC4_STATUS is defined as MSR_MC4_STATUS in SDM.
 **/
 #define MSR_PENTIUM_M_MC4_STATUS                 0x0000040D
 
@@ -580,6 +617,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_MC4_ADDR);
   AsmWriteMsr64 (MSR_PENTIUM_M_MC4_ADDR, Msr);
   @endcode
+  @note MSR_PENTIUM_M_MC4_ADDR is defined as MSR_MC4_ADDR in SDM.
 **/
 #define MSR_PENTIUM_M_MC4_ADDR                   0x0000040E
 
@@ -598,6 +636,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_MC3_CTL);
   AsmWriteMsr64 (MSR_PENTIUM_M_MC3_CTL, Msr);
   @endcode
+  @note MSR_PENTIUM_M_MC3_CTL is defined as MSR_MC3_CTL in SDM.
 **/
 #define MSR_PENTIUM_M_MC3_CTL                    0x00000410
 
@@ -616,6 +655,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_MC3_STATUS);
   AsmWriteMsr64 (MSR_PENTIUM_M_MC3_STATUS, Msr);
   @endcode
+  @note MSR_PENTIUM_M_MC3_STATUS is defined as MSR_MC3_STATUS in SDM.
 **/
 #define MSR_PENTIUM_M_MC3_STATUS                 0x00000411
 
@@ -637,6 +677,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_M_MC3_ADDR);
   AsmWriteMsr64 (MSR_PENTIUM_M_MC3_ADDR, Msr);
   @endcode
+  @note MSR_PENTIUM_M_MC3_ADDR is defined as MSR_MC3_ADDR in SDM.
 **/
 #define MSR_PENTIUM_M_MC3_ADDR                   0x00000412
 

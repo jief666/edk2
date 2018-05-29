@@ -28,11 +28,14 @@
 
 [Sources]
   AcpiPlatform.c
-  Qemu.c
-  QemuFwCfgAcpi.c
-  Xen.c
+  AcpiPlatform.h
+  BootScript.c
   EntryPoint.c
   PciDecoding.c
+  Qemu.c
+  QemuFwCfgAcpi.c
+  QemuLoader.h
+  Xen.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -51,6 +54,7 @@
   UefiDriverEntryPoint
   HobLib
   QemuFwCfgLib
+  QemuFwCfgS3Lib
   MemoryAllocationLib
   BaseLib
   DxeServicesTableLib

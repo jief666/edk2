@@ -1,7 +1,7 @@
 /** @file
 The tool dumps the contents of a firmware volume
 
-Copyright (c) 1999 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 1999 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -148,6 +148,65 @@ Usage (
   VOID
   );
 
+UINT32
+UnicodeStrLen (
+  IN CHAR16 *String
+  )
+  /*++
+
+  Routine Description:
+
+  Returns the length of a null-terminated unicode string.
+
+  Arguments:
+
+    String - The pointer to a null-terminated unicode string.
+
+  Returns:
+
+    N/A
+
+  --*/
+{
+  UINT32  Length;
+
+  for (Length = 0; *String != L'\0'; String++, Length++) {
+    ;
+  }
+  return Length;
+}
+
+VOID
+Unicode2AsciiString (
+  IN  CHAR16 *Source,
+  OUT CHAR8  *Destination
+  )
+  /*++
+
+  Routine Description:
+
+  Convert a null-terminated unicode string to a null-terminated ascii string.
+
+  Arguments:
+
+    Source      - The pointer to the null-terminated input unicode string.
+    Destination - The pointer to the null-terminated output ascii string.
+
+  Returns:
+
+    N/A
+
+  --*/
+{
+  while (*Source != '\0') {
+    *(Destination++) = (CHAR8) *(Source++);
+  }
+  //
+  // End the ascii with a NULL.
+  //
+  *Destination = '\0';
+}
+
 int
 main (
   int       argc,
@@ -258,13 +317,28 @@ Returns:
       continue;
     }
     if ((stricmp (argv[0], "--hash") == 0)) {
+      if (EnableHash == TRUE) {
+        //
+        // --hash already given in the option, ignore this one
+        //
+        argc --;
+        argv ++;
+        continue;
+      }
       EnableHash = TRUE;
       OpenSslCommand = "openssl";
       OpenSslEnv = getenv("OPENSSL_PATH");
       if (OpenSslEnv == NULL) {
         OpenSslPath = OpenSslCommand;
       } else {
-        OpenSslPath = malloc(strlen(OpenSslEnv)+strlen(OpenSslCommand)+1);
+        //
+        // We add quotes to the Openssl Path in case it has space characters
+        //
+        OpenSslPath = malloc(2+strlen(OpenSslEnv)+strlen(OpenSslCommand)+1);
+        if (OpenSslPath == NULL) {
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return GetUtilityStatus ();
+        }
         CombinePath(OpenSslEnv, OpenSslCommand, OpenSslPath);
       }
       if (OpenSslPath == NULL){
@@ -1519,10 +1593,13 @@ CombinePath (
 )
 {
   UINT32 DefaultPathLen;
+  UINT64 Index;
+  CHAR8  QuotesStr[] = "\"";
+  strcpy(NewPath, QuotesStr);
   DefaultPathLen = strlen(DefaultPath);
-  strcpy(NewPath, DefaultPath);
-  UINT64 Index = 0;
-  for (; Index < DefaultPathLen; Index ++) {
+  strcat(NewPath, DefaultPath);
+  Index = 0;
+  for (; Index < DefaultPathLen + 1; Index ++) {
     if (NewPath[Index] == '\\' || NewPath[Index] == '/') {
       if (NewPath[Index + 1] != '\0') {
         NewPath[Index] = '/';
@@ -1534,6 +1611,7 @@ CombinePath (
     NewPath[Index + 1] = '\0';
   }
   strcat(NewPath, AppendPath);
+  strcat(NewPath, QuotesStr);
   return EFI_SUCCESS;
 }
 
@@ -1587,7 +1665,6 @@ Returns:
   CHAR8               *ExtractionTool;
   CHAR8               *ToolInputFile;
   CHAR8               *ToolOutputFile;
-  CHAR8               *SystemCommandFormatString;
   CHAR8               *SystemCommand;
   EFI_GUID            *EfiGuid;
   UINT16              DataOffset;
@@ -1595,6 +1672,7 @@ Returns:
   UINT32              RealHdrLen;
   CHAR8               *ToolInputFileName;
   CHAR8               *ToolOutputFileName;
+  CHAR8               *UIFileName;
 
   ParsedLength = 0;
   ToolInputFileName = NULL;
@@ -1623,9 +1701,11 @@ Returns:
     SectionHeaderLen = GetSectionHeaderLength((EFI_COMMON_SECTION_HEADER *)Ptr);
 
     SectionName = SectionNameToStr (Type);
-    printf ("------------------------------------------------------------\n");
-    printf ("  Type:  %s\n  Size:  0x%08X\n", SectionName, (unsigned) SectionLength);
-    free (SectionName);
+    if (SectionName != NULL) {
+      printf ("------------------------------------------------------------\n");
+      printf ("  Type:  %s\n  Size:  0x%08X\n", SectionName, (unsigned) SectionLength);
+      free (SectionName);
+    }
 
     switch (Type) {
     case EFI_SECTION_RAW:
@@ -1645,17 +1725,20 @@ Returns:
           SectionLength - SectionHeaderLen
           );
 
-        SystemCommandFormatString = "%s sha1 -out %s %s";
         SystemCommand = malloc (
-          strlen (SystemCommandFormatString) +
+          strlen (OPENSSL_COMMAND_FORMAT_STRING) +
           strlen (OpenSslPath) +
           strlen (ToolInputFileName) +
           strlen (ToolOutputFileName) +
           1
           );
+        if (SystemCommand == NULL) {
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
         sprintf (
           SystemCommand,
-          SystemCommandFormatString,
+          OPENSSL_COMMAND_FORMAT_STRING,
           OpenSslPath,
           ToolOutputFileName,
           ToolInputFileName
@@ -1678,12 +1761,18 @@ Returns:
             nFileLen = ftell(fp);
             fseek(fp,0,SEEK_SET);
             StrLine = malloc(nFileLen);
+            if (StrLine == NULL) {
+              fclose(fp);
+              free (SystemCommand);
+              Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+              return EFI_OUT_OF_RESOURCES;
+            }
             fgets(StrLine, nFileLen, fp);
             NewStr = strrchr (StrLine, '=');
             printf ("  SHA1: %s\n", NewStr + 1);
             free (StrLine);
+            fclose(fp);
           }
-          fclose(fp);
         }
         remove(ToolInputFileName);
         remove(ToolOutputFileName);
@@ -1692,7 +1781,14 @@ Returns:
       break;
 
     case EFI_SECTION_USER_INTERFACE:
-      printf ("  String: %ls\n", (CHAR16 *) &((EFI_USER_INTERFACE_SECTION *) Ptr)->FileNameString);
+      UIFileName = (CHAR8 *) malloc (UnicodeStrLen (((EFI_USER_INTERFACE_SECTION *) Ptr)->FileNameString) + 1);
+      if (UIFileName == NULL) {
+        Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+        return EFI_OUT_OF_RESOURCES;
+      }
+      Unicode2AsciiString (((EFI_USER_INTERFACE_SECTION *) Ptr)->FileNameString, UIFileName);
+      printf ("  String: %s\n", UIFileName);
+      free (UIFileName);
       break;
 
     case EFI_SECTION_FIRMWARE_VOLUME_IMAGE:
@@ -1768,8 +1864,14 @@ Returns:
         }
 
         ScratchBuffer       = malloc (ScratchSize);
+        if (ScratchBuffer == NULL) {
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
         UncompressedBuffer  = malloc (UncompressedLength);
-        if ((ScratchBuffer == NULL) || (UncompressedBuffer == NULL)) {
+        if (UncompressedBuffer == NULL) {
+          free (ScratchBuffer);
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
           return EFI_OUT_OF_RESOURCES;
         }
         Status = DecompressFunction (
@@ -1845,20 +1947,40 @@ Returns:
         close(fd2);
        #endif
 
+        if ((ToolInputFile == NULL) || (ToolOutputFile == NULL)) {
+          if (ToolInputFile != NULL) {
+            free (ToolInputFile);
+          }
+          if (ToolOutputFile != NULL) {
+            free (ToolOutputFile);
+          }
+          free (ExtractionTool);
+
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
+
         //
         // Construction 'system' command string
         //
-        SystemCommandFormatString = "%s -d -o %s %s";
         SystemCommand = malloc (
-          strlen (SystemCommandFormatString) +
+          strlen (EXTRACT_COMMAND_FORMAT_STRING) +
           strlen (ExtractionTool) +
           strlen (ToolInputFile) +
           strlen (ToolOutputFile) +
           1
           );
+        if (SystemCommand == NULL) {
+          free (ToolInputFile);
+          free (ToolOutputFile);
+          free (ExtractionTool);
+
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
         sprintf (
           SystemCommand,
-          SystemCommandFormatString,
+          EXTRACT_COMMAND_FORMAT_STRING,
           ExtractionTool,
           ToolOutputFile,
           ToolInputFile
@@ -1884,6 +2006,7 @@ Returns:
             );
         remove (ToolOutputFile);
         free (ToolOutputFile);
+        free (SystemCommand);
         if (EFI_ERROR (Status)) {
           Error (NULL, 0, 0004, "unable to read decoded GUIDED section", NULL);
           return EFI_SECTION_ERROR;
@@ -2126,6 +2249,7 @@ Returns:
 {
   FILE              *Fptr;
   CHAR8             Line[MAX_LINE_LEN];
+  CHAR8             FormatString[MAX_LINE_LEN];
   GUID_TO_BASENAME  *GPtr;
 
   if ((Fptr = fopen (LongFilePath (FileName), "r")) == NULL) {
@@ -2133,17 +2257,28 @@ Returns:
     return EFI_DEVICE_ERROR;
   }
 
+  //
+  // Generate the format string for fscanf
+  //
+  sprintf (
+    FormatString,
+    "%%%us %%%us",
+    (unsigned) sizeof (GPtr->Guid) - 1,
+    (unsigned) sizeof (GPtr->BaseName) - 1
+    );
+
   while (fgets (Line, sizeof (Line), Fptr) != NULL) {
     //
     // Allocate space for another guid/basename element
     //
     GPtr = malloc (sizeof (GUID_TO_BASENAME));
     if (GPtr == NULL) {
+      fclose (Fptr);
       return EFI_OUT_OF_RESOURCES;
     }
 
     memset ((char *) GPtr, 0, sizeof (GUID_TO_BASENAME));
-    if (sscanf (Line, "%s %s", GPtr->Guid, GPtr->BaseName) == 2) {
+    if (sscanf (Line, FormatString, GPtr->Guid, GPtr->BaseName) == 2) {
       GPtr->Next        = mGuidBaseNameList;
       mGuidBaseNameList = GPtr;
     } else {

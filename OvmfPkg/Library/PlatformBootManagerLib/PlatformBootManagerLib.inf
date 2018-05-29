@@ -1,7 +1,7 @@
 ## @file
 #  Platform BDS customizations library.
 #
-#  Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2017, Intel Corporation. All rights reserved.<BR>
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
 #  which accompanies this distribution.  The full text of the license may be found at
@@ -36,7 +36,9 @@
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
+  SourceLevelDebugPkg/SourceLevelDebugPkg.dec
   OvmfPkg/OvmfPkg.dec
+  SecurityPkg/SecurityPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -51,12 +53,14 @@
   PciLib
   NvVarsFileLib
   QemuFwCfgLib
+  QemuFwCfgS3Lib
   LoadLinuxLib
   QemuBootOrderLib
+  ReportStatusCodeLib
   UefiLib
+  Tcg2PhysicalPresenceLib
 
 [Pcd]
-  gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdLogoFile
   gUefiOvmfPkgTokenSpaceGuid.PcdEmuVariableEvent
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfFlashVariablesEnable
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfHostBridgePciDevId
@@ -72,6 +76,7 @@
   gEfiS3SaveStateProtocolGuid                   # PROTOCOL SOMETIMES_CONSUMED
   gEfiDxeSmmReadyToLockProtocolGuid             # PROTOCOL SOMETIMES_PRODUCED
   gEfiLoadedImageProtocolGuid                   # PROTOCOL SOMETIMES_PRODUCED
+  gEfiFirmwareVolume2ProtocolGuid               # PROTOCOL SOMETIMES_CONSUMED
 
 [Guids]
   gEfiXenInfoGuid

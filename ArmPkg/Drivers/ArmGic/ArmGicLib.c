@@ -1,6 +1,6 @@
 /** @file
 *
-*  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
+*  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 *
 *  This program and the accompanying materials
 *  are licensed and made available under the terms and conditions of the BSD License
@@ -18,6 +18,26 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/PcdLib.h>
+
+
+#define ISENABLER_ADDRESS(base,offset) ((base) + \
+          ARM_GICR_CTLR_FRAME_SIZE +  ARM_GICR_ISENABLER + (4 * offset))
+
+#define ICENABLER_ADDRESS(base,offset) ((base) + \
+          ARM_GICR_CTLR_FRAME_SIZE +  ARM_GICR_ICENABLER + (4 * offset))
+
+/**
+ *
+ * Return whether the Source interrupt index refers to a shared interrupt (SPI)
+ */
+STATIC
+BOOLEAN
+SourceIsSpi (
+  IN UINTN  Source
+  )
+{
+  return Source >= 32 && Source < 1020;
+}
 
 /**
  * Return the base address of the GIC redistributor for the current CPU
@@ -42,13 +62,17 @@ GicGetCpuRedistributorBase (
   UINTN GicCpuRedistributorBase;
 
   MpId = ArmReadMpidr ();
-  // Define CPU affinity as Affinity0[0:8], Affinity1[9:15], Affinity2[16:23], Affinity3[24:32]
+  // Define CPU affinity as:
+  // Affinity0[0:8], Affinity1[9:15], Affinity2[16:23], Affinity3[24:32]
   // whereas Affinity3 is defined at [32:39] in MPIDR
-  CpuAffinity = (MpId & (ARM_CORE_AFF0 | ARM_CORE_AFF1 | ARM_CORE_AFF2)) | ((MpId & ARM_CORE_AFF3) >> 8);
+  CpuAffinity = (MpId & (ARM_CORE_AFF0 | ARM_CORE_AFF1 | ARM_CORE_AFF2)) |
+                ((MpId & ARM_CORE_AFF3) >> 8);
 
   if (Revision == ARM_GIC_ARCH_REVISION_3) {
-    // 2 x 64KB frame: Redistributor control frame + SGI Control & Generation frame
-    GicRedistributorGranularity = ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_SGI_PPI_FRAME_SIZE;
+    // 2 x 64KB frame:
+    //   Redistributor control frame + SGI Control & Generation frame
+    GicRedistributorGranularity = ARM_GICR_CTLR_FRAME_SIZE
+                                  + ARM_GICR_SGI_PPI_FRAME_SIZE;
   } else {
     ASSERT_EFI_ERROR (EFI_UNSUPPORTED);
     return 0;
@@ -63,7 +87,7 @@ GicGetCpuRedistributorBase (
     }
 
     // Move to the next GIC Redistributor frame
-    GicRedistributorBase += GicRedistributorGranularity;
+    GicCpuRedistributorBase += GicRedistributorGranularity;
   }
 
   // The Redistributor has not been found for the current CPU
@@ -99,7 +123,10 @@ ArmGicSendSgiTo (
   IN  INTN          SgiId
   )
 {
-  MmioWrite32 (GicDistributorBase + ARM_GIC_ICDSGIR, ((TargetListFilter & 0x3) << 24) | ((CPUTargetList & 0xFF) << 16) | SgiId);
+  MmioWrite32 (
+    GicDistributorBase + ARM_GIC_ICDSGIR,
+    ((TargetListFilter & 0x3) << 24) | ((CPUTargetList & 0xFF) << 16) | SgiId
+    );
 }
 
 /*
@@ -110,7 +137,8 @@ ArmGicSendSgiTo (
  * in the GICv3 the register value is only the InterruptId.
  *
  * @param GicInterruptInterfaceBase   Base Address of the GIC CPU Interface
- * @param InterruptId                 InterruptId read from the Interrupt Acknowledge Register
+ * @param InterruptId                 InterruptId read from the Interrupt
+ *                                    Acknowledge Register
  *
  * @retval value returned by the Interrupt Acknowledge Register
  *
@@ -183,18 +211,29 @@ ArmGicEnableInterrupt (
   RegShift = Source % 32;
 
   Revision = ArmGicGetSupportedArchRevision ();
-  if ((Revision == ARM_GIC_ARCH_REVISION_2) || FeaturePcdGet (PcdArmGicV3WithV2Legacy)) {
+  if ((Revision == ARM_GIC_ARCH_REVISION_2) ||
+      FeaturePcdGet (PcdArmGicV3WithV2Legacy) ||
+      SourceIsSpi (Source)) {
     // Write set-enable register
-    MmioWrite32 (GicDistributorBase + ARM_GIC_ICDISER + (4 * RegOffset), 1 << RegShift);
+    MmioWrite32 (
+      GicDistributorBase + ARM_GIC_ICDISER + (4 * RegOffset),
+      1 << RegShift
+      );
   } else {
-    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase, Revision);
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (
+                                GicRedistributorBase,
+                                Revision
+                                );
     if (GicCpuRedistributorBase == 0) {
       ASSERT_EFI_ERROR (EFI_NOT_FOUND);
       return;
     }
 
     // Write set-enable register
-    MmioWrite32 (GicCpuRedistributorBase + ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_ISENABLER + (4 * RegOffset), 1 << RegShift);
+    MmioWrite32 (
+      ISENABLER_ADDRESS(GicCpuRedistributorBase, RegOffset),
+      1 << RegShift
+      );
   }
 }
 
@@ -216,17 +255,28 @@ ArmGicDisableInterrupt (
   RegShift = Source % 32;
 
   Revision = ArmGicGetSupportedArchRevision ();
-  if ((Revision == ARM_GIC_ARCH_REVISION_2) || FeaturePcdGet (PcdArmGicV3WithV2Legacy)) {
+  if ((Revision == ARM_GIC_ARCH_REVISION_2) ||
+      FeaturePcdGet (PcdArmGicV3WithV2Legacy) ||
+      SourceIsSpi (Source)) {
     // Write clear-enable register
-    MmioWrite32 (GicDistributorBase + ARM_GIC_ICDICER + (4 * RegOffset), 1 << RegShift);
+    MmioWrite32 (
+      GicDistributorBase + ARM_GIC_ICDICER + (4 * RegOffset),
+      1 << RegShift
+      );
   } else {
-    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase, Revision);
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (
+      GicRedistributorBase,
+      Revision
+      );
     if (GicCpuRedistributorBase == 0) {
       return;
     }
 
     // Write clear-enable register
-    MmioWrite32 (GicCpuRedistributorBase + ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_ICENABLER + (4 * RegOffset), 1 << RegShift);
+    MmioWrite32 (
+      ICENABLER_ADDRESS(GicCpuRedistributorBase, RegOffset),
+      1 << RegShift
+      );
   }
 }
 
@@ -249,16 +299,26 @@ ArmGicIsInterruptEnabled (
   RegShift = Source % 32;
 
   Revision = ArmGicGetSupportedArchRevision ();
-  if ((Revision == ARM_GIC_ARCH_REVISION_2) || FeaturePcdGet (PcdArmGicV3WithV2Legacy)) {
-    Interrupts = ((MmioRead32 (GicDistributorBase + ARM_GIC_ICDISER + (4 * RegOffset)) & (1 << RegShift)) != 0);
+  if ((Revision == ARM_GIC_ARCH_REVISION_2) ||
+      FeaturePcdGet (PcdArmGicV3WithV2Legacy) ||
+      SourceIsSpi (Source)) {
+    Interrupts = ((MmioRead32 (
+                     GicDistributorBase + ARM_GIC_ICDISER + (4 * RegOffset)
+                     )
+                  & (1 << RegShift)) != 0);
   } else {
-    GicCpuRedistributorBase = GicGetCpuRedistributorBase (GicRedistributorBase, Revision);
+    GicCpuRedistributorBase = GicGetCpuRedistributorBase (
+                                GicRedistributorBase,
+                                Revision
+                                );
     if (GicCpuRedistributorBase == 0) {
       return 0;
     }
 
     // Read set-enable register
-    Interrupts = MmioRead32 (GicCpuRedistributorBase + ARM_GICR_CTLR_FRAME_SIZE + ARM_GICR_ISENABLER + (4 * RegOffset));
+    Interrupts = MmioRead32 (
+                   ISENABLER_ADDRESS(GicCpuRedistributorBase, RegOffset)
+                   );
   }
 
   return ((Interrupts & (1 << RegShift)) != 0);

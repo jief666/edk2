@@ -32,14 +32,15 @@
 
 [Sources]
   PlatformBm.c
+  PlatformBm.h
   QemuKernel.c
 
 [Packages]
-  IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
+  ArmVirtPkg/ArmVirtPkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
   OvmfPkg/OvmfPkg.dec
-  ArmVirtPkg/ArmVirtPkg.dec
+  ShellPkg/ShellPkg.dec
 
 [LibraryClasses]
   BaseLib
@@ -52,14 +53,13 @@
   PrintLib
   QemuBootOrderLib
   QemuFwCfgLib
+  ReportStatusCodeLib
   UefiBootManagerLib
   UefiBootServicesTableLib
   UefiLib
   UefiRuntimeServicesTableLib
 
 [FixedPcd]
-  gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdLogoFile
-  gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdShellFile
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
@@ -75,10 +75,13 @@
   gEfiFileSystemVolumeLabelInfoIdGuid
   gEfiEndOfDxeEventGroupGuid
   gRootBridgesConnectedEventGroupGuid
+  gUefiShellFileGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid
+  gEfiFirmwareVolume2ProtocolGuid
   gEfiGraphicsOutputProtocolGuid
   gEfiLoadedImageProtocolGuid
   gEfiPciRootBridgeIoProtocolGuid
   gEfiSimpleFileSystemProtocolGuid
+  gVirtioDeviceProtocolGuid

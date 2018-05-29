@@ -2,7 +2,7 @@
   NvmExpressDxe driver is used to manage non-volatile memory subsystem which follows
   NVM Express specification.
 
-  Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2013 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -39,7 +39,10 @@ EFI_DRIVER_SUPPORTED_EFI_VERSION_PROTOCOL gNvmExpressDriverSupportedEfiVersion =
 // Template for NVM Express Pass Thru Mode data structure.
 //
 GLOBAL_REMOVE_IF_UNREFERENCED EFI_NVM_EXPRESS_PASS_THRU_MODE gEfiNvmExpressPassThruMode = {
-  EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_PHYSICAL | EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_LOGICAL | EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_CMD_SET_NVM,
+  EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_PHYSICAL   |
+  EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_LOGICAL    |
+  EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_NONBLOCKIO |
+  EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_CMD_SET_NVM,
   sizeof (UINTN),
   0x10100
 };
@@ -76,6 +79,7 @@ EnumerateNvmeDevNamespace (
   UINT32                                LbaFmtIdx;
   UINT8                                 Sn[21];
   UINT8                                 Mn[41];
+  VOID                                  *DummyInterface;
 
   NewDevicePathNode = NULL;
   DevicePath        = NULL;
@@ -264,7 +268,7 @@ EnumerateNvmeDevNamespace (
     gBS->OpenProtocol (
            Private->ControllerHandle,
            &gEfiNvmExpressPassThruProtocolGuid,
-           (VOID **) &Private->Passthru,
+           (VOID **) &DummyInterface,
            Private->DriverBindingHandle,
            Device->DeviceHandle,
            EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -392,10 +396,10 @@ UnregisterNvmeNamespace (
   EFI_STATUS                               Status;
   EFI_BLOCK_IO_PROTOCOL                    *BlockIo;
   NVME_DEVICE_PRIVATE_DATA                 *Device;
-  NVME_CONTROLLER_PRIVATE_DATA             *Private;
   EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *StorageSecurity;
   BOOLEAN                                  IsEmpty;
   EFI_TPL                                  OldTpl;
+  VOID                                     *DummyInterface;
 
   BlockIo = NULL;
 
@@ -412,7 +416,6 @@ UnregisterNvmeNamespace (
   }
 
   Device  = NVME_DEVICE_PRIVATE_DATA_FROM_BLOCK_IO (BlockIo);
-  Private = Device->Controller;
 
   //
   // Wait for the device's asynchronous I/O queue to become empty.
@@ -460,7 +463,7 @@ UnregisterNvmeNamespace (
     gBS->OpenProtocol (
            Controller,
            &gEfiNvmExpressPassThruProtocolGuid,
-           (VOID **) &Private->Passthru,
+           (VOID **) &DummyInterface,
            This->DriverBindingHandle,
            Handle,
            EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -490,7 +493,7 @@ UnregisterNvmeNamespace (
       gBS->OpenProtocol (
         Controller,
         &gEfiNvmExpressPassThruProtocolGuid,
-        (VOID **) &Private->Passthru,
+        (VOID **) &DummyInterface,
         This->DriverBindingHandle,
         Handle,
         EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -545,6 +548,7 @@ ProcessAsyncTaskList (
   QueueId    = 2;
   Cq         = Private->CqBuffer[QueueId] + Private->CqHdbl[QueueId].Cqh;
   HasNewItem = FALSE;
+  PciIo      = Private->PciIo;
 
   //
   // Submit asynchronous subtasks to the NVMe Submission Queue
@@ -641,6 +645,26 @@ ProcessAsyncTaskList (
           sizeof(EFI_NVM_EXPRESS_COMPLETION)
           );
 
+        //
+        // Free the resources allocated before cmd submission
+        //
+        if (AsyncRequest->MapData != NULL) {
+          PciIo->Unmap (PciIo, AsyncRequest->MapData);
+        }
+        if (AsyncRequest->MapMeta != NULL) {
+          PciIo->Unmap (PciIo, AsyncRequest->MapMeta);
+        }
+        if (AsyncRequest->MapPrpList != NULL) {
+          PciIo->Unmap (PciIo, AsyncRequest->MapPrpList);
+        }
+        if (AsyncRequest->PrpListHost != NULL) {
+          PciIo->FreeBuffer (
+                   PciIo,
+                   AsyncRequest->PrpListNo,
+                   AsyncRequest->PrpListHost
+                   );
+        }
+
         RemoveEntryList (Link);
         gBS->SignalEvent (AsyncRequest->CallerEvent);
         FreePool (AsyncRequest);
@@ -663,7 +687,6 @@ ProcessAsyncTaskList (
   }
 
   if (HasNewItem) {
-    PciIo = Private->PciIo;
     Data  = ReadUnaligned32 ((UINT32*)&Private->CqHdbl[QueueId]);
     PciIo->Mem.Write (
                  PciIo,
@@ -1023,6 +1046,8 @@ NvmExpressDriverBindingStart (
     if (EFI_ERROR (Status)) {
       goto Exit;
     }
+
+    NvmeRegisterShutdownNotification ();
   } else {
     Status = gBS->OpenProtocol (
                     Controller,
@@ -1216,6 +1241,9 @@ NvmExpressDriverBindingStop (
           This->DriverBindingHandle,
           Controller
           );
+
+    NvmeUnregisterShutdownNotification ();
+
     return EFI_SUCCESS;
   }
 

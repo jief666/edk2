@@ -1,7 +1,9 @@
 /** @file
   RTC Architectural Protocol GUID as defined in DxeCis 0.96.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2017, AMD Inc. All rights reserved.<BR>
+
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -70,8 +72,8 @@ RtcRead (
   IN  UINT8 Address
   )
 {
-  IoWrite8 (PCAT_RTC_ADDRESS_REGISTER, (UINT8) (Address | (UINT8) (IoRead8 (PCAT_RTC_ADDRESS_REGISTER) & 0x80)));
-  return IoRead8 (PCAT_RTC_DATA_REGISTER);
+  IoWrite8 (PcdGet8 (PcdRtcIndexRegister), (UINT8) (Address | (UINT8) (IoRead8 (PcdGet8 (PcdRtcIndexRegister)) & 0x80)));
+  return IoRead8 (PcdGet8 (PcdRtcTargetRegister));
 }
 
 /**
@@ -88,8 +90,8 @@ RtcWrite (
   IN  UINT8   Data
   )
 {
-  IoWrite8 (PCAT_RTC_ADDRESS_REGISTER, (UINT8) (Address | (UINT8) (IoRead8 (PCAT_RTC_ADDRESS_REGISTER) & 0x80)));
-  IoWrite8 (PCAT_RTC_DATA_REGISTER, Data);
+  IoWrite8 (PcdGet8 (PcdRtcIndexRegister), (UINT8) (Address | (UINT8) (IoRead8 (PcdGet8 (PcdRtcIndexRegister)) & 0x80)));
+  IoWrite8 (PcdGet8 (PcdRtcTargetRegister), Data);
 }
 
 /**
@@ -128,7 +130,7 @@ PcRtcInit (
   // Make sure Division Chain is properly configured,
   // or RTC clock won't "tick" -- time won't increment
   //
-  RegisterA.Data = RTC_INIT_REGISTER_A;
+  RegisterA.Data = FixedPcdGet8 (PcdInitialValueRtcRegisterA);
   RtcWrite (RTC_ADDRESS_REGISTER_A, RegisterA.Data);
 
   //
@@ -144,7 +146,7 @@ PcRtcInit (
   //
   // Clear RTC register D
   //
-  RegisterD.Data = RTC_INIT_REGISTER_D;
+  RegisterD.Data = FixedPcdGet8 (PcdInitialValueRtcRegisterD);
   RtcWrite (RTC_ADDRESS_REGISTER_D, RegisterD.Data);
 
   //
@@ -176,7 +178,7 @@ PcRtcInit (
   // Set RTC configuration after get original time
   // The value of bit AIE should be reserved.
   //
-  RegisterB.Data = RTC_INIT_REGISTER_B | (RegisterB.Data & BIT5);
+  RegisterB.Data = FixedPcdGet8 (PcdInitialValueRtcRegisterB) | (RegisterB.Data & BIT5);
   RtcWrite (RTC_ADDRESS_REGISTER_B, RegisterB.Data);
 
   //
@@ -1230,6 +1232,11 @@ ScanTableInSDT (
     //
     Table = 0;
     CopyMem (&Table, (VOID *) (EntryBase + Index * TablePointerSize), TablePointerSize);
+
+    if (Table == NULL) {
+      continue;
+    }
+
     if (Table->Signature == Signature) {
       return Table;
     }
@@ -1250,8 +1257,6 @@ GetCenturyRtcAddress (
 {
   EFI_STATUS                                    Status;
   EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER  *Rsdp;
-  EFI_ACPI_DESCRIPTION_HEADER                   *Rsdt;
-  EFI_ACPI_DESCRIPTION_HEADER                   *Xsdt;
   EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE     *Fadt;
 
   Status = EfiGetSystemConfigurationTable (&gEfiAcpiTableGuid, (VOID **) &Rsdp);
@@ -1259,27 +1264,32 @@ GetCenturyRtcAddress (
     Status = EfiGetSystemConfigurationTable (&gEfiAcpi10TableGuid, (VOID **) &Rsdp);
   }
 
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR (Status) || (Rsdp == NULL)) {
     return 0;
   }
 
-  ASSERT (Rsdp != NULL);
+  Fadt = NULL;
 
   //
   // Find FADT in XSDT
   //
-  Fadt = NULL;
-  if (Rsdp->Revision >= EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER_REVISION) {
-    Xsdt = (EFI_ACPI_DESCRIPTION_HEADER *) (UINTN) Rsdp->XsdtAddress;
-    Fadt = ScanTableInSDT (Xsdt, EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE, sizeof (UINT64));
+  if (Rsdp->Revision >= EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER_REVISION && Rsdp->XsdtAddress != 0) {
+    Fadt = ScanTableInSDT (
+             (EFI_ACPI_DESCRIPTION_HEADER *) (UINTN) Rsdp->XsdtAddress,
+             EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE,
+             sizeof (UINTN)
+             );
   }
 
-  if (Fadt == NULL) {
-    //
-    // Find FADT in RSDT
-    //
-    Rsdt = (EFI_ACPI_DESCRIPTION_HEADER *) (UINTN) Rsdp->RsdtAddress;
-    Fadt = ScanTableInSDT (Rsdt, EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE, sizeof (UINT32));
+  //
+  // Find FADT in RSDT
+  //
+  if (Fadt == NULL && Rsdp->RsdtAddress != 0) {
+    Fadt = ScanTableInSDT (
+             (EFI_ACPI_DESCRIPTION_HEADER *) (UINTN) Rsdp->RsdtAddress,
+             EFI_ACPI_2_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE,
+             sizeof (UINT32)
+             );
   }
 
   if ((Fadt != NULL) &&

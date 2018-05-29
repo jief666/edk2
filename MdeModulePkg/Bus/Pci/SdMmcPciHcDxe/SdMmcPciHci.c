@@ -4,7 +4,7 @@
 
   It would expose EFI_SD_MMC_PASS_THRU_PROTOCOL for upper layer use.
 
-  Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -33,46 +33,46 @@ DumpCapabilityReg (
   //
   // Dump Capability Data
   //
-  DEBUG ((EFI_D_INFO, " == Slot [%d] Capability is 0x%x ==\n", Slot, Capability));
-  DEBUG ((EFI_D_INFO, "   Timeout Clk Freq  %d%a\n", Capability->TimeoutFreq, (Capability->TimeoutUnit) ? "MHz" : "KHz"));
-  DEBUG ((EFI_D_INFO, "   Base Clk Freq     %dMHz\n", Capability->BaseClkFreq));
-  DEBUG ((EFI_D_INFO, "   Max Blk Len       %dbytes\n", 512 * (1 << Capability->MaxBlkLen)));
-  DEBUG ((EFI_D_INFO, "   8-bit Support     %a\n", Capability->BusWidth8 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   ADMA2 Support     %a\n", Capability->Adma2 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   HighSpeed Support %a\n", Capability->HighSpeed ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   SDMA Support      %a\n", Capability->Sdma ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Suspend/Resume    %a\n", Capability->SuspRes ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Voltage 3.3       %a\n", Capability->Voltage33 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Voltage 3.0       %a\n", Capability->Voltage30 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Voltage 1.8       %a\n", Capability->Voltage18 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   64-bit Sys Bus    %a\n", Capability->SysBus64 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Async Interrupt   %a\n", Capability->AsyncInt ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   SlotType          "));
+  DEBUG ((DEBUG_INFO, " == Slot [%d] Capability is 0x%x ==\n", Slot, Capability));
+  DEBUG ((DEBUG_INFO, "   Timeout Clk Freq  %d%a\n", Capability->TimeoutFreq, (Capability->TimeoutUnit) ? "MHz" : "KHz"));
+  DEBUG ((DEBUG_INFO, "   Base Clk Freq     %dMHz\n", Capability->BaseClkFreq));
+  DEBUG ((DEBUG_INFO, "   Max Blk Len       %dbytes\n", 512 * (1 << Capability->MaxBlkLen)));
+  DEBUG ((DEBUG_INFO, "   8-bit Support     %a\n", Capability->BusWidth8 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   ADMA2 Support     %a\n", Capability->Adma2 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   HighSpeed Support %a\n", Capability->HighSpeed ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   SDMA Support      %a\n", Capability->Sdma ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Suspend/Resume    %a\n", Capability->SuspRes ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Voltage 3.3       %a\n", Capability->Voltage33 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Voltage 3.0       %a\n", Capability->Voltage30 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Voltage 1.8       %a\n", Capability->Voltage18 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   64-bit Sys Bus    %a\n", Capability->SysBus64 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Async Interrupt   %a\n", Capability->AsyncInt ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   SlotType          "));
   if (Capability->SlotType == 0x00) {
-    DEBUG ((EFI_D_INFO, "%a\n", "Removable Slot"));
+    DEBUG ((DEBUG_INFO, "%a\n", "Removable Slot"));
   } else if (Capability->SlotType == 0x01) {
-    DEBUG ((EFI_D_INFO, "%a\n", "Embedded Slot"));
+    DEBUG ((DEBUG_INFO, "%a\n", "Embedded Slot"));
   } else if (Capability->SlotType == 0x02) {
-    DEBUG ((EFI_D_INFO, "%a\n", "Shared Bus Slot"));
+    DEBUG ((DEBUG_INFO, "%a\n", "Shared Bus Slot"));
   } else {
-    DEBUG ((EFI_D_INFO, "%a\n", "Reserved"));
+    DEBUG ((DEBUG_INFO, "%a\n", "Reserved"));
   }
-  DEBUG ((EFI_D_INFO, "   SDR50  Support    %a\n", Capability->Sdr50 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   SDR104 Support    %a\n", Capability->Sdr104 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   DDR50  Support    %a\n", Capability->Ddr50 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Driver Type A     %a\n", Capability->DriverTypeA ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Driver Type C     %a\n", Capability->DriverTypeC ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Driver Type D     %a\n", Capability->DriverTypeD ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Driver Type 4     %a\n", Capability->DriverType4 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   SDR50  Support    %a\n", Capability->Sdr50 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   SDR104 Support    %a\n", Capability->Sdr104 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   DDR50  Support    %a\n", Capability->Ddr50 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Driver Type A     %a\n", Capability->DriverTypeA ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Driver Type C     %a\n", Capability->DriverTypeC ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Driver Type D     %a\n", Capability->DriverTypeD ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Driver Type 4     %a\n", Capability->DriverType4 ? "TRUE" : "FALSE"));
   if (Capability->TimerCount == 0) {
-    DEBUG ((EFI_D_INFO, "   Retuning TimerCnt Disabled\n", 2 * (Capability->TimerCount - 1)));
+    DEBUG ((DEBUG_INFO, "   Retuning TimerCnt Disabled\n", 2 * (Capability->TimerCount - 1)));
   } else {
-    DEBUG ((EFI_D_INFO, "   Retuning TimerCnt %dseconds\n", 2 * (Capability->TimerCount - 1)));
+    DEBUG ((DEBUG_INFO, "   Retuning TimerCnt %dseconds\n", 2 * (Capability->TimerCount - 1)));
   }
-  DEBUG ((EFI_D_INFO, "   SDR50 Tuning      %a\n", Capability->TuningSDR50 ? "TRUE" : "FALSE"));
-  DEBUG ((EFI_D_INFO, "   Retuning Mode     Mode %d\n", Capability->RetuningMod + 1));
-  DEBUG ((EFI_D_INFO, "   Clock Multiplier  M = %d\n", Capability->ClkMultiplier + 1));
-  DEBUG ((EFI_D_INFO, "   HS 400            %a\n", Capability->Hs400 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   SDR50 Tuning      %a\n", Capability->TuningSDR50 ? "TRUE" : "FALSE"));
+  DEBUG ((DEBUG_INFO, "   Retuning Mode     Mode %d\n", Capability->RetuningMod + 1));
+  DEBUG ((DEBUG_INFO, "   Clock Multiplier  M = %d\n", Capability->ClkMultiplier + 1));
+  DEBUG ((DEBUG_INFO, "   HS 400            %a\n", Capability->Hs400 ? "TRUE" : "FALSE"));
   return;
 }
 
@@ -419,7 +419,7 @@ SdMmcHcWaitMmioSet (
 /**
   Software reset the specified SD/MMC host controller and enable all interrupts.
 
-  @param[in] PciIo          The PCI IO protocol instance.
+  @param[in] Private        A pointer to the SD_MMC_HC_PRIVATE_DATA instance.
   @param[in] Slot           The slot number of the SD card to send the command to.
 
   @retval EFI_SUCCESS       The software reset executes successfully.
@@ -428,18 +428,37 @@ SdMmcHcWaitMmioSet (
 **/
 EFI_STATUS
 SdMmcHcReset (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
+  IN SD_MMC_HC_PRIVATE_DATA *Private,
   IN UINT8                  Slot
   )
 {
   EFI_STATUS                Status;
   UINT8                     SwReset;
+  EFI_PCI_IO_PROTOCOL       *PciIo;
 
+  //
+  // Notify the SD/MMC override protocol that we are about to reset
+  // the SD/MMC host controller.
+  //
+  if (mOverride != NULL && mOverride->NotifyPhase != NULL) {
+    Status = mOverride->NotifyPhase (
+                          Private->ControllerHandle,
+                          Slot,
+                          EdkiiSdMmcResetPre);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN,
+        "%a: SD/MMC pre reset notifier callback failed - %r\n",
+        __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  PciIo   = Private->PciIo;
   SwReset = 0xFF;
   Status  = SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_SW_RST, FALSE, sizeof (SwReset), &SwReset);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "SdMmcHcReset: write full 1 fails: %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "SdMmcHcReset: write full 1 fails: %r\n", Status));
     return Status;
   }
 
@@ -453,13 +472,35 @@ SdMmcHcReset (
              SD_MMC_HC_GENERIC_TIMEOUT
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_INFO, "SdMmcHcReset: reset done with %r\n", Status));
+    DEBUG ((DEBUG_INFO, "SdMmcHcReset: reset done with %r\n", Status));
     return Status;
   }
+
   //
   // Enable all interrupt after reset all.
   //
   Status = SdMmcHcEnableInterrupt (PciIo, Slot);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "SdMmcHcReset: SdMmcHcEnableInterrupt done with %r\n",
+      Status));
+    return Status;
+  }
+
+  //
+  // Notify the SD/MMC override protocol that we have just reset
+  // the SD/MMC host controller.
+  //
+  if (mOverride != NULL && mOverride->NotifyPhase != NULL) {
+    Status = mOverride->NotifyPhase (
+                          Private->ControllerHandle,
+                          Slot,
+                          EdkiiSdMmcResetPost);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN,
+        "%a: SD/MMC post reset notifier callback failed - %r\n",
+        __FUNCTION__, Status));
+    }
+  }
 
   return Status;
 }
@@ -732,7 +773,7 @@ SdMmcHcClockSupply (
     }
   }
 
-  DEBUG ((EFI_D_INFO, "BaseClkFreq %dMHz Divisor %d ClockFreq %dKhz\n", BaseClkFreq, Divisor, ClockFreq));
+  DEBUG ((DEBUG_INFO, "BaseClkFreq %dMHz Divisor %d ClockFreq %dKhz\n", BaseClkFreq, Divisor, ClockFreq));
 
   Status = SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_CTRL_VER, TRUE, sizeof (ControllerVer), &ControllerVer);
   if (EFI_ERROR (Status)) {
@@ -754,7 +795,7 @@ SdMmcHcClockSupply (
     ASSERT (Divisor <= 0x80);
     ClockCtrl = (Divisor & 0xFF) << 8;
   } else {
-    DEBUG ((EFI_D_ERROR, "Unknown SD Host Controller Spec version [0x%x]!!!\n", ControllerVer));
+    DEBUG ((DEBUG_ERROR, "Unknown SD Host Controller Spec version [0x%x]!!!\n", ControllerVer));
     return EFI_UNSUPPORTED;
   }
 
@@ -772,7 +813,7 @@ SdMmcHcClockSupply (
   ClockCtrl |= BIT0;
   Status = SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_CLOCK_CTRL, FALSE, sizeof (ClockCtrl), &ClockCtrl);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Set SDCLK Frequency Select and Internal Clock Enable fields fails\n"));
+    DEBUG ((DEBUG_ERROR, "Set SDCLK Frequency Select and Internal Clock Enable fields fails\n"));
     return Status;
   }
 
@@ -1021,9 +1062,8 @@ SdMmcHcInitTimeoutCtrl (
   Initial SD/MMC host controller with lowest clock frequency, max power and max timeout value
   at initialization.
 
-  @param[in] PciIo          The PCI IO protocol instance.
+  @param[in] Private        A pointer to the SD_MMC_HC_PRIVATE_DATA instance.
   @param[in] Slot           The slot number of the SD card to send the command to.
-  @param[in] Capability     The capability of the slot.
 
   @retval EFI_SUCCESS       The host controller is initialized successfully.
   @retval Others            The host controller isn't initialized successfully.
@@ -1031,12 +1071,33 @@ SdMmcHcInitTimeoutCtrl (
 **/
 EFI_STATUS
 SdMmcHcInitHost (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN SD_MMC_HC_SLOT_CAP     Capability
+  IN SD_MMC_HC_PRIVATE_DATA *Private,
+  IN UINT8                  Slot
   )
 {
-  EFI_STATUS       Status;
+  EFI_STATUS                Status;
+  EFI_PCI_IO_PROTOCOL       *PciIo;
+  SD_MMC_HC_SLOT_CAP        Capability;
+
+  //
+  // Notify the SD/MMC override protocol that we are about to initialize
+  // the SD/MMC host controller.
+  //
+  if (mOverride != NULL && mOverride->NotifyPhase != NULL) {
+    Status = mOverride->NotifyPhase (
+                          Private->ControllerHandle,
+                          Slot,
+                          EdkiiSdMmcInitHostPre);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN,
+        "%a: SD/MMC pre init notifier callback failed - %r\n",
+        __FUNCTION__, Status));
+      return Status;
+    }
+  }
+
+  PciIo = Private->PciIo;
+  Capability = Private->Capability[Slot];
 
   Status = SdMmcHcInitClockFreq (PciIo, Slot, Capability);
   if (EFI_ERROR (Status)) {
@@ -1049,6 +1110,25 @@ SdMmcHcInitHost (
   }
 
   Status = SdMmcHcInitTimeoutCtrl (PciIo, Slot);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  //
+  // Notify the SD/MMC override protocol that we are have just initialized
+  // the SD/MMC host controller.
+  //
+  if (mOverride != NULL && mOverride->NotifyPhase != NULL) {
+    Status = mOverride->NotifyPhase (
+                          Private->ControllerHandle,
+                          Slot,
+                          EdkiiSdMmcInitHostPost);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_WARN,
+        "%a: SD/MMC post init notifier callback failed - %r\n",
+        __FUNCTION__, Status));
+    }
+  }
   return Status;
 }
 
@@ -1125,7 +1205,7 @@ BuildAdmaDescTable (
   // for 32-bit address descriptor table.
   //
   if ((Data & (BIT0 | BIT1)) != 0) {
-    DEBUG ((EFI_D_INFO, "The buffer [0x%x] to construct ADMA desc is not aligned to 4 bytes boundary!\n", Data));
+    DEBUG ((DEBUG_INFO, "The buffer [0x%x] to construct ADMA desc is not aligned to 4 bytes boundary!\n", Data));
   }
 
   Entries   = DivU64x32 ((DataLen + ADMA_MAX_DATA_PER_LINE - 1), ADMA_MAX_DATA_PER_LINE);
@@ -1265,7 +1345,7 @@ SdMmcCreateTrb (
     goto Error;
   }
 
-  if (Trb->DataLen < Trb->BlockSize) {
+  if ((Trb->DataLen != 0) && (Trb->DataLen < Trb->BlockSize)) {
     Trb->BlockSize = (UINT16)Trb->DataLen;
   }
 

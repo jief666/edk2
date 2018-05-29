@@ -1,7 +1,7 @@
 /** @file
   Main file for map shell level 2 command.
 
-  Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2013-2015 Hewlett-Packard Development Company, L.P.<BR>
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
   
@@ -34,7 +34,6 @@
   @retval FALSE           String has at least one other character.
 **/
 BOOLEAN
-EFIAPI
 IsNumberLetterOnly(
   IN CONST CHAR16 *String,
   IN CONST UINTN  Len
@@ -65,7 +64,6 @@ IsNumberLetterOnly(
                           items (";" normally). 
 **/
 BOOLEAN
-EFIAPI
 SearchList(
   IN CONST CHAR16   *List,
   IN CONST CHAR16   *MetaTarget,
@@ -133,7 +131,6 @@ SearchList(
   @retval STR_MAP_MEDIA_FLOPPY    The media is a floppy drive.
 **/
 CHAR16*
-EFIAPI
 GetDeviceMediaType (
   IN  EFI_DEVICE_PATH_PROTOCOL     *DevicePath
   )
@@ -179,7 +176,6 @@ GetDeviceMediaType (
   @retval FALSE                     The handle does not have removable storage.
 **/
 BOOLEAN
-EFIAPI
 IsRemoveableDevice (
   IN EFI_DEVICE_PATH_PROTOCOL      *DevicePath
   )
@@ -216,7 +212,6 @@ IsRemoveableDevice (
   @retval FALSE               The map should not be displayed.
 **/
 BOOLEAN
-EFIAPI
 MappingListHasType(
   IN CONST CHAR16     *MapList,
   IN CONST CHAR16     *Specific,
@@ -225,19 +220,25 @@ MappingListHasType(
   IN CONST BOOLEAN    Consist
   )
 {
-  CHAR16 *NewSpecific;
-  RETURN_STATUS  Status;
+  CHAR16              *NewSpecific;
+  RETURN_STATUS       Status;
+  UINTN               Length;
   
   //
   // specific has priority
   //
   if (Specific != NULL) {
-    NewSpecific = AllocateCopyPool(StrSize(Specific) + sizeof(CHAR16), Specific);
+    Length      = StrLen (Specific);
+    //
+    // Allocate enough buffer for Specific and potential ":"
+    //
+    NewSpecific = AllocatePool ((Length + 2) * sizeof(CHAR16));
     if (NewSpecific == NULL){
       return FALSE;
     }
-    if (NewSpecific[StrLen(NewSpecific)-1] != L':') {
-      Status = StrnCatS(NewSpecific, (StrSize(Specific) + sizeof(CHAR16))/sizeof(CHAR16), L":", StrLen(L":"));
+    StrCpyS (NewSpecific, Length + 2, Specific);
+    if (Specific[Length - 1] != L':') {
+      Status = StrnCatS(NewSpecific, Length + 2, L":", StrLen(L":"));
       if (EFI_ERROR (Status)) {
         FreePool(NewSpecific);
         return FALSE;
@@ -287,7 +288,6 @@ MappingListHasType(
   @retval EFI_SUCCESS               The mapping was displayed.
 **/
 EFI_STATUS
-EFIAPI
 PerformSingleMappingDisplay(
   IN CONST BOOLEAN    Verbose,
   IN CONST BOOLEAN    Consist,
@@ -461,7 +461,6 @@ PerformSingleMappingDisplay(
   @retval EFI_NOT_FOUND   Name was not a map on Handle.
 **/
 EFI_STATUS
-EFIAPI
 PerformSingleMappingDelete(
   IN CONST CHAR16     *Specific,
   IN CONST EFI_HANDLE Handle
@@ -512,7 +511,6 @@ CONST CHAR16 AnyF[] = L"F*";
 
 **/
 SHELL_STATUS
-EFIAPI
 PerformMappingDisplay(
   IN CONST BOOLEAN Verbose,
   IN CONST BOOLEAN Consist,
@@ -690,7 +688,6 @@ PerformMappingDisplay(
   @sa PerformMappingDisplay
 **/
 SHELL_STATUS
-EFIAPI
 PerformMappingDisplay2(
   IN CONST BOOLEAN Verbose,
   IN CONST BOOLEAN Consist,
@@ -743,7 +740,6 @@ PerformMappingDisplay2(
   @retval EFI_NOT_FOUND             Specific could not be found.
 **/
 EFI_STATUS
-EFIAPI
 PerformMappingDelete(
   IN CONST CHAR16  *Specific
   )
@@ -874,7 +870,6 @@ PerformMappingDelete(
 
 **/
 SHELL_STATUS
-EFIAPI
 AddMappingFromMapping(
   IN CONST CHAR16     *Map,
   IN CONST CHAR16     *SName
@@ -931,7 +926,6 @@ AddMappingFromMapping(
 
 **/
 SHELL_STATUS
-EFIAPI
 AddMappingFromHandle(
   IN CONST EFI_HANDLE Handle,
   IN CONST CHAR16     *SName
@@ -990,6 +984,57 @@ STATIC CONST SHELL_PARAM_ITEM MapParamList[] = {
   {L"-sfo", TypeValue},
   {NULL, TypeMax}
   };
+
+/**
+  The routine issues dummy read for every physical block device to cause
+  the BlockIo re-installed if media change happened.
+**/
+VOID
+ProbeForMediaChange (
+  VOID
+  )
+{
+  EFI_STATUS                            Status;
+  UINTN                                 HandleCount;
+  EFI_HANDLE                            *Handles;
+  EFI_BLOCK_IO_PROTOCOL                 *BlockIo;
+  UINTN                                 Index;
+
+  gBS->LocateHandleBuffer (
+         ByProtocol,
+         &gEfiBlockIoProtocolGuid,
+         NULL,
+         &HandleCount,
+         &Handles
+         );
+  //
+  // Probe for media change for every physical block io
+  //
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (
+                    Handles[Index],
+                    &gEfiBlockIoProtocolGuid,
+                    (VOID **) &BlockIo
+                    );
+    if (!EFI_ERROR (Status)) {
+      if (!BlockIo->Media->LogicalPartition) {
+        //
+        // Per spec:
+        //   The function (ReadBlocks) must return EFI_NO_MEDIA or
+        //   EFI_MEDIA_CHANGED even if LBA, BufferSize, or Buffer are invalid so the caller can probe
+        //   for changes in media state.
+        //
+        BlockIo->ReadBlocks (
+                   BlockIo,
+                   BlockIo->Media->MediaId,
+                   0,
+                   0,
+                   NULL
+                   );
+      }
+    }
+  }
+}
 
 /**
   Function for 'map' command.
@@ -1099,6 +1144,7 @@ ShellCommandRunMap (
                || ShellCommandLineGetFlag(Package, L"-u")
                || ShellCommandLineGetFlag(Package, L"-t")
               ){
+        ProbeForMediaChange ();
         if ( ShellCommandLineGetFlag(Package, L"-r")) {
           //
           // Do the reset

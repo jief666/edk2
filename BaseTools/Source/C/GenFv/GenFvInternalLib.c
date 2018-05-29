@@ -1,7 +1,7 @@
 /** @file
 This file contains the internal functions required to generate a Firmware Volume.
 
-Copyright (c) 2004 - 2014, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
 Portions Copyright (c) 2011 - 2013, ARM Ltd. All rights reserved.<BR>
 Portions Copyright (c) 2016 HP Development Company, L.P.<BR>
 This program and the accompanying materials                          
@@ -34,16 +34,17 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <Guid/FfsSectionAlignmentPadding.h>
 
+#include "WinNtInclude.h"
 #include "GenFvInternalLib.h"
 #include "FvLib.h"
 #include "PeCoffLib.h"
-#include "WinNtInclude.h"
 
 #define ARMT_UNCONDITIONAL_JUMP_INSTRUCTION       0xEB000000
 #define ARM64_UNCONDITIONAL_JUMP_INSTRUCTION      0x14000000
 
 BOOLEAN mArm = FALSE;
 STATIC UINT32   MaxFfsAlignment = 0;
+BOOLEAN VtfFileFlag = FALSE;
 
 EFI_GUID  mEfiFirmwareVolumeTopFileGuid       = EFI_FFS_VOLUME_TOP_FILE_GUID;
 EFI_GUID  mFileGuidArray [MAX_NUMBER_OF_FILES_IN_FV];
@@ -374,7 +375,7 @@ Returns:
     }
   }
 
-  for (Index = 0; Index < MAX_NUMBER_OF_FILES_IN_FV; Index++) {
+  for (Index = 0; Number + Index < MAX_NUMBER_OF_FILES_IN_FV; Index++) {
     //
     // Read the FFS file list
     //
@@ -464,57 +465,97 @@ Returns:
   case 0:
     //
     // 1 byte alignment
+    //if bit 1 have set, 128K byte alignmnet
     //
-    *Alignment = 0;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 17;
+    } else {
+      *Alignment = 0;
+    }
     break;
 
   case 1:
     //
     // 16 byte alignment
+    //if bit 1 have set, 256K byte alignment
     //
-    *Alignment = 4;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 18;
+    } else {
+      *Alignment = 4;
+    }
     break;
 
   case 2:
     //
     // 128 byte alignment
+    //if bit 1 have set, 512K byte alignment
     //
-    *Alignment = 7;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 19;
+    } else {
+      *Alignment = 7;
+    }
     break;
 
   case 3:
     //
     // 512 byte alignment
+    //if bit 1 have set, 1M byte alignment
     //
-    *Alignment = 9;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 20;
+    } else {
+      *Alignment = 9;
+    }
     break;
 
   case 4:
     //
     // 1K byte alignment
+    //if bit 1 have set, 2M byte alignment
     //
-    *Alignment = 10;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 21;
+    } else {
+      *Alignment = 10;
+    }
     break;
 
   case 5:
     //
     // 4K byte alignment
+    //if bit 1 have set, 4M byte alignment
     //
-    *Alignment = 12;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 22;
+    } else {
+      *Alignment = 12;
+    }
     break;
 
   case 6:
     //
     // 32K byte alignment
+    //if bit 1 have set , 8M byte alignment
     //
-    *Alignment = 15;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 23;
+    } else {
+      *Alignment = 15;
+    }
     break;
 
   case 7:
     //
     // 64K byte alignment
+    //if bit 1 have set, 16M alignment
     //
-    *Alignment = 16;
+    if (FfsFile->Attributes & FFS_ATTRIB_DATA_ALIGNMENT2) {
+      *Alignment = 24;
+    } else {
+      *Alignment = 16;
+    }
     break;
 
   default:
@@ -560,7 +601,9 @@ Returns:
   UINTN               PadFileSize;
   UINT32              NextFfsHeaderSize;
   UINT32              CurFfsHeaderSize;
+  UINT32              Index;
 
+  Index = 0;
   CurFfsHeaderSize = sizeof (EFI_FFS_FILE_HEADER);
   //
   // Verify input parameters.
@@ -665,6 +708,19 @@ Returns:
     //
     // Copy Fv Extension Header and Set Fv Extension header offset
     //
+    if (ExtHeader->ExtHeaderSize > sizeof (EFI_FIRMWARE_VOLUME_EXT_HEADER)) {
+      for (Index = sizeof (EFI_FIRMWARE_VOLUME_EXT_HEADER); Index < ExtHeader->ExtHeaderSize;) {
+        if (((EFI_FIRMWARE_VOLUME_EXT_ENTRY *)((UINT8 *)ExtHeader + Index))-> ExtEntryType == EFI_FV_EXT_TYPE_USED_SIZE_TYPE) {
+          if (VtfFileFlag) {
+            ((EFI_FIRMWARE_VOLUME_EXT_ENTRY_USED_SIZE_TYPE *)((UINT8 *)ExtHeader + Index))->UsedSize = mFvTotalSize;
+          } else {
+            ((EFI_FIRMWARE_VOLUME_EXT_ENTRY_USED_SIZE_TYPE *)((UINT8 *)ExtHeader + Index))->UsedSize = mFvTakenSize;
+          }
+          break;
+        }
+        Index += ((EFI_FIRMWARE_VOLUME_EXT_ENTRY *)((UINT8 *)ExtHeader + Index))-> ExtEntrySize;
+      }
+    }
     memcpy ((UINT8 *)PadFile + CurFfsHeaderSize, ExtHeader, ExtHeader->ExtHeaderSize);
     ((EFI_FIRMWARE_VOLUME_HEADER *) FvImage->FileImage)->ExtHeaderOffset = (UINT16) ((UINTN) ((UINT8 *)PadFile + CurFfsHeaderSize) - (UINTN) FvImage->FileImage);
 	  //
@@ -751,7 +807,7 @@ Returns:
   EFI_IMAGE_OPTIONAL_HEADER_UNION     *ImgHdr;
   EFI_TE_IMAGE_HEADER                 *TEImageHeader;
   EFI_IMAGE_SECTION_HEADER            *SectionHeader;
-  unsigned long long                  TempLongAddress;
+  long long                           TempLongAddress;
   UINT32                              TextVirtualAddress;
   UINT32                              DataVirtualAddress;
   EFI_PHYSICAL_ADDRESS                LinkTimeBaseAddress;
@@ -768,7 +824,11 @@ Returns:
   //
   // Construct Map file Name 
   //
-  strcpy (PeMapFileName, FileName);
+  if (strlen (FileName) >= MAX_LONG_FILE_PATH) {
+    return EFI_ABORTED;
+  }
+  strncpy (PeMapFileName, FileName, MAX_LONG_FILE_PATH - 1);
+  PeMapFileName[MAX_LONG_FILE_PATH - 1] = 0;
   
   //
   // Change '\\' to '/', unified path format.
@@ -805,7 +865,11 @@ Returns:
     Cptr --;
   }
 	*Cptr2 = '\0';
-	strcpy (KeyWord, Cptr + 1);
+  if (strlen (Cptr + 1) >= MAX_LINE_LEN) {
+    return EFI_ABORTED;
+  }
+  strncpy (KeyWord, Cptr + 1, MAX_LINE_LEN - 1);
+  KeyWord[MAX_LINE_LEN - 1] = 0;
 	*Cptr2 = '.';
 
   //
@@ -1060,7 +1124,7 @@ Returns:
   // Clear the alignment bits: these have become meaningless now that we have
   // adjusted the padding section.
   //
-  FfsFile->Attributes &= ~FFS_ATTRIB_DATA_ALIGNMENT;
+  FfsFile->Attributes &= ~(FFS_ATTRIB_DATA_ALIGNMENT | FFS_ATTRIB_DATA_ALIGNMENT2);
 
   //
   // Recalculate the FFS header checksum. Instead of setting Header and State
@@ -1161,6 +1225,7 @@ Returns:
   //
   FileBuffer = malloc (FileSize);
   if (FileBuffer == NULL) {
+    fclose (NewFile);
     Error (NULL, 0, 4001, "Resouce", "memory cannot be allocated!");
     return EFI_OUT_OF_RESOURCES;
   }
@@ -1220,6 +1285,7 @@ Returns:
     if (CompareGuid ((EFI_GUID *) FileBuffer, &mFileGuidArray [Index1]) == 0) {
       Error (NULL, 0, 2000, "Invalid parameter", "the %dth file and %uth file have the same file GUID.", (unsigned) Index1 + 1, (unsigned) Index + 1);
       PrintGuid ((EFI_GUID *) FileBuffer);
+      free (FileBuffer);
       return EFI_INVALID_PARAMETER;
     }
   }
@@ -2418,17 +2484,19 @@ Returns:
   UINT8                           *FvImage;
   UINTN                           FvImageSize;
   FILE                            *FvFile;
-  CHAR8                           FvMapName [MAX_LONG_FILE_PATH];
+  CHAR8                           *FvMapName;
   FILE                            *FvMapFile;
   EFI_FIRMWARE_VOLUME_EXT_HEADER  *FvExtHeader;
   FILE                            *FvExtHeaderFile;
   UINTN                           FileSize;
-  CHAR8                           FvReportName[MAX_LONG_FILE_PATH];
+  CHAR8                           *FvReportName;
   FILE                            *FvReportFile;
 
   FvBufferHeader = NULL;
   FvFile         = NULL;
+  FvMapName      = NULL;
   FvMapFile      = NULL;
+  FvReportName   = NULL;
   FvReportFile   = NULL;
 
   if (InfFileImage != NULL) {
@@ -2494,6 +2562,10 @@ Returns:
     // Open the FV Extension Header file
     //
     FvExtHeaderFile = fopen (LongFilePath (mFvDataInfo.FvExtHeaderFile), "rb");
+    if (FvExtHeaderFile == NULL) {
+      Error (NULL, 0, 0001, "Error opening file", mFvDataInfo.FvExtHeaderFile);
+      return EFI_ABORTED;
+    }
 
     //
     // Get the file size
@@ -2562,8 +2634,34 @@ Returns:
   // FvMap file to log the function address of all modules in one Fvimage
   //
   if (MapFileName != NULL) {
+    if (strlen (MapFileName) > MAX_LONG_FILE_PATH - 1) {
+      Error (NULL, 0, 1003, "Invalid option value", "MapFileName %s is too long!", MapFileName);
+      Status = EFI_ABORTED;
+      goto Finish;
+    }
+
+    FvMapName = malloc (strlen (MapFileName) + 1);
+    if (FvMapName == NULL) {
+      Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Finish;
+    }
+
     strcpy (FvMapName, MapFileName);
   } else {
+    if (strlen (FvFileName) + strlen (".map") > MAX_LONG_FILE_PATH - 1) {
+      Error (NULL, 0, 1003, "Invalid option value", "FvFileName %s is too long!", FvFileName);
+      Status = EFI_ABORTED;
+      goto Finish;
+    }
+
+    FvMapName = malloc (strlen (FvFileName) + strlen (".map") + 1);
+    if (FvMapName == NULL) {
+      Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+      Status = EFI_OUT_OF_RESOURCES;
+      goto Finish;
+    }
+
     strcpy (FvMapName, FvFileName);
     strcat (FvMapName, ".map");
   }
@@ -2572,6 +2670,19 @@ Returns:
   //
   // FvReport file to log the FV information in one Fvimage
   //
+  if (strlen (FvFileName) + strlen (".txt") > MAX_LONG_FILE_PATH - 1) {
+    Error (NULL, 0, 1003, "Invalid option value", "FvFileName %s is too long!", FvFileName);
+    Status = EFI_ABORTED;
+    goto Finish;
+  }
+
+  FvReportName = malloc (strlen (FvFileName) + strlen (".txt") + 1);
+  if (FvReportName == NULL) {
+    Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Finish;
+  }
+
   strcpy (FvReportName, FvFileName);
   strcat (FvReportName, ".txt");
 
@@ -2581,7 +2692,7 @@ Returns:
   //
   Status = CalculateFvSize (&mFvDataInfo);
   if (EFI_ERROR (Status)) {
-    return Status;    
+    goto Finish;
   }
   VerboseMsg ("the generated FV image size is %u bytes", (unsigned) mFvDataInfo.Size);
   
@@ -2595,7 +2706,8 @@ Returns:
   //
   FvBufferHeader = malloc (FvImageSize + sizeof (UINT64));
   if (FvBufferHeader == NULL) {
-    return EFI_OUT_OF_RESOURCES;
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Finish;
   }
   FvImage = (UINT8 *) (((UINTN) FvBufferHeader + 7) & ~7);
 
@@ -2687,7 +2799,8 @@ Returns:
   FvMapFile = fopen (LongFilePath (FvMapName), "w");
   if (FvMapFile == NULL) {
     Error (NULL, 0, 0001, "Error opening file", FvMapName);
-    return EFI_ABORTED;
+    Status = EFI_ABORTED;
+    goto Finish;
   }
   
   //
@@ -2696,7 +2809,8 @@ Returns:
   FvReportFile = fopen (LongFilePath (FvReportName), "w");
   if (FvReportFile == NULL) {
     Error (NULL, 0, 0001, "Error opening file", FvReportName);
-    return EFI_ABORTED;
+    Status = EFI_ABORTED;
+    goto Finish;
   }
   //
   // record FV size information into FvMap file.
@@ -2770,11 +2884,13 @@ Returns:
       //
       // Update reset vector (SALE_ENTRY for IPF)
       // Now for IA32 and IA64 platform, the fv which has bsf file must have the 
-      // EndAddress of 0xFFFFFFFF. Thus, only this type fv needs to update the   
-      // reset vector. If the PEI Core is found, the VTF file will probably get  
-      // corrupted by updating the entry point.                                  
+      // EndAddress of 0xFFFFFFFF (unless the section was rebased).
+      // Thus, only this type fv needs to update the  reset vector.
+      // If the PEI Core is found, the VTF file will probably get
+      // corrupted by updating the entry point.
       //
-      if ((mFvDataInfo.BaseAddress + mFvDataInfo.Size) == FV_IMAGES_TOP_ADDRESS) {       
+      if (mFvDataInfo.ForceRebase == 1 ||
+          (mFvDataInfo.BaseAddress + mFvDataInfo.Size) == FV_IMAGES_TOP_ADDRESS) {
         Status = UpdateResetVector (&FvImageMemoryFile, &mFvDataInfo, VtfFileImage);
         if (EFI_ERROR(Status)) {                                               
           Error (NULL, 0, 3000, "Invalid", "Could not update the reset vector.");
@@ -2845,6 +2961,14 @@ Finish:
 
   if (FvExtHeader != NULL) {
     free (FvExtHeader);
+  }
+
+  if (FvMapName != NULL) {
+    free (FvMapName);
+  }
+
+  if (FvReportName != NULL) {
+    free (FvReportName);
   }
   
   if (FvFile != NULL) {
@@ -2959,12 +3083,10 @@ Returns:
   UINT32              FfsAlignment;
   UINT32              FfsHeaderSize;
   EFI_FFS_FILE_HEADER FfsHeader;
-  BOOLEAN             VtfFileFlag;
   UINTN               VtfFileSize;
   
   FvExtendHeaderSize = 0;
   VtfFileSize = 0;
-  VtfFileFlag = FALSE;
   fpin  = NULL;
   Index = 0;
 
@@ -3410,7 +3532,7 @@ Returns:
           //
           // Xip module has the same section alignment and file alignment.
           //
-          Error (NULL, 0, 3000, "Invalid", "Section-Alignment and File-Alignment do not match : %s.", FileName);
+          Error (NULL, 0, 3000, "Invalid", "PE image Section-Alignment and File-Alignment do not match : %s.", FileName);
           return EFI_ABORTED;
         }
         //
@@ -3420,7 +3542,12 @@ Returns:
           //
           // Construct the original efi file Name 
           //
-          strcpy (PeFileName, FileName);
+          if (strlen (FileName) >= MAX_LONG_FILE_PATH) {
+            Error (NULL, 0, 2000, "Invalid", "The file name %s is too long.", FileName);
+            return EFI_ABORTED;
+          }
+          strncpy (PeFileName, FileName, MAX_LONG_FILE_PATH - 1);
+          PeFileName[MAX_LONG_FILE_PATH - 1] = 0;
           Cptr = PeFileName + strlen (PeFileName);
           while (*Cptr != '.') {
             Cptr --;
@@ -3447,6 +3574,7 @@ Returns:
           PeFileSize = _filelength (fileno (PeFile));
           PeFileBuffer = (UINT8 *) malloc (PeFileSize);
           if (PeFileBuffer == NULL) {
+            fclose (PeFile);
             Error (NULL, 0, 4001, "Resource", "memory cannot be allocated on rebase of %s", FileName);
             return EFI_OUT_OF_RESOURCES;
           }
@@ -3482,7 +3610,7 @@ Returns:
           //
           // Xip module has the same section alignment and file alignment.
           //
-          Error (NULL, 0, 3000, "Invalid", "Section-Alignment and File-Alignment do not match : %s.", FileName);
+          Error (NULL, 0, 3000, "Invalid", "PE image Section-Alignment and File-Alignment do not match : %s.", FileName);
           return EFI_ABORTED;
         }
         NewPe32BaseAddress = XipBase + (UINTN) CurrentPe32Section.Pe32Section + CurSecHdrSize - (UINTN)FfsFile;
@@ -3674,7 +3802,12 @@ Returns:
       //
       // Construct the original efi file name 
       //
-      strcpy (PeFileName, FileName);
+      if (strlen (FileName) >= MAX_LONG_FILE_PATH) {
+        Error (NULL, 0, 2000, "Invalid", "The file name %s is too long.", FileName);
+        return EFI_ABORTED;
+      }
+      strncpy (PeFileName, FileName, MAX_LONG_FILE_PATH - 1);
+      PeFileName[MAX_LONG_FILE_PATH - 1] = 0;
       Cptr = PeFileName + strlen (PeFileName);
       while (*Cptr != '.') {
         Cptr --;
@@ -3702,6 +3835,7 @@ Returns:
         PeFileSize = _filelength (fileno (PeFile));
         PeFileBuffer = (UINT8 *) malloc (PeFileSize);
         if (PeFileBuffer == NULL) {
+          fclose (PeFile);
           Error (NULL, 0, 4001, "Resource", "memory cannot be allocated on rebase of %s", FileName);
           return EFI_OUT_OF_RESOURCES;
         }
@@ -4204,6 +4338,7 @@ Returns:
 
   fwrite (CapBuffer, 1, CapSize, fpout);
   fclose (fpout);
+  free (CapBuffer);
   
   VerboseMsg ("The size of the generated capsule image is %u bytes", (unsigned) CapSize);
 

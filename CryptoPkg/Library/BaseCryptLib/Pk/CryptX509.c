@@ -1,7 +1,7 @@
 /** @file
   X.509 Certificate Handler Wrapper Implementation over OpenSSL.
 
-Copyright (c) 2010 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2010 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -73,7 +73,7 @@ X509ConstructCertificate (
   @param           ...        A list of DER-encoded single certificate data followed
                               by certificate size. A NULL terminates the list. The
                               pairs are the arguments to X509ConstructCertificate().
-                                 
+
   @retval     TRUE            The X509 stack construction succeeded.
   @retval     FALSE           The construction operation failed.
 
@@ -82,7 +82,7 @@ BOOLEAN
 EFIAPI
 X509ConstructCertificateStack (
   IN OUT  UINT8  **X509Stack,
-  ...  
+  ...
   )
 {
   UINT8           *Cert;
@@ -175,14 +175,14 @@ EFIAPI
 X509Free (
   IN  VOID  *X509Cert
   )
-{ 
+{
   //
   // Check input parameters.
   //
   if (X509Cert == NULL) {
     return;
   }
-  
+
   //
   // Free OpenSSL X509 object.
   //
@@ -209,7 +209,7 @@ X509StackFree (
   if (X509Stack == NULL) {
     return;
   }
-  
+
   //
   // Free OpenSSL X509 stack object.
   //
@@ -298,6 +298,115 @@ _Exit:
 }
 
 /**
+  Retrieve the common name (CN) string from one X.509 certificate.
+
+  @param[in]      Cert             Pointer to the DER-encoded X509 certificate.
+  @param[in]      CertSize         Size of the X509 certificate in bytes.
+  @param[out]     CommonName       Buffer to contain the retrieved certificate common
+                                   name string. At most CommonNameSize bytes will be
+                                   written and the string will be null terminated. May be
+                                   NULL in order to determine the size buffer needed.
+  @param[in,out]  CommonNameSize   The size in bytes of the CommonName buffer on input,
+                                   and the size of buffer returned CommonName on output.
+                                   If CommonName is NULL then the amount of space needed
+                                   in buffer (including the final null) is returned.
+
+  @retval RETURN_SUCCESS           The certificate CommonName retrieved successfully.
+  @retval RETURN_INVALID_PARAMETER If Cert is NULL.
+                                   If CommonNameSize is NULL.
+                                   If CommonName is not NULL and *CommonNameSize is 0.
+                                   If Certificate is invalid.
+  @retval RETURN_NOT_FOUND         If no CommonName entry exists.
+  @retval RETURN_BUFFER_TOO_SMALL  If the CommonName is NULL. The required buffer size
+                                   (including the final null) is returned in the 
+                                   CommonNameSize parameter.
+  @retval RETURN_UNSUPPORTED       The operation is not supported.
+
+**/
+RETURN_STATUS
+EFIAPI
+X509GetCommonName (
+  IN      CONST UINT8  *Cert,
+  IN      UINTN        CertSize,
+  OUT     CHAR8        *CommonName,  OPTIONAL
+  IN OUT  UINTN        *CommonNameSize
+  )
+{
+  RETURN_STATUS  ReturnStatus;
+  BOOLEAN        Status;
+  X509           *X509Cert;
+  X509_NAME      *X509Name;
+  INTN           Length;
+
+  ReturnStatus = RETURN_INVALID_PARAMETER;
+
+  //
+  // Check input parameters.
+  //
+  if ((Cert == NULL) || (CertSize > INT_MAX) || (CommonNameSize == NULL)) {
+    return ReturnStatus;
+  }
+  if ((CommonName != NULL) && (*CommonNameSize == 0)) {
+    return ReturnStatus;
+  }
+
+  X509Cert = NULL;
+  //
+  // Read DER-encoded X509 Certificate and Construct X509 object.
+  //
+  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **) &X509Cert);
+  if ((X509Cert == NULL) || (!Status)) {
+    //
+    // Invalid X.509 Certificate
+    //
+    goto _Exit;
+  }
+
+  Status = FALSE;
+
+  //
+  // Retrieve subject name from certificate object.
+  //
+  X509Name = X509_get_subject_name (X509Cert);
+  if (X509Name == NULL) {
+    //
+    // Fail to retrieve subject name content
+    //
+    goto _Exit;
+  }
+
+  //
+  // Retrieve the CommonName information from X.509 Subject
+  //
+  Length = (INTN) X509_NAME_get_text_by_NID (X509Name, NID_commonName, CommonName, (int)(*CommonNameSize));
+  if (Length < 0) {
+    //
+    // No CommonName entry exists in X509_NAME object
+    //
+    *CommonNameSize = 0;
+    ReturnStatus    = RETURN_NOT_FOUND;
+    goto _Exit;
+  }
+
+  *CommonNameSize = (UINTN)(Length + 1);
+  if (CommonName == NULL) {
+    ReturnStatus = RETURN_BUFFER_TOO_SMALL;
+  } else {
+    ReturnStatus = RETURN_SUCCESS;
+  }
+
+_Exit:
+  //
+  // Release Resources.
+  //
+  if (X509Cert != NULL) {
+    X509_free (X509Cert);
+  }
+
+  return ReturnStatus;
+}
+
+/**
   Retrieve the RSA Public Key from one DER-encoded X509 certificate.
 
   @param[in]  Cert         Pointer to the DER-encoded X509 certificate.
@@ -324,7 +433,7 @@ RsaGetPublicKeyFromX509 (
   BOOLEAN   Status;
   EVP_PKEY  *Pkey;
   X509      *X509Cert;
-  
+
   //
   // Check input parameters.
   //
@@ -350,14 +459,14 @@ RsaGetPublicKeyFromX509 (
   // Retrieve and check EVP_PKEY data from X509 Certificate.
   //
   Pkey = X509_get_pubkey (X509Cert);
-  if ((Pkey == NULL) || (Pkey->type != EVP_PKEY_RSA)) {
+  if ((Pkey == NULL) || (EVP_PKEY_id (Pkey) != EVP_PKEY_RSA)) {
     goto _Exit;
   }
 
   //
   // Duplicate RSA Context from the retrieved EVP_PKEY.
   //
-  if ((*RsaContext = RSAPublicKey_dup (Pkey->pkey.rsa)) != NULL) {
+  if ((*RsaContext = RSAPublicKey_dup (EVP_PKEY_get0_RSA (Pkey))) != NULL) {
     Status = TRUE;
   }
 
@@ -371,7 +480,7 @@ _Exit:
 
   if (Pkey != NULL) {
     EVP_PKEY_free (Pkey);
-  }  
+  }
 
   return Status;
 }
@@ -405,8 +514,8 @@ X509VerifyCert (
   X509            *X509Cert;
   X509            *X509CACert;
   X509_STORE      *CertStore;
-  X509_STORE_CTX  CertCtx;
-  
+  X509_STORE_CTX  *CertCtx;
+
   //
   // Check input parameters.
   //
@@ -418,6 +527,7 @@ X509VerifyCert (
   X509Cert   = NULL;
   X509CACert = NULL;
   CertStore  = NULL;
+  CertCtx    = NULL;
 
   //
   // Register & Initialize necessary digest algorithms for certificate verification.
@@ -473,15 +583,19 @@ X509VerifyCert (
   //
   // Set up X509_STORE_CTX for the subsequent verification operation.
   //
-  if (!X509_STORE_CTX_init (&CertCtx, CertStore, X509Cert, NULL)) {
+  CertCtx = X509_STORE_CTX_new ();
+  if (CertCtx == NULL) {
+    goto _Exit;
+  }
+  if (!X509_STORE_CTX_init (CertCtx, CertStore, X509Cert, NULL)) {
     goto _Exit;
   }
 
   //
   // X509 Certificate Verification.
   //
-  Status = (BOOLEAN) X509_verify_cert (&CertCtx);
-  X509_STORE_CTX_cleanup (&CertCtx);
+  Status = (BOOLEAN) X509_verify_cert (CertCtx);
+  X509_STORE_CTX_cleanup (CertCtx);
 
 _Exit:
   //
@@ -498,7 +612,9 @@ _Exit:
   if (CertStore != NULL) {
     X509_STORE_free (CertStore);
   }
-  
+
+  X509_STORE_CTX_free (CertCtx);
+
   return Status;
 }
 
@@ -528,8 +644,8 @@ X509GetTBSCert (
   )
 {
   CONST UINT8  *Temp;
-  INTN         Asn1Tag;
-  INTN         ObjClass;
+  UINT32       Asn1Tag;
+  UINT32       ObjClass;
   UINTN        Length;
 
   //
@@ -557,7 +673,8 @@ X509GetTBSCert (
   // So we can just ASN1-parse the x.509 DER-encoded data. If we strip
   // the first SEQUENCE, the second SEQUENCE is the TBSCertificate.
   //
-  Temp = Cert;
+  Temp   = Cert;
+  Length = 0;
   ASN1_get_object (&Temp, (long *)&Length, (int *)&Asn1Tag, (int *)&ObjClass, (long)CertSize);
 
   if (Asn1Tag != V_ASN1_SEQUENCE) {
@@ -575,6 +692,6 @@ X509GetTBSCert (
   }
 
   *TBSCertSize = Length + (Temp - *TBSCert);
-  
+
   return TRUE;
 }

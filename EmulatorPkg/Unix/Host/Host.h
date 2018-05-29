@@ -82,7 +82,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #undef NTOHS
 #undef HTONS
 #undef B0
-
+#undef CR3
 
 #include <PiPei.h>
 #include <Uefi.h>
@@ -255,9 +255,9 @@ AsciiToUnicode (
   );
 
 UINTN
-CountSeperatorsInString (
+CountSeparatorsInString (
   IN  const CHAR16   *String,
-  IN  CHAR16   Seperator
+  IN  CHAR16   Separator
   );
 
 EFI_STATUS

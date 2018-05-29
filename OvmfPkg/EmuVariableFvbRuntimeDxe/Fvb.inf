@@ -29,6 +29,7 @@
 
 [Sources]
   Fvb.c
+  Fvb.h
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -57,19 +58,15 @@
   gEfiDevicePathProtocolGuid                    # PROTOCOL ALWAYS_PRODUCED
 
 [FixedPcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVariableStoreSize
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
 
 [Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvStoreReserved
-
-[FeaturePcd]
-  gUefiOvmfPkgTokenSpaceGuid.PcdSecureBootEnable
 
 [Depex]
   TRUE

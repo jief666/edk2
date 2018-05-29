@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2014 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -27,7 +27,6 @@
 #include <Protocol/SmmCommunication.h>
 #include <Protocol/SmmAccess2.h>
 
-#include <Guid/ZeroGuid.h>
 #include <Guid/MemoryProfile.h>
 #include <Guid/PiSmmCommunicationRegionTable.h>
 
@@ -250,12 +249,12 @@ GetDriverNameString (
   //
   // Method 1: Get the name string from image PDB
   //
-  if (DriverInfo->Header.Length > sizeof (MEMORY_PROFILE_DRIVER_INFO)) {
-    GetShortPdbFileName ((CHAR8 *) (DriverInfo + 1), mNameString);
+  if (DriverInfo->PdbStringOffset != 0) {
+    GetShortPdbFileName ((CHAR8 *) ((UINTN) DriverInfo + DriverInfo->PdbStringOffset), mNameString);
     return mNameString;
   }
 
-  if (!CompareGuid (&DriverInfo->FileName, &gZeroGuid)) {
+  if (!IsZeroGuid (&DriverInfo->FileName)) {
     //
     // Try to get the image's FFS UI section by image GUID
     //
@@ -344,16 +343,16 @@ ProfileActionToStr (
 
   if (IsForSmm) {
     ActionString = mSmmActionString;
-    ActionStringCount = sizeof (mSmmActionString) / sizeof (mSmmActionString[0]);
+    ActionStringCount = ARRAY_SIZE (mSmmActionString);
   } else {
     ActionString = mActionString;
-    ActionStringCount = sizeof (mActionString) / sizeof (mActionString[0]);
+    ActionStringCount = ARRAY_SIZE (mActionString);
   }
 
   if ((UINTN) (UINT32) Action < ActionStringCount) {
     return ActionString[Action];
   }
-  for (Index = 0; Index < sizeof (mExtActionString) / sizeof (mExtActionString[0]); Index++) {
+  for (Index = 0; Index < ARRAY_SIZE (mExtActionString); Index++) {
     if (mExtActionString[Index].Action == Action) {
       return mExtActionString[Index].String;
     }

@@ -2,7 +2,7 @@
   The internal header file includes the common header files, defines
   internal structure and functions used by DxeCore module.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -69,7 +69,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Guid/IdleLoopEvent.h>
 #include <Guid/VectorHandoffTable.h>
 #include <Ppi/VectorHandoffInfo.h>
-#include <Guid/ZeroGuid.h>
 #include <Guid/MemoryProfile.h>
 
 #include <Library/DxeCoreEntryPoint.h>
@@ -110,8 +109,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 
 ///
-/// EFI_DEP_REPLACE_TRUE - Used to dynamically patch the dependecy expression
-///                        to save time.  A EFI_DEP_PUSH is evauated one an
+/// EFI_DEP_REPLACE_TRUE - Used to dynamically patch the dependency expression
+///                        to save time.  A EFI_DEP_PUSH is evaluated one an
 ///                        replaced with EFI_DEP_REPLACE_TRUE. If PI spec's Vol 2
 ///                        Driver Execution Environment Core Interface use 0xff
 ///                        as new DEPEX opcode. EFI_DEP_REPLACE_TRUE should be
@@ -123,31 +122,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 /// Define the initial size of the dependency expression evaluation stack
 ///
 #define DEPEX_STACK_SIZE_INCREMENT  0x1000
-
-#if defined (MDE_CPU_IPF)
-///
-/// For Itanium machines make the default allocations 8K aligned
-///
-#define EFI_ACPI_RUNTIME_PAGE_ALLOCATION_ALIGNMENT  (EFI_PAGE_SIZE * 2)
-#define DEFAULT_PAGE_ALLOCATION                     (EFI_PAGE_SIZE * 2)
-
-#elif defined (MDE_CPU_AARCH64)
-///
-/// 64-bit ARM systems allow the OS to execute with 64 KB page size,
-/// so for improved interoperability with the firmware, align the
-/// runtime regions to 64 KB as well
-///
-#define EFI_ACPI_RUNTIME_PAGE_ALLOCATION_ALIGNMENT  (SIZE_64KB)
-#define DEFAULT_PAGE_ALLOCATION                     (EFI_PAGE_SIZE)
-
-#else
-///
-/// For genric EFI machines make the default allocations 4K aligned
-///
-#define EFI_ACPI_RUNTIME_PAGE_ALLOCATION_ALIGNMENT  (EFI_PAGE_SIZE)
-#define DEFAULT_PAGE_ALLOCATION                     (EFI_PAGE_SIZE)
-
-#endif
 
 typedef struct {
   EFI_GUID                    *ProtocolGuid;
@@ -247,9 +221,9 @@ typedef struct {
   UINTN                       ExitDataSize;   
   /// Pointer to exit data from started image
   VOID                        *ExitData;      
-  /// Pointer to pool allocation for context save/retore
+  /// Pointer to pool allocation for context save/restore
   VOID                        *JumpBuffer;    
-  /// Pointer to buffer for context save/retore
+  /// Pointer to buffer for context save/restore
   BASE_LIBRARY_JUMP_BUFFER    *JumpContext;  
   /// Machine type from PE image
   UINT16                      Machine;        
@@ -257,7 +231,7 @@ typedef struct {
   EFI_EBC_PROTOCOL            *Ebc;           
   /// Runtime image list
   EFI_RUNTIME_IMAGE_ENTRY     *RuntimeData;   
-  /// Pointer to Loaded Image Device Path Protocl
+  /// Pointer to Loaded Image Device Path Protocol
   EFI_DEVICE_PATH_PROTOCOL    *LoadedImageDevicePath;  
   /// PeCoffLoader ImageContext
   PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext; 
@@ -267,6 +241,26 @@ typedef struct {
 
 #define LOADED_IMAGE_PRIVATE_DATA_FROM_THIS(a) \
           CR(a, LOADED_IMAGE_PRIVATE_DATA, Info, LOADED_IMAGE_PRIVATE_DATA_SIGNATURE)
+
+#define IMAGE_PROPERTIES_RECORD_CODE_SECTION_SIGNATURE SIGNATURE_32 ('I','P','R','C')
+
+typedef struct {
+  UINT32                 Signature;
+  LIST_ENTRY             Link;
+  EFI_PHYSICAL_ADDRESS   CodeSegmentBase;
+  UINT64                 CodeSegmentSize;
+} IMAGE_PROPERTIES_RECORD_CODE_SECTION;
+
+#define IMAGE_PROPERTIES_RECORD_SIGNATURE SIGNATURE_32 ('I','P','R','D')
+
+typedef struct {
+  UINT32                 Signature;
+  LIST_ENTRY             Link;
+  EFI_PHYSICAL_ADDRESS   ImageBase;
+  UINT64                 ImageSize;
+  UINTN                  CodeSegmentCount;
+  LIST_ENTRY             CodeSegmentList;
+} IMAGE_PROPERTIES_RECORD;
 
 //
 // DXE Core Global Variables
@@ -446,7 +440,7 @@ CoreNotifyOnProtocolInstallation (
 
 
 /**
-  Return TRUE if all AP services are availible.
+  Return TRUE if all AP services are available.
 
   @retval EFI_SUCCESS    All AP services are available
   @retval EFI_NOT_FOUND  At least one AP service is not available
@@ -474,7 +468,7 @@ CalculateEfiHdrCrc (
 /**
   Called by the platform code to process a tick.
 
-  @param  Duration               The number of 100ns elasped since the last call
+  @param  Duration               The number of 100ns elapsed since the last call
                                  to TimerTick
 
 **/
@@ -1098,7 +1092,7 @@ CoreLocateDevicePath (
   @retval EFI_NOT_FOUND          No handles match the search.
   @retval EFI_OUT_OF_RESOURCES   There is not enough pool memory to store the
                                  matching results.
-  @retval EFI_INVALID_PARAMETER  One or more paramters are not valid.
+  @retval EFI_INVALID_PARAMETER  One or more parameters are not valid.
 
 **/
 EFI_STATUS
@@ -1459,7 +1453,7 @@ CoreLoadImage (
                                   unloaded.
 
   @retval EFI_SUCCESS             The image has been unloaded.
-  @retval EFI_UNSUPPORTED         The image has been sarted, and does not support
+  @retval EFI_UNSUPPORTED         The image has been started, and does not support
                                   unload.
   @retval EFI_INVALID_PARAMPETER  ImageHandle is not a valid image handle.
 
@@ -2430,7 +2424,7 @@ OpenSectionStream (
                                 non-null on input, then the buffer is caller
                                 allocated.  If Buffer is NULL, then the buffer
                                 is callee allocated.  In either case, the
-                                requried buffer size is returned in *BufferSize.
+                                required buffer size is returned in *BufferSize.
   @param  BufferSize            On input, indicates the size of *Buffer if
                                 *Buffer is non-null on input.  On output,
                                 indicates the required size (allocated size if
@@ -2676,22 +2670,6 @@ CoreReleaseLock (
   IN EFI_LOCK  *Lock
   );
 
-
-/**
-  An empty function to pass error checking of CreateEventEx ().
-
-  @param  Event                 Event whose notification function is being invoked.
-  @param  Context               Pointer to the notification function's context,
-                                which is implementation-dependent.
-
-**/
-VOID
-EFIAPI
-CoreEmptyCallbackFunction (
-  IN EFI_EVENT                Event,
-  IN VOID                     *Context
-  );
-
 /**
   Read data from Firmware Block by FVB protocol Read. 
   The data may cross the multi block ranges.
@@ -2876,6 +2854,15 @@ CoreInitializeMemoryAttributesTable (
   );
 
 /**
+  Initialize Memory Protection support.
+**/
+VOID
+EFIAPI
+CoreInitializeMemoryProtection (
+  VOID
+  );
+
+/**
   Install MemoryAttributesTable on memory allocation.
 
   @param[in] MemoryType EFI memory type.
@@ -2903,6 +2890,80 @@ InsertImageRecord (
 VOID
 RemoveImageRecord (
   IN EFI_RUNTIME_IMAGE_ENTRY  *RuntimeImage
+  );
+
+/**
+  Protect UEFI image.
+
+  @param[in]  LoadedImage              The loaded image protocol
+  @param[in]  LoadedImageDevicePath    The loaded image device path protocol
+**/
+VOID
+ProtectUefiImage (
+  IN EFI_LOADED_IMAGE_PROTOCOL   *LoadedImage,
+  IN EFI_DEVICE_PATH_PROTOCOL    *LoadedImageDevicePath
+  );
+
+/**
+  Unprotect UEFI image.
+
+  @param[in]  LoadedImage              The loaded image protocol
+  @param[in]  LoadedImageDevicePath    The loaded image device path protocol
+**/
+VOID
+UnprotectUefiImage (
+  IN EFI_LOADED_IMAGE_PROTOCOL   *LoadedImage,
+  IN EFI_DEVICE_PATH_PROTOCOL    *LoadedImageDevicePath
+  );
+
+/**
+  ExitBootServices Callback function for memory protection.
+**/
+VOID
+MemoryProtectionExitBootServicesCallback (
+  VOID
+  );
+
+/**
+  Manage memory permission attributes on a memory range, according to the
+  configured DXE memory protection policy.
+
+  @param  OldType           The old memory type of the range
+  @param  NewType           The new memory type of the range
+  @param  Memory            The base address of the range
+  @param  Length            The size of the range (in bytes)
+
+  @return EFI_SUCCESS       If the the CPU arch protocol is not installed yet
+  @return EFI_SUCCESS       If no DXE memory protection policy has been configured
+  @return EFI_SUCCESS       If OldType and NewType use the same permission attributes
+  @return other             Return value of gCpu->SetMemoryAttributes()
+
+**/
+EFI_STATUS
+EFIAPI
+ApplyMemoryProtectionPolicy (
+  IN  EFI_MEMORY_TYPE       OldType,
+  IN  EFI_MEMORY_TYPE       NewType,
+  IN  EFI_PHYSICAL_ADDRESS  Memory,
+  IN  UINT64                Length
+  );
+
+/**
+  Merge continous memory map entries whose have same attributes.
+
+  @param  MemoryMap       A pointer to the buffer in which firmware places
+                          the current memory map.
+  @param  MemoryMapSize   A pointer to the size, in bytes, of the
+                          MemoryMap buffer. On input, this is the size of
+                          the current memory map.  On output,
+                          it is the size of new memory map after merge.
+  @param  DescriptorSize  Size, in bytes, of an individual EFI_MEMORY_DESCRIPTOR.
+**/
+VOID
+MergeMemoryMap (
+  IN OUT EFI_MEMORY_DESCRIPTOR  *MemoryMap,
+  IN OUT UINTN                  *MemoryMapSize,
+  IN UINTN                      DescriptorSize
   );
 
 #endif

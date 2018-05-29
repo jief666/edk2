@@ -1,7 +1,7 @@
 ## @file
 # EFI/PI MdePkg Package
 #
-# Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 # Portions copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
 #
 #    This program and the accompanying materials
@@ -17,7 +17,7 @@
 [Defines]
   PLATFORM_NAME                  = Mde
   PLATFORM_GUID                  = 082F8BFC-0455-4859-AE3C-ECD64FB81642
-  PLATFORM_VERSION               = 1.06
+  PLATFORM_VERSION               = 1.08
   DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/Mde
   SUPPORTED_ARCHITECTURES        = IA32|IPF|X64|EBC|ARM|AARCH64
@@ -69,6 +69,10 @@
   MdePkg/Library/BasePciLibCf8/BasePciLibCf8.inf
   MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   MdePkg/Library/BasePciSegmentLibPci/BasePciSegmentLibPci.inf
+  MdePkg/Library/BasePciSegmentInfoLibNull/BasePciSegmentInfoLibNull.inf
+  MdePkg/Library/PciSegmentLibSegmentInfo/BasePciSegmentLibSegmentInfo.inf
+  MdePkg/Library/PciSegmentLibSegmentInfo/DxeRuntimePciSegmentLibSegmentInfo.inf
+  MdePkg/Library/BaseS3PciSegmentLib/BaseS3PciSegmentLib.inf
   MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
   MdePkg/Library/BasePeCoffLib/BasePeCoffLib.inf
   MdePkg/Library/BasePeCoffExtraActionLibNull/BasePeCoffExtraActionLibNull.inf
@@ -82,6 +86,7 @@
   MdePkg/Library/BaseTimerLibNullTemplate/BaseTimerLibNullTemplate.inf
   MdePkg/Library/BaseUefiDecompressLib/BaseUefiDecompressLib.inf
   MdePkg/Library/BaseSmbusLibNull/BaseSmbusLibNull.inf
+  MdePkg/Library/BaseSafeIntLib/BaseSafeIntLib.inf
 
   MdePkg/Library/DxeCoreEntryPoint/DxeCoreEntryPoint.inf
   MdePkg/Library/DxeCoreHobLib/DxeCoreHobLib.inf
@@ -134,6 +139,7 @@
 
 [Components.IA32, Components.X64]
   MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
+  MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsicSev.inf
   MdePkg/Library/BaseMemoryLibMmx/BaseMemoryLibMmx.inf
   MdePkg/Library/BaseMemoryLibOptDxe/BaseMemoryLibOptDxe.inf
   MdePkg/Library/BaseMemoryLibOptPei/BaseMemoryLibOptPei.inf
@@ -153,7 +159,10 @@
   MdePkg/Library/BaseS3SmbusLib/BaseS3SmbusLib.inf
   MdePkg/Library/BaseS3StallLib/BaseS3StallLib.inf
   MdePkg/Library/SmmMemLib/SmmMemLib.inf
+  MdePkg/Library/SmmIoLib/SmmIoLib.inf
   MdePkg/Library/BaseRngLib/BaseRngLib.inf
+  MdePkg/Library/SmmPciExpressLib/SmmPciExpressLib.inf
+  MdePkg/Library/SmiHandlerProfileLibNull/SmiHandlerProfileLibNull.inf
 
 [Components.IPF]
   MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
@@ -178,3 +187,6 @@
 
 [Components.ARM, Components.AARCH64]
   MdePkg/Library/BaseStackCheckLib/BaseStackCheckLib.inf
+
+[BuildOptions]
+  *_*_*_CC_FLAGS = -D DISABLE_NEW_DEPRECATED_INTERFACES

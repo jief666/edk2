@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-2.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.2.
 
 **/
 
@@ -25,6 +25,23 @@
 #define __CORE2_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel(R) Core(TM) 2 Processor Family?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_CORE2_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x0F || \
+    DisplayModel == 0x17    \
+    )                       \
+   )
 
 /**
   Shared. Model Specific Platform ID (R).
@@ -41,6 +58,7 @@
 
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_PLATFORM_ID);
   @endcode
+  @note MSR_CORE2_PLATFORM_ID is defined as MSR_PLATFORM_ID in SDM.
 **/
 #define MSR_CORE2_PLATFORM_ID                    0x00000017
 
@@ -89,6 +107,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_EBL_CR_POWERON);
   AsmWriteMsr64 (MSR_CORE2_EBL_CR_POWERON, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_EBL_CR_POWERON is defined as MSR_EBL_CR_POWERON in SDM.
 **/
 #define MSR_CORE2_EBL_CR_POWERON                 0x0000002A
 
@@ -202,6 +221,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_FEATURE_CONTROL);
   AsmWriteMsr64 (MSR_CORE2_FEATURE_CONTROL, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_FEATURE_CONTROL is defined as MSR_FEATURE_CONTROL in SDM.
 **/
 #define MSR_CORE2_FEATURE_CONTROL                0x0000003A
 
@@ -236,11 +256,9 @@ typedef union {
 
 /**
   Unique. Last Branch Record n From IP (R/W) One of four pairs of last branch
-  record registers on the last branch record stack. This part of the stack
-  contains pointers to the source instruction for one of the last four
-  branches, exceptions, or interrupts taken by the processor. See also: -
-  Last Branch Record Stack TOS at 1C9H -  Section 17.12, "Last Branch,
-  Interrupt, and Exception Recording (Pentium M Processors).".
+  record registers on the last branch record stack. The From_IP part of the
+  stack contains pointers to the source instruction. See also: -  Last Branch
+  Record Stack TOS at 1C9H -  Section 17.5.
 
   @param  ECX  MSR_CORE2_LASTBRANCH_n_FROM_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -253,6 +271,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_LASTBRANCH_0_FROM_IP);
   AsmWriteMsr64 (MSR_CORE2_LASTBRANCH_0_FROM_IP, Msr);
   @endcode
+  @note MSR_CORE2_LASTBRANCH_0_FROM_IP is defined as MSR_LASTBRANCH_0_FROM_IP in SDM.
+        MSR_CORE2_LASTBRANCH_1_FROM_IP is defined as MSR_LASTBRANCH_1_FROM_IP in SDM.
+        MSR_CORE2_LASTBRANCH_2_FROM_IP is defined as MSR_LASTBRANCH_2_FROM_IP in SDM.
+        MSR_CORE2_LASTBRANCH_3_FROM_IP is defined as MSR_LASTBRANCH_3_FROM_IP in SDM.
   @{
 **/
 #define MSR_CORE2_LASTBRANCH_0_FROM_IP           0x00000040
@@ -264,9 +286,8 @@ typedef union {
 
 /**
   Unique. Last Branch Record n To IP (R/W) One of four pairs of last branch
-  record registers on the last branch record stack. This part of the stack
-  contains pointers to the destination instruction for one of the last four
-  branches, exceptions, or interrupts taken by the processor.
+  record registers on the last branch record stack. This To_IP part of the
+  stack contains pointers to the destination instruction.
 
   @param  ECX  MSR_CORE2_LASTBRANCH_n_TO_IP
   @param  EAX  Lower 32-bits of MSR value.
@@ -279,6 +300,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_LASTBRANCH_0_TO_IP);
   AsmWriteMsr64 (MSR_CORE2_LASTBRANCH_0_TO_IP, Msr);
   @endcode
+  @note MSR_CORE2_LASTBRANCH_0_TO_IP is defined as MSR_LASTBRANCH_0_TO_IP in SDM.
+        MSR_CORE2_LASTBRANCH_1_TO_IP is defined as MSR_LASTBRANCH_1_TO_IP in SDM.
+        MSR_CORE2_LASTBRANCH_2_TO_IP is defined as MSR_LASTBRANCH_2_TO_IP in SDM.
+        MSR_CORE2_LASTBRANCH_3_TO_IP is defined as MSR_LASTBRANCH_3_TO_IP in SDM.
   @{
 **/
 #define MSR_CORE2_LASTBRANCH_0_TO_IP             0x00000060
@@ -306,6 +331,7 @@ typedef union {
   Msr.Uint64 = 0;
   AsmWriteMsr64 (MSR_CORE2_SMRR_PHYSBASE, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_SMRR_PHYSBASE is defined as MSR_SMRR_PHYSBASE in SDM.
 **/
 #define MSR_CORE2_SMRR_PHYSBASE                  0x000000A0
 
@@ -353,6 +379,7 @@ typedef union {
   Msr.Uint64 = 0;
   AsmWriteMsr64 (MSR_CORE2_SMRR_PHYSMASK, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_SMRR_PHYSMASK is defined as MSR_SMRR_PHYSMASK in SDM.
 **/
 #define MSR_CORE2_SMRR_PHYSMASK                  0x000000A1
 
@@ -402,6 +429,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_FSB_FREQ);
   @endcode
+  @note MSR_CORE2_FSB_FREQ is defined as MSR_FSB_FREQ in SDM.
 **/
 #define MSR_CORE2_FSB_FREQ                       0x000000CD
 
@@ -460,6 +488,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_BBL_CR_CTL3);
   AsmWriteMsr64 (MSR_CORE2_BBL_CR_CTL3, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_BBL_CR_CTL3 is defined as MSR_BBL_CR_CTL3 in SDM.
 **/
 #define MSR_CORE2_BBL_CR_CTL3                    0x0000011E
 
@@ -518,6 +547,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_PERF_STATUS);
   AsmWriteMsr64 (MSR_CORE2_PERF_STATUS, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_PERF_STATUS is defined as MSR_PERF_STATUS in SDM.
 **/
 #define MSR_CORE2_PERF_STATUS                    0x00000198
 
@@ -577,6 +607,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_THERM2_CTL);
   AsmWriteMsr64 (MSR_CORE2_THERM2_CTL, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_THERM2_CTL is defined as MSR_THERM2_CTL in SDM.
 **/
 #define MSR_CORE2_THERM2_CTL                     0x0000019D
 
@@ -628,6 +659,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_IA32_MISC_ENABLE);
   AsmWriteMsr64 (MSR_CORE2_IA32_MISC_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_IA32_MISC_ENABLE is defined as IA32_MISC_ENABLE in SDM.
 **/
 #define MSR_CORE2_IA32_MISC_ENABLE               0x000001A0
 
@@ -674,7 +706,7 @@ typedef union {
     ///
     UINT32  BTS:1;
     ///
-    /// [Bit 12] Shared. Precise Event Based Sampling Unavailable (RO) See
+    /// [Bit 12] Shared. Processor Event Based Sampling Unavailable (RO) See
     /// Table 35-2.
     ///
     UINT32  PEBS:1;
@@ -795,6 +827,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_LASTBRANCH_TOS);
   AsmWriteMsr64 (MSR_CORE2_LASTBRANCH_TOS, Msr);
   @endcode
+  @note MSR_CORE2_LASTBRANCH_TOS is defined as MSR_LASTBRANCH_TOS in SDM.
 **/
 #define MSR_CORE2_LASTBRANCH_TOS                 0x000001C9
 
@@ -814,6 +847,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_CORE2_LER_FROM_LIP);
   @endcode
+  @note MSR_CORE2_LER_FROM_LIP is defined as MSR_LER_FROM_LIP in SDM.
 **/
 #define MSR_CORE2_LER_FROM_LIP                   0x000001DD
 
@@ -834,6 +868,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_CORE2_LER_TO_LIP);
   @endcode
+  @note MSR_CORE2_LER_TO_LIP is defined as MSR_LER_TO_LIP in SDM.
 **/
 #define MSR_CORE2_LER_TO_LIP                     0x000001DE
 
@@ -852,6 +887,9 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_PERF_FIXED_CTR0);
   AsmWriteMsr64 (MSR_CORE2_PERF_FIXED_CTR0, Msr);
   @endcode
+  @note MSR_CORE2_PERF_FIXED_CTR0 is defined as MSR_PERF_FIXED_CTR0 in SDM.
+        MSR_CORE2_PERF_FIXED_CTR1 is defined as MSR_PERF_FIXED_CTR1 in SDM.
+        MSR_CORE2_PERF_FIXED_CTR2 is defined as MSR_PERF_FIXED_CTR2 in SDM.
   @{
 **/
 #define MSR_CORE2_PERF_FIXED_CTR0                0x00000309
@@ -877,6 +915,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_PERF_CAPABILITIES);
   AsmWriteMsr64 (MSR_CORE2_PERF_CAPABILITIES, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_PERF_CAPABILITIES is defined as MSR_PERF_CAPABILITIES in SDM.
 **/
 #define MSR_CORE2_PERF_CAPABILITIES              0x00000345
 
@@ -928,33 +967,15 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_PERF_FIXED_CTR_CTRL);
   AsmWriteMsr64 (MSR_CORE2_PERF_FIXED_CTR_CTRL, Msr);
   @endcode
+  @note MSR_CORE2_PERF_FIXED_CTR_CTRL is defined as MSR_PERF_FIXED_CTR_CTRL in SDM.
 **/
 #define MSR_CORE2_PERF_FIXED_CTR_CTRL            0x0000038D
 
 
 /**
-  Unique. See Table 35-2. See Section 18.4.2, "Global Counter Control
-  Facilities.".
-
-  @param  ECX  MSR_CORE2_IA32_PERF_GLOBAL_STAUS (0x0000038E)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_IA32_PERF_GLOBAL_STAUS);
-  AsmWriteMsr64 (MSR_CORE2_IA32_PERF_GLOBAL_STAUS, Msr);
-  @endcode
-**/
-#define MSR_CORE2_IA32_PERF_GLOBAL_STAUS         0x0000038E
-
-
-/**
   Unique. See Section 18.4.2, "Global Counter Control Facilities.".
 
-  @param  ECX  MSR_CORE2_PERF_GLOBAL_STAUS (0x0000038E)
+  @param  ECX  MSR_CORE2_PERF_GLOBAL_STATUS (0x0000038E)
   @param  EAX  Lower 32-bits of MSR value.
   @param  EDX  Upper 32-bits of MSR value.
 
@@ -962,11 +983,12 @@ typedef union {
   @code
   UINT64  Msr;
 
-  Msr = AsmReadMsr64 (MSR_CORE2_PERF_GLOBAL_STAUS);
-  AsmWriteMsr64 (MSR_CORE2_PERF_GLOBAL_STAUS, Msr);
+  Msr = AsmReadMsr64 (MSR_CORE2_PERF_GLOBAL_STATUS);
+  AsmWriteMsr64 (MSR_CORE2_PERF_GLOBAL_STATUS, Msr);
   @endcode
+  @note MSR_CORE2_PERF_GLOBAL_STATUS is defined as MSR_PERF_GLOBAL_STATUS in SDM.
 **/
-#define MSR_CORE2_PERF_GLOBAL_STAUS              0x0000038E
+#define MSR_CORE2_PERF_GLOBAL_STATUS             0x0000038E
 
 
 /**
@@ -983,6 +1005,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_PERF_GLOBAL_CTRL);
   AsmWriteMsr64 (MSR_CORE2_PERF_GLOBAL_CTRL, Msr);
   @endcode
+  @note MSR_CORE2_PERF_GLOBAL_CTRL is defined as MSR_PERF_GLOBAL_CTRL in SDM.
 **/
 #define MSR_CORE2_PERF_GLOBAL_CTRL               0x0000038F
 
@@ -1001,12 +1024,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_PERF_GLOBAL_OVF_CTRL);
   AsmWriteMsr64 (MSR_CORE2_PERF_GLOBAL_OVF_CTRL, Msr);
   @endcode
+  @note MSR_CORE2_PERF_GLOBAL_OVF_CTRL is defined as MSR_PERF_GLOBAL_OVF_CTRL in SDM.
 **/
 #define MSR_CORE2_PERF_GLOBAL_OVF_CTRL           0x00000390
 
 
 /**
-  Unique. See Table 35-2. See Section 18.4.4, "Precise Event Based Sampling
+  Unique. See Table 35-2. See Section 18.4.4, "Processor Event Based Sampling
   (PEBS).".
 
   @param  ECX  MSR_CORE2_PEBS_ENABLE (0x000003F1)
@@ -1022,6 +1046,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_CORE2_PEBS_ENABLE);
   AsmWriteMsr64 (MSR_CORE2_PEBS_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_CORE2_PEBS_ENABLE is defined as MSR_PEBS_ENABLE in SDM.
 **/
 #define MSR_CORE2_PEBS_ENABLE                    0x000003F1
 
@@ -1052,231 +1077,6 @@ typedef union {
 
 
 /**
-  Unique. See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
-
-  @param  ECX  MSR_CORE2_MC4_CTL (0x0000040C)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC4_CTL);
-  AsmWriteMsr64 (MSR_CORE2_MC4_CTL, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC4_CTL                        0x0000040C
-
-
-/**
-  Unique. See Section 15.3.2.2, "IA32_MCi_STATUS MSRS.".
-
-  @param  ECX  MSR_CORE2_MC4_STATUS (0x0000040D)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC4_STATUS);
-  AsmWriteMsr64 (MSR_CORE2_MC4_STATUS, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC4_STATUS                     0x0000040D
-
-
-/**
-  Unique. See Section 15.3.2.3, "IA32_MCi_ADDR MSRs." The MSR_MC4_ADDR
-  register is either not implemented or contains no address if the ADDRV flag
-  in the MSR_MC4_STATUS register is clear. When not implemented in the
-  processor, all reads and writes to this MSR will cause a general-protection
-  exception.
-
-  @param  ECX  MSR_CORE2_MC4_ADDR (0x0000040E)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC4_ADDR);
-  AsmWriteMsr64 (MSR_CORE2_MC4_ADDR, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC4_ADDR                       0x0000040E
-
-
-/**
-  See Section 15.3.2.1, "IA32_MCi_CTL MSRs.".
-
-  @param  ECX  MSR_CORE2_MC3_CTL (0x00000410)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC3_CTL);
-  AsmWriteMsr64 (MSR_CORE2_MC3_CTL, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC3_CTL                        0x00000410
-
-
-/**
-  See Section 15.3.2.2, "IA32_MCi_STATUS MSRS.".
-
-  @param  ECX  MSR_CORE2_MC3_STATUS (0x00000411)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC3_STATUS);
-  AsmWriteMsr64 (MSR_CORE2_MC3_STATUS, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC3_STATUS                     0x00000411
-
-
-/**
-  Unique. See Section 15.3.2.3, "IA32_MCi_ADDR MSRs." The MSR_MC3_ADDR
-  register is either not implemented or contains no address if the ADDRV flag
-  in the MSR_MC3_STATUS register is clear. When not implemented in the
-  processor, all reads and writes to this MSR will cause a general-protection
-  exception.
-
-  @param  ECX  MSR_CORE2_MC3_ADDR (0x00000412)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC3_ADDR);
-  AsmWriteMsr64 (MSR_CORE2_MC3_ADDR, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC3_ADDR                       0x00000412
-
-
-/**
-  Unique.
-
-  @param  ECX  MSR_CORE2_MC3_MISC (0x00000413)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC3_MISC);
-  AsmWriteMsr64 (MSR_CORE2_MC3_MISC, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC3_MISC                       0x00000413
-
-
-/**
-  Unique.
-
-  @param  ECX  MSR_CORE2_MC5_CTL (0x00000414)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC5_CTL);
-  AsmWriteMsr64 (MSR_CORE2_MC5_CTL, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC5_CTL                        0x00000414
-
-
-/**
-  Unique.
-
-  @param  ECX  MSR_CORE2_MC5_STATUS (0x00000415)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC5_STATUS);
-  AsmWriteMsr64 (MSR_CORE2_MC5_STATUS, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC5_STATUS                     0x00000415
-
-
-/**
-  Unique.
-
-  @param  ECX  MSR_CORE2_MC5_ADDR (0x00000416)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC5_ADDR);
-  AsmWriteMsr64 (MSR_CORE2_MC5_ADDR, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC5_ADDR                       0x00000416
-
-
-/**
-  Unique.
-
-  @param  ECX  MSR_CORE2_MC5_MISC (0x00000417)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC5_MISC);
-  AsmWriteMsr64 (MSR_CORE2_MC5_MISC, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC5_MISC                       0x00000417
-
-
-/**
-  Unique. Apply to Intel Xeon processor 7400 series (processor signature
-  06_1D) only. See Section 15.3.2.2, "IA32_MCi_STATUS MSRS." and Chapter 23.
-
-  @param  ECX  MSR_CORE2_MC6_STATUS (0x00000419)
-  @param  EAX  Lower 32-bits of MSR value.
-  @param  EDX  Upper 32-bits of MSR value.
-
-  <b>Example usage</b>
-  @code
-  UINT64  Msr;
-
-  Msr = AsmReadMsr64 (MSR_CORE2_MC6_STATUS);
-  AsmWriteMsr64 (MSR_CORE2_MC6_STATUS, Msr);
-  @endcode
-**/
-#define MSR_CORE2_MC6_STATUS                     0x00000419
-
-
-/**
   Unique. GBUSQ Event Control/Counter Register (R/W) Apply to Intel Xeon
   processor 7400 series (processor signature 06_1D) only. See Section 17.2.2.
 
@@ -1291,6 +1091,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_EMON_L3_CTR_CTL0);
   AsmWriteMsr64 (MSR_CORE2_EMON_L3_CTR_CTL0, Msr);
   @endcode
+  @note MSR_CORE2_EMON_L3_CTR_CTL0 is defined as MSR_EMON_L3_CTR_CTL0 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL1 is defined as MSR_EMON_L3_CTR_CTL1 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL2 is defined as MSR_EMON_L3_CTR_CTL2 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL3 is defined as MSR_EMON_L3_CTR_CTL3 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL4 is defined as MSR_EMON_L3_CTR_CTL4 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL5 is defined as MSR_EMON_L3_CTR_CTL5 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL6 is defined as MSR_EMON_L3_CTR_CTL6 in SDM.
+        MSR_CORE2_EMON_L3_CTR_CTL7 is defined as MSR_EMON_L3_CTR_CTL7 in SDM.
   @{
 **/
 #define MSR_CORE2_EMON_L3_CTR_CTL0               0x000107CC
@@ -1319,6 +1127,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_CORE2_EMON_L3_GL_CTL);
   AsmWriteMsr64 (MSR_CORE2_EMON_L3_GL_CTL, Msr);
   @endcode
+  @note MSR_CORE2_EMON_L3_GL_CTL is defined as MSR_EMON_L3_GL_CTL in SDM.
 **/
 #define MSR_CORE2_EMON_L3_GL_CTL                 0x000107D8
 

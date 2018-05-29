@@ -1,7 +1,9 @@
 /** @file
   The entry point of IScsi driver.
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2017, Intel Corporation. All rights reserved.<BR>
+(C) Copyright 2017 Hewlett Packard Enterprise Development LP<BR>
+
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -85,6 +87,7 @@ IScsiIsDevicePathSupported (
 **/
 EFI_STATUS
 IScsiCheckAip (
+  VOID
   )
 {
   UINTN                            AipHandleCount;
@@ -252,15 +255,19 @@ IScsiSupported (
   EFI_GUID                  *IScsiServiceBindingGuid;
   EFI_GUID                  *TcpServiceBindingGuid;
   EFI_GUID                  *DhcpServiceBindingGuid;
+  EFI_GUID                  *DnsServiceBindingGuid;
 
   if (IpVersion == IP_VERSION_4) {
     IScsiServiceBindingGuid  = &gIScsiV4PrivateGuid;
     TcpServiceBindingGuid    = &gEfiTcp4ServiceBindingProtocolGuid;
     DhcpServiceBindingGuid   = &gEfiDhcp4ServiceBindingProtocolGuid;
+    DnsServiceBindingGuid    = &gEfiDns4ServiceBindingProtocolGuid;
+
   } else {
     IScsiServiceBindingGuid  = &gIScsiV6PrivateGuid;
     TcpServiceBindingGuid    = &gEfiTcp6ServiceBindingProtocolGuid;
     DhcpServiceBindingGuid   = &gEfiDhcp6ServiceBindingProtocolGuid;
+    DnsServiceBindingGuid    = &gEfiDns6ServiceBindingProtocolGuid;
   }
 
   Status = gBS->OpenProtocol (
@@ -305,7 +312,21 @@ IScsiSupported (
       return EFI_UNSUPPORTED;
     }
   }
-  
+
+  if (IScsiDnsIsConfigured (ControllerHandle)) {
+    Status = gBS->OpenProtocol (
+                    ControllerHandle,
+                    DnsServiceBindingGuid,
+                    NULL,
+                    This->DriverBindingHandle,
+                    ControllerHandle,
+                    EFI_OPEN_PROTOCOL_TEST_PROTOCOL
+                    );
+    if (EFI_ERROR (Status)) {
+      return EFI_UNSUPPORTED;
+    }
+  }
+
   return EFI_SUCCESS;
 }
 
@@ -353,11 +374,11 @@ IScsiStart (
   EFI_DEVICE_PATH_PROTOCOL        *DevicePath;
   EFI_GUID                        *IScsiPrivateGuid;
   EFI_GUID                        *TcpServiceBindingGuid;
-  CHAR16                          MacString[ISCSI_MAX_MAC_STRING_LEN];
   BOOLEAN                         NeedUpdate;
   VOID                            *Interface;
   EFI_GUID                        *ProtocolGuid;
   UINT8                           NetworkBootPolicy;
+  ISCSI_SESSION_CONFIG_NVDATA     *NvData;
 
   //
   // Test to see if iSCSI driver supports the given controller.
@@ -400,7 +421,11 @@ IScsiStart (
   }
 
   NetworkBootPolicy = PcdGet8 (PcdIScsiAIPNetworkBootPolicy);
-  if (NetworkBootPolicy != ALWAYS_USE_UEFI_ISCSI_AND_IGNORE_AIP) {
+  if (NetworkBootPolicy == ALWAYS_USE_ISCSI_HBA_AND_IGNORE_UEFI_ISCSI) {
+    return EFI_ABORTED;
+  }
+
+  if (NetworkBootPolicy != ALWAYS_USE_UEFI_ISCSI_AND_IGNORE_ISCSI_HBA) {
     //
     // Check existing iSCSI AIP.
     //
@@ -416,7 +441,7 @@ IScsiStart (
   //
   // Record the incoming NIC info.
   //
-  Status = IScsiAddNic (ControllerHandle);
+  Status = IScsiAddNic (ControllerHandle, Image);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -672,12 +697,10 @@ IScsiStart (
     Session->ConfigData = AttemptConfigData;
     Session->AuthType   = AttemptConfigData->AuthenticationType;
 
-    AsciiStrToUnicodeStrS (AttemptConfigData->MacString, MacString, sizeof (MacString) / sizeof (MacString[0]));
     UnicodeSPrint (
       mPrivate->PortString,
       (UINTN) ISCSI_NAME_IFR_MAX_SIZE,
-      L"%s%d",
-      MacString,
+      L"Attempt %d",
       (UINTN) AttemptConfigData->AttemptConfigIndex
       );
 
@@ -699,6 +722,24 @@ IScsiStart (
       Status = IScsiSessionLogin (Session);
     } else if (Status == EFI_NOT_READY) {
       Status = IScsiSessionReLogin (Session);
+    }
+
+    //
+    // Restore the origial user setting which specifies the proxy/virtual iSCSI target to NV region.
+    //
+    NvData = &AttemptConfigData->SessionConfigData;
+    if (NvData->RedirectFlag) {
+      NvData->TargetPort = NvData->OriginalTargetPort;
+      CopyMem (&NvData->TargetIp, &NvData->OriginalTargetIp, sizeof (EFI_IP_ADDRESS));
+      NvData->RedirectFlag = FALSE;
+
+      gRT->SetVariable (
+             mPrivate->PortString,
+             &gEfiIScsiInitiatorNameProtocolGuid,
+             ISCSI_CONFIG_VAR_ATTR,
+             sizeof (ISCSI_ATTEMPT_CONFIG_NVDATA),
+             AttemptConfigData
+             );
     }
 
     if (EFI_ERROR (Status)) {
@@ -1761,6 +1802,22 @@ IScsiDriverEntryPoint (
   }
 
   //
+  // Create the Maximum Attempts.
+  //
+  Status = IScsiCreateAttempts (PcdGet8 (PcdMaxIScsiAttemptNumber));
+  if (EFI_ERROR (Status)) {
+    goto Error5;
+  }
+
+  //
+  // Create Keywords for all the Attempts.
+  //
+  Status = IScsiCreateKeywords (PcdGet8 (PcdMaxIScsiAttemptNumber));
+  if (EFI_ERROR (Status)) {
+    goto Error6;
+  }
+
+  //
   // There should be only one EFI_AUTHENTICATION_INFO_PROTOCOL. If already exists,
   // do not produce the protocol instance.
   //
@@ -1777,17 +1834,23 @@ IScsiDriverEntryPoint (
                     &gIScsiAuthenticationInfo
                     );
     if (EFI_ERROR (Status)) {
-      goto Error5;
+      goto Error6;
     }    
   }
 
   return EFI_SUCCESS;
 
+Error6:
+  IScsiCleanAttemptVariable ();
+
 Error5:
   IScsiConfigFormUnload (gIScsiIp4DriverBinding.DriverBindingHandle);
 
 Error4:
-  FreePool (mPrivate);
+  if (mPrivate != NULL) {
+    FreePool (mPrivate);
+    mPrivate = NULL;
+  }
 
 Error3:
   gBS->UninstallMultipleProtocolInterfaces (

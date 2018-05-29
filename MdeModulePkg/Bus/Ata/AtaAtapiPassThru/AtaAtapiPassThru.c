@@ -94,6 +94,7 @@ ATA_ATAPI_PASS_THRU_INSTANCE gAtaAtapiPassThruInstanceTemplate = {
     NULL,
     NULL
   },
+  0,                  // EnabledPciAttributes
   0,                  // OriginalAttributes
   0,                  // PreviousPort
   0,                  // PreviousPortMultiplier
@@ -670,7 +671,7 @@ AtaAtapiPassThruStart (
   EFI_IDE_CONTROLLER_INIT_PROTOCOL  *IdeControllerInit;
   ATA_ATAPI_PASS_THRU_INSTANCE      *Instance;
   EFI_PCI_IO_PROTOCOL               *PciIo;
-  UINT64                            Supports;
+  UINT64                            EnabledPciAttributes;
   UINT64                            OriginalPciAttributes;
 
   Status                = EFI_SUCCESS;
@@ -722,14 +723,14 @@ AtaAtapiPassThruStart (
                     PciIo,
                     EfiPciIoAttributeOperationSupported,
                     0,
-                    &Supports
+                    &EnabledPciAttributes
                     );
   if (!EFI_ERROR (Status)) {
-    Supports &= (UINT64)EFI_PCI_DEVICE_ENABLE;
+    EnabledPciAttributes &= (UINT64)EFI_PCI_DEVICE_ENABLE;
     Status = PciIo->Attributes (
                       PciIo,
                       EfiPciIoAttributeOperationEnable,
-                      Supports,
+                      EnabledPciAttributes,
                       NULL
                       );
   }
@@ -749,6 +750,7 @@ AtaAtapiPassThruStart (
   Instance->ControllerHandle      = Controller;
   Instance->IdeControllerInit     = IdeControllerInit;
   Instance->PciIo                 = PciIo;
+  Instance->EnabledPciAttributes  = EnabledPciAttributes;
   Instance->OriginalPciAttributes = OriginalPciAttributes;
   Instance->AtaPassThru.Mode      = &Instance->AtaPassThruMode;
   Instance->ExtScsiPassThru.Mode  = &Instance->ExtScsiPassThruMode;
@@ -859,7 +861,6 @@ AtaAtapiPassThruStop (
   EFI_ATA_PASS_THRU_PROTOCOL        *AtaPassThru;
   EFI_PCI_IO_PROTOCOL               *PciIo;
   EFI_AHCI_REGISTERS                *AhciRegisters;
-  UINT64                            Supports;
 
   DEBUG ((EFI_D_INFO, "==AtaAtapiPassThru Stop== Controller = %x\n", Controller));
 
@@ -912,12 +913,22 @@ AtaAtapiPassThruStop (
   //
   DestroyDeviceInfoList (Instance);
 
+  PciIo = Instance->PciIo;
+
+  //
+  // Disable this ATA host controller.
+  //
+  PciIo->Attributes (
+           PciIo,
+           EfiPciIoAttributeOperationDisable,
+           Instance->EnabledPciAttributes,
+           NULL
+           );
+
   //
   // If the current working mode is AHCI mode, then pre-allocated resource
   // for AHCI initialization should be released.
   //
-  PciIo = Instance->PciIo;
-
   if (Instance->Mode == EfiAtaAhciMode) {
     AhciRegisters = &Instance->AhciRegisters;
     PciIo->Unmap (
@@ -946,25 +957,6 @@ AtaAtapiPassThruStop (
              PciIo,
              EFI_SIZE_TO_PAGES ((UINTN) AhciRegisters->MaxReceiveFisSize),
              AhciRegisters->AhciRFis
-             );
-  }
-
-  //
-  // Disable this ATA host controller.
-  //
-  Status = PciIo->Attributes (
-                    PciIo,
-                    EfiPciIoAttributeOperationSupported,
-                    0,
-                    &Supports
-                    );
-  if (!EFI_ERROR (Status)) {
-    Supports &= (UINT64)EFI_PCI_DEVICE_ENABLE;
-    PciIo->Attributes (
-             PciIo,
-             EfiPciIoAttributeOperationDisable,
-             Supports,
-             NULL
              );
   }
 
@@ -1878,7 +1870,7 @@ AtaPassThruResetDevice (
 }
 
 /**
-  Sumbit ATAPI request sense command.
+  Submit ATAPI request sense command.
 
   @param[in] This            A pointer to the EFI_EXT_SCSI_PASS_THRU_PROTOCOL instance.
   @param[in] Target          The Target is an array of size TARGET_MAX_BYTES and it represents

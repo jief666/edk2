@@ -1,7 +1,7 @@
 /** @file
   Provides interface to shell internal functions for shell commands.
 
-  Copyright (c) 2009 - 2014, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2013-2015 Hewlett-Packard Development Company, L.P.<BR>
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 
@@ -53,7 +53,7 @@ STATIC CONST CHAR8 Hex[] = {
 // global variables required by library class.
 EFI_UNICODE_COLLATION_PROTOCOL    *gUnicodeCollation            = NULL;
 SHELL_MAP_LIST                    gShellMapList;
-SHELL_MAP_LIST                    *gShellCurDir                 = NULL;
+SHELL_MAP_LIST                    *gShellCurMapping             = NULL;
 
 CONST CHAR16* SupportLevel[] = {
   L"Minimal",
@@ -72,14 +72,70 @@ CommandInit(
   VOID
   )
 {
-  EFI_STATUS Status;
-  if (gUnicodeCollation == NULL) {
-    Status = gBS->LocateProtocol(&gEfiUnicodeCollation2ProtocolGuid, NULL, (VOID**)&gUnicodeCollation);
-    if (EFI_ERROR(Status)) {
-      return (EFI_DEVICE_ERROR);
-    }
+  UINTN                           NumHandles;
+  EFI_HANDLE                      *Handles;
+  EFI_UNICODE_COLLATION_PROTOCOL  *Uc;
+  CHAR8                           *BestLanguage;
+  UINTN                           Index;
+  EFI_STATUS                      Status;
+  CHAR8                           *PlatformLang;
+  
+  GetEfiGlobalVariable2 (EFI_PLATFORM_LANG_VARIABLE_NAME, (VOID**)&PlatformLang, NULL);
+  if (PlatformLang == NULL) {
+    return EFI_UNSUPPORTED;
   }
-  return (EFI_SUCCESS);
+
+  if (gUnicodeCollation == NULL) {
+    Status = gBS->LocateHandleBuffer (
+                    ByProtocol,
+                    &gEfiUnicodeCollation2ProtocolGuid,
+                    NULL,
+                    &NumHandles,
+                    &Handles
+                    );
+    if (EFI_ERROR (Status)) {
+      NumHandles = 0;
+      Handles    = NULL;
+    }
+    for (Index = 0; Index < NumHandles; Index++) {
+      //
+      // Open Unicode Collation Protocol
+      //
+      Status = gBS->OpenProtocol (
+                      Handles[Index],
+                      &gEfiUnicodeCollation2ProtocolGuid,
+                      (VOID **) &Uc,
+                      gImageHandle,
+                      NULL,
+                      EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                      );
+      if (EFI_ERROR (Status)) {
+        continue;
+      }
+
+      //
+      // Find the best matching matching language from the supported languages
+      // of Unicode Collation2 protocol. 
+      //
+      BestLanguage = GetBestLanguage (
+                       Uc->SupportedLanguages,
+                       FALSE,
+                       PlatformLang,
+                       NULL
+                       );
+      if (BestLanguage != NULL) {
+        FreePool (BestLanguage);
+        gUnicodeCollation = Uc;
+        break;
+      }
+    }
+    if (Handles != NULL) {
+      FreePool (Handles);
+    }
+    FreePool (PlatformLang);
+  }
+
+  return (gUnicodeCollation == NULL) ? EFI_UNSUPPORTED : EFI_SUCCESS;
 }
 
 /**
@@ -112,11 +168,9 @@ ShellCommandLibConstructor (
   mProfileListSize  = 0;
   mProfileList      = NULL;
 
-  if (gUnicodeCollation == NULL) {
-    Status = gBS->LocateProtocol(&gEfiUnicodeCollation2ProtocolGuid, NULL, (VOID**)&gUnicodeCollation);
-    if (EFI_ERROR(Status)) {
-      return (EFI_DEVICE_ERROR);
-    }
+  Status = CommandInit ();
+  if (EFI_ERROR (Status)) {
+    return EFI_DEVICE_ERROR;
   }
 
   return (RETURN_SUCCESS);
@@ -128,7 +182,6 @@ ShellCommandLibConstructor (
   @param[in] List     The list to free.
 **/
 VOID
-EFIAPI
 FreeFileHandleList (
   IN BUFFER_LIST *List
   )
@@ -230,7 +283,7 @@ ShellCommandLibDestructor (
   }
 
   gUnicodeCollation            = NULL;
-  gShellCurDir                 = NULL;
+  gShellCurMapping             = NULL;
 
   return (RETURN_SUCCESS);
 }
@@ -244,7 +297,6 @@ ShellCommandLibDestructor (
   @retval NULL          no dynamic command protocol instance found for name
 **/
 CONST EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL *
-EFIAPI
 ShellCommandFindDynamicCommand (
   IN CONST CHAR16 *CommandString
   )
@@ -293,7 +345,6 @@ ShellCommandFindDynamicCommand (
   @param[in] CommandString        The command string to check for on the list.
 **/
 BOOLEAN
-EFIAPI
 ShellCommandDynamicCommandExists (
   IN CONST CHAR16 *CommandString
   )
@@ -307,7 +358,6 @@ ShellCommandDynamicCommandExists (
   @param[in] CommandString        The command string to check for on the list.
 **/
 BOOLEAN
-EFIAPI
 ShellCommandIsCommandOnInternalList(
   IN CONST  CHAR16 *CommandString
   )
@@ -365,7 +415,6 @@ ShellCommandIsCommandOnList(
   @return       String of help text. Caller required to free.
 **/
 CHAR16*
-EFIAPI
 ShellCommandGetDynamicCommandHelp(
   IN CONST  CHAR16                      *CommandString
   )
@@ -392,7 +441,6 @@ ShellCommandGetDynamicCommandHelp(
   @return       String of help text. Caller reuiqred to free.
 **/
 CHAR16*
-EFIAPI
 ShellCommandGetInternalCommandHelp(
   IN CONST  CHAR16                      *CommandString
   )
@@ -546,9 +594,14 @@ ShellCommandRegisterCommandName (
   // allocate memory for new struct
   //
   Node = AllocateZeroPool(sizeof(SHELL_COMMAND_INTERNAL_LIST_ENTRY));
-  ASSERT(Node != NULL);
+  if (Node == NULL) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Node->CommandString = AllocateCopyPool(StrSize(CommandString), CommandString);
-  ASSERT(Node->CommandString != NULL);
+  if (Node->CommandString == NULL) {
+    FreePool (Node);
+    return RETURN_OUT_OF_RESOURCES;
+  }
 
   Node->GetManFileName  = GetManFileName;
   Node->CommandHandler  = CommandHandler;
@@ -807,11 +860,20 @@ ShellCommandRegisterAlias (
   // allocate memory for new struct
   //
   Node = AllocateZeroPool(sizeof(ALIAS_LIST));
-  ASSERT(Node != NULL);
+  if (Node == NULL) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Node->CommandString = AllocateCopyPool(StrSize(Command), Command);
+  if (Node->CommandString == NULL) {
+    FreePool (Node);
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Node->Alias = AllocateCopyPool(StrSize(Alias), Alias);
-  ASSERT(Node->CommandString != NULL);
-  ASSERT(Node->Alias != NULL);
+  if (Node->Alias == NULL) {
+    FreePool (Node->CommandString);
+    FreePool (Node);
+    return RETURN_OUT_OF_RESOURCES;
+  }
 
   InsertHeadList (&mAliasList.Link, &Node->Link);
 
@@ -1213,10 +1275,8 @@ ShellCommandAddMapItemAndUpdatePath(
     ASSERT((NewPath == NULL && NewPathSize == 0) || (NewPath != NULL));
     if (OriginalPath != NULL) {
       StrnCatGrow(&NewPath, &NewPathSize, OriginalPath, 0);
-    } else {
-      StrnCatGrow(&NewPath, &NewPathSize, L".\\", 0);
+      StrnCatGrow(&NewPath, &NewPathSize, L";", 0);
     }
-    StrnCatGrow(&NewPath, &NewPathSize, L";", 0);
     StrnCatGrow(&NewPath, &NewPathSize, Name, 0);
     StrnCatGrow(&NewPath, &NewPathSize, L"\\efi\\tools\\;", 0);
     StrnCatGrow(&NewPath, &NewPathSize, Name, 0);
@@ -1262,7 +1322,14 @@ ShellCommandCreateInitialMappingsAndPaths(
   CHAR16                    *NewConsistName;
   EFI_DEVICE_PATH_PROTOCOL  **ConsistMappingTable;
   SHELL_MAP_LIST            *MapListNode;
+  CONST CHAR16              *CurDir;
+  CHAR16                    *SplitCurDir;
+  CHAR16                    *MapName;
+  SHELL_MAP_LIST            *MapListItem;
 
+  SplitCurDir = NULL;
+  MapName     = NULL;
+  MapListItem = NULL;
   HandleList  = NULL;
 
   //
@@ -1303,7 +1370,10 @@ ShellCommandCreateInitialMappingsAndPaths(
     // Get all Device Paths
     //
     DevicePathList = AllocateZeroPool(sizeof(EFI_DEVICE_PATH_PROTOCOL*) * Count);
-    ASSERT(DevicePathList != NULL);
+    if (DevicePathList == NULL) {
+      SHELL_FREE_NON_NULL (HandleList);
+      return EFI_OUT_OF_RESOURCES;
+    }
 
     for (Count = 0 ; HandleList[Count] != NULL ; Count++) {
       DevicePathList[Count] = DevicePathFromHandle(HandleList[Count]);
@@ -1345,6 +1415,33 @@ ShellCommandCreateInitialMappingsAndPaths(
     SHELL_FREE_NON_NULL(DevicePathList);
 
     HandleList = NULL;
+
+    //
+    //gShellCurMapping point to node of current file system in the gShellMapList. When reset all mappings,
+    //all nodes in the gShellMapList will be free. Then gShellCurMapping will be a dangling pointer, So,
+    //after created new mappings, we should reset the gShellCurMapping pointer back to node of current file system.
+    //
+    if (gShellCurMapping != NULL) {
+      gShellCurMapping = NULL;
+      CurDir = gEfiShellProtocol->GetEnv(L"cwd");
+      if (CurDir != NULL) {
+        MapName = AllocateCopyPool (StrSize(CurDir), CurDir);
+        if (MapName == NULL) {
+          return EFI_OUT_OF_RESOURCES;
+        }
+        SplitCurDir = StrStr (MapName, L":");
+        if (SplitCurDir == NULL) {
+          SHELL_FREE_NON_NULL (MapName);
+          return EFI_UNSUPPORTED;
+        }
+        *(SplitCurDir + 1) = CHAR_NULL;
+        MapListItem = ShellCommandFindMapItem (MapName);
+        if (MapListItem != NULL) {
+          gShellCurMapping = MapListItem;
+        }
+        SHELL_FREE_NON_NULL (MapName);
+      }
+    }
   } else {
     Count = (UINTN)-1;
   }
@@ -1360,7 +1457,10 @@ ShellCommandCreateInitialMappingsAndPaths(
     // Get all Device Paths
     //
     DevicePathList = AllocateZeroPool(sizeof(EFI_DEVICE_PATH_PROTOCOL*) * Count);
-    ASSERT(DevicePathList != NULL);
+    if (DevicePathList == NULL) {
+      SHELL_FREE_NON_NULL (HandleList);
+      return EFI_OUT_OF_RESOURCES;
+    }
 
     for (Count = 0 ; HandleList[Count] != NULL ; Count++) {
       DevicePathList[Count] = DevicePathFromHandle(HandleList[Count]);
@@ -1703,6 +1803,7 @@ FreeBufferList (
   @param[in] UserData   The data to print out.
 **/
 VOID
+EFIAPI
 DumpHex (
   IN UINTN        Indent,
   IN UINTN        Offset,
@@ -1732,7 +1833,7 @@ DumpHex (
       Val[Index * 3 + 0]  = Hex[TempByte >> 4];
       Val[Index * 3 + 1]  = Hex[TempByte & 0xF];
       Val[Index * 3 + 2]  = (CHAR8) ((Index == 7) ? '-' : ' ');
-      Str[Index]          = (CHAR8) ((TempByte < ' ' || TempByte > 'z') ? '.' : TempByte);
+      Str[Index]          = (CHAR8) ((TempByte < ' ' || TempByte > '~') ? '.' : TempByte);
     }
 
     Val[Index * 3]  = 0;
@@ -1747,7 +1848,7 @@ DumpHex (
 
 /**
   Dump HEX data into buffer.
-   
+
   @param[in] Buffer     HEX data to be dumped in Buffer.
   @param[in] Indent     How many spaces to indent the output.
   @param[in] Offset     The offset of the printing.
@@ -1755,6 +1856,7 @@ DumpHex (
   @param[in] UserData   The data to print out.
 **/
 CHAR16*
+EFIAPI
 CatSDumpHex (
   IN CHAR16  *Buffer,
   IN UINTN   Indent,

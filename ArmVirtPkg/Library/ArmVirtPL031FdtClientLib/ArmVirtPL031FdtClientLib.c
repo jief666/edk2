@@ -34,6 +34,7 @@ ArmVirtPL031FdtClientLibConstructor (
   CONST UINT64                  *Reg;
   UINT32                        RegSize;
   UINT64                        RegBase;
+  RETURN_STATUS                 PcdStatus;
 
   Status = gBS->LocateProtocol (&gFdtClientProtocolGuid, NULL,
                   (VOID **)&FdtClient);
@@ -60,22 +61,21 @@ ArmVirtPL031FdtClientLibConstructor (
   RegBase = SwapBytes64 (Reg[0]);
   ASSERT (RegBase < MAX_UINT32);
 
-  PcdSet32 (PcdPL031RtcBase, (UINT32)RegBase);
+  PcdStatus = PcdSet32S (PcdPL031RtcBase, (UINT32)RegBase);
+  ASSERT_RETURN_ERROR (PcdStatus);
 
   DEBUG ((EFI_D_INFO, "Found PL031 RTC @ 0x%Lx\n", RegBase));
 
-  if (!FeaturePcdGet (PcdPureAcpiBoot)) {
-    //
-    // UEFI takes ownership of the RTC hardware, and exposes its functionality
-    // through the UEFI Runtime Services GetTime, SetTime, etc. This means we
-    // need to disable it in the device tree to prevent the OS from attaching
-    // its device driver as well.
-    //
-    Status = FdtClient->SetNodeProperty (FdtClient, Node, "status",
-                          "disabled", sizeof ("disabled"));
-    if (EFI_ERROR (Status)) {
-        DEBUG ((EFI_D_WARN, "Failed to set PL031 status to 'disabled'\n"));
-    }
+  //
+  // UEFI takes ownership of the RTC hardware, and exposes its functionality
+  // through the UEFI Runtime Services GetTime, SetTime, etc. This means we
+  // need to disable it in the device tree to prevent the OS from attaching
+  // its device driver as well.
+  //
+  Status = FdtClient->SetNodeProperty (FdtClient, Node, "status",
+                        "disabled", sizeof ("disabled"));
+  if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_WARN, "Failed to set PL031 status to 'disabled'\n"));
   }
 
   return EFI_SUCCESS;

@@ -1,6 +1,6 @@
 /**@file
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -748,6 +748,12 @@ GetNextFileNameToken (
     // Point *FileName to the next character after L'\'.
     //
     *FileName = *FileName + Offset + 1;
+    //
+    // If *FileName is an empty string, then set *FileName to NULL
+    //
+    if (**FileName == L'\0') {
+      *FileName = NULL;
+    }
   }
 
   return Token;
@@ -1486,6 +1492,30 @@ Returns:
   }
 }
 
+/**
+  Convert the FileTime to EfiTime.
+
+  @param PrivateFile  Pointer to WIN_NT_EFI_FILE_PRIVATE.
+  @param TimeZone     Pointer to the current time zone.
+  @param FileTime     Pointer to file time.
+  @param EfiTime      Pointer to EFI time.
+**/
+VOID
+WinNtFileTimeToEfiTime (  
+  IN CONST WIN_NT_EFI_FILE_PRIVATE *PrivateFile,
+  IN       TIME_ZONE_INFORMATION   *TimeZone,
+  IN CONST FILETIME                *FileTime,
+  OUT      EFI_TIME                *EfiTime
+  )
+{
+  FILETIME                         TempFileTime;
+  SYSTEMTIME                       SystemTime;
+
+  PrivateFile->WinNtThunk->FileTimeToLocalFileTime (FileTime, &TempFileTime);
+  PrivateFile->WinNtThunk->FileTimeToSystemTime (&TempFileTime, &SystemTime);
+  WinNtSystemTimeToEfiTime (&SystemTime, TimeZone, EfiTime);
+}
+
 EFI_STATUS
 EFIAPI
 WinNtSimpleFileSystemRead (
@@ -1529,7 +1559,6 @@ Returns:
   UINTN                   NameSize;
   UINTN                   ResultSize;
   UINTN                   Index;
-  SYSTEMTIME              SystemTime;
   EFI_FILE_INFO           *Info;
   WCHAR                   *pw;
   TIME_ZONE_INFORMATION   TimeZone;
@@ -1636,24 +1665,9 @@ Returns:
     Info->Size = ResultSize;
 
     PrivateFile->WinNtThunk->GetTimeZoneInformation (&TimeZone);
-
-    PrivateFile->WinNtThunk->FileTimeToLocalFileTime (
-                              &PrivateFile->FindBuf.ftCreationTime,
-                              &PrivateFile->FindBuf.ftCreationTime
-                              );
-
-    PrivateFile->WinNtThunk->FileTimeToSystemTime (&PrivateFile->FindBuf.ftCreationTime, &SystemTime);
-
-    WinNtSystemTimeToEfiTime (&SystemTime, &TimeZone, &Info->CreateTime);
-
-    PrivateFile->WinNtThunk->FileTimeToLocalFileTime (
-                              &PrivateFile->FindBuf.ftLastWriteTime,
-                              &PrivateFile->FindBuf.ftLastWriteTime
-                              );
-
-    PrivateFile->WinNtThunk->FileTimeToSystemTime (&PrivateFile->FindBuf.ftLastWriteTime, &SystemTime);
-
-    WinNtSystemTimeToEfiTime (&SystemTime, &TimeZone, &Info->ModificationTime);
+    WinNtFileTimeToEfiTime (PrivateFile, &TimeZone, &PrivateFile->FindBuf.ftCreationTime, &Info->CreateTime);
+    WinNtFileTimeToEfiTime (PrivateFile, &TimeZone, &PrivateFile->FindBuf.ftLastAccessTime, &Info->LastAccessTime);
+    WinNtFileTimeToEfiTime (PrivateFile, &TimeZone, &PrivateFile->FindBuf.ftLastWriteTime, &Info->ModificationTime);
 
     Info->FileSize      = PrivateFile->FindBuf.nFileSizeLow;
 
@@ -1982,13 +1996,24 @@ Returns:
   UINTN                       ResultSize;
   EFI_FILE_INFO               *Info;
   BY_HANDLE_FILE_INFORMATION  FileInfo;
-  SYSTEMTIME                  SystemTime;
   CHAR16                      *RealFileName;
   CHAR16                      *TempPointer;
+  TIME_ZONE_INFORMATION       TimeZone;
 
   Size        = SIZE_OF_EFI_FILE_INFO;
-  NameSize    = StrSize (PrivateFile->FileName);
-  ResultSize  = Size + NameSize;
+
+  RealFileName  = PrivateFile->FileName;
+  TempPointer   = RealFileName;
+  while (*TempPointer) {
+    if (*TempPointer == '\\') {
+      RealFileName = TempPointer + 1;
+    }
+
+    TempPointer++;
+  }
+  NameSize = StrSize (RealFileName);
+
+  ResultSize = Size + NameSize; 
 
   Status      = EFI_BUFFER_TOO_SMALL;
   if (*BufferSize >= ResultSize) {
@@ -2005,32 +2030,10 @@ Returns:
     Info->FileSize      = FileInfo.nFileSizeLow;
     Info->PhysicalSize  = Info->FileSize;
 
-    PrivateFile->WinNtThunk->FileTimeToLocalFileTime(&FileInfo.ftCreationTime, &FileInfo.ftCreationTime);
-    PrivateFile->WinNtThunk->FileTimeToSystemTime (&FileInfo.ftCreationTime, &SystemTime);
-    Info->CreateTime.Year   = SystemTime.wYear;
-    Info->CreateTime.Month  = (UINT8) SystemTime.wMonth;
-    Info->CreateTime.Day    = (UINT8) SystemTime.wDay;
-    Info->CreateTime.Hour   = (UINT8) SystemTime.wHour;
-    Info->CreateTime.Minute = (UINT8) SystemTime.wMinute;
-    Info->CreateTime.Second = (UINT8) SystemTime.wSecond;
-
-    PrivateFile->WinNtThunk->FileTimeToLocalFileTime(&FileInfo.ftLastAccessTime, &FileInfo.ftLastAccessTime);
-    PrivateFile->WinNtThunk->FileTimeToSystemTime (&FileInfo.ftLastAccessTime, &SystemTime);
-    Info->LastAccessTime.Year   = SystemTime.wYear;
-    Info->LastAccessTime.Month  = (UINT8) SystemTime.wMonth;
-    Info->LastAccessTime.Day    = (UINT8) SystemTime.wDay;
-    Info->LastAccessTime.Hour   = (UINT8) SystemTime.wHour;
-    Info->LastAccessTime.Minute = (UINT8) SystemTime.wMinute;
-    Info->LastAccessTime.Second = (UINT8) SystemTime.wSecond;
-
-    PrivateFile->WinNtThunk->FileTimeToLocalFileTime(&FileInfo.ftLastWriteTime, &FileInfo.ftLastWriteTime);
-    PrivateFile->WinNtThunk->FileTimeToSystemTime (&FileInfo.ftLastWriteTime, &SystemTime);
-    Info->ModificationTime.Year   = SystemTime.wYear;
-    Info->ModificationTime.Month  = (UINT8) SystemTime.wMonth;
-    Info->ModificationTime.Day    = (UINT8) SystemTime.wDay;
-    Info->ModificationTime.Hour   = (UINT8) SystemTime.wHour;
-    Info->ModificationTime.Minute = (UINT8) SystemTime.wMinute;
-    Info->ModificationTime.Second = (UINT8) SystemTime.wSecond;
+    PrivateFile->WinNtThunk->GetTimeZoneInformation (&TimeZone);
+    WinNtFileTimeToEfiTime (PrivateFile, &TimeZone, &FileInfo.ftCreationTime, &Info->CreateTime);
+    WinNtFileTimeToEfiTime (PrivateFile, &TimeZone, &FileInfo.ftLastAccessTime, &Info->LastAccessTime);
+    WinNtFileTimeToEfiTime (PrivateFile, &TimeZone, &FileInfo.ftLastWriteTime, &Info->ModificationTime);
 
     if (FileInfo.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) {
       Info->Attribute |= EFI_FILE_ARCHIVE;
@@ -2054,17 +2057,6 @@ Returns:
 
     if (PrivateFile->IsDirectoryPath) {
       Info->Attribute |= EFI_FILE_DIRECTORY;
-    }
-
-    RealFileName  = PrivateFile->FileName;
-    TempPointer   = RealFileName;
-
-    while (*TempPointer) {
-      if (*TempPointer == '\\') {
-        RealFileName = TempPointer + 1;
-      }
-
-      TempPointer++;
     }
 
     if (PrivateFile->IsRootDirectory) {

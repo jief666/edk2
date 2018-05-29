@@ -1,7 +1,7 @@
 /** @file
   CPU Exception Library provides PEI/DXE/SMM CPU common exception handler.
 
-Copyright (c) 2012 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials are licensed and made available under
 the terms and conditions of the BSD License that accompanies this distribution.
 The full text of the license may be found at
@@ -24,7 +24,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 CommonExceptionHandlerWorker (
-  IN EFI_EXCEPTION_TYPE          ExceptionType, 
+  IN EFI_EXCEPTION_TYPE          ExceptionType,
   IN EFI_SYSTEM_CONTEXT          SystemContext,
   IN EXCEPTION_HANDLER_DATA      *ExceptionHandlerData
   )
@@ -55,7 +55,7 @@ CommonExceptionHandlerWorker (
         // Need to execute old IDT handler before running this exception handler
         //
         ReservedVectors[ExceptionType].ApicId = GetApicId ();
-        ArchSaveExceptionContext (ExceptionType, SystemContext);
+        ArchSaveExceptionContext (ExceptionType, SystemContext, ExceptionHandlerData);
         ExceptionHandlerContext->ExceptionDataFlag = (mErrorCodeFlag & (1 << ExceptionType)) ? TRUE : FALSE;
         ExceptionHandlerContext->OldIdtHandler     = ReservedVectors[ExceptionType].ExceptonHandler;
         return;
@@ -65,10 +65,10 @@ CommonExceptionHandlerWorker (
       //
       if (ReservedVectors[ExceptionType].ApicId == GetApicId ()) {
         //
-        // Old IDT handler has been executed, then retore CPU exception content to
+        // Old IDT handler has been executed, then restore CPU exception content to
         // run new exception handler.
         //
-        ArchRestoreExceptionContext (ExceptionType, SystemContext);
+        ArchRestoreExceptionContext (ExceptionType, SystemContext, ExceptionHandlerData);
         //
         // Rlease spin lock for ApicId
         //
@@ -87,7 +87,7 @@ CommonExceptionHandlerWorker (
     CpuDeadLoop ();
     break;
   }
-  
+
   if (ExternalInterruptHandler != NULL &&
       ExternalInterruptHandler[ExceptionType] != NULL) {
     (ExternalInterruptHandler[ExceptionType]) (ExceptionType, SystemContext);
@@ -99,9 +99,13 @@ CommonExceptionHandlerWorker (
       CpuPause ();
     }
     //
+    // Initialize the serial port before dumping.
+    //
+    SerialPortInitialize ();
+    //
     // Display ExceptionType, CPU information and Image information
-    //  
-    DumpCpuContent (ExceptionType, SystemContext);
+    //
+    DumpImageAndCpuContent (ExceptionType, SystemContext);
     //
     // Release Spinlock of output message
     //
@@ -192,8 +196,8 @@ UpdateIdtTable (
 
   @param[in]      VectorInfo            Pointer to reserved vector list.
   @param[in, out] ExceptionHandlerData  Pointer to exception handler data.
-  
-  @retval EFI_SUCCESS           CPU Exception Entries have been successfully initialized 
+
+  @retval EFI_SUCCESS           CPU Exception Entries have been successfully initialized
                                 with default exception handlers.
   @retval EFI_INVALID_PARAMETER VectorInfo includes the invalid content if VectorInfo is not NULL.
   @retval EFI_UNSUPPORTED       This function is not supported.

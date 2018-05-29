@@ -707,7 +707,7 @@ TranslatePciOfwNodes (
   // Parse the OFW nodes starting with the first non-bridge node.
   //
   PciDevFun[1] = 0;
-  NumEntries = sizeof (PciDevFun) / sizeof (PciDevFun[0]);
+  NumEntries = ARRAY_SIZE (PciDevFun);
   if (ParseUnitAddressHexList (
         OfwNode[FirstNonBridge].UnitAddress,
         PciDevFun,
@@ -872,13 +872,13 @@ TranslatePciOfwNodes (
     //
     // UEFI device path prefix:
     //
-    //   PciRoot(0x0)/Pci(0x6,0x0)/HD( -- if PCI function is 0 or absent
-    //   PciRoot(0x0)/Pci(0x6,0x3)/HD( -- if PCI function is present and nonzero
+    //   PciRoot(0x0)/Pci(0x6,0x0) -- if PCI function is 0 or absent
+    //   PciRoot(0x0)/Pci(0x6,0x3) -- if PCI function is present and nonzero
     //
     Written = UnicodeSPrintAsciiFormat (
       Translated,
       *TranslatedSize * sizeof (*Translated), // BufferSize in bytes
-      "PciRoot(0x%x)%s/Pci(0x%Lx,0x%Lx)/HD(",
+      "PciRoot(0x%x)%s/Pci(0x%Lx,0x%Lx)",
       PciRoot,
       Bridges,
       PciDevFun[0],
@@ -910,7 +910,7 @@ TranslatePciOfwNodes (
     UINT64 TargetLun[2];
 
     TargetLun[1] = 0;
-    NumEntries = sizeof (TargetLun) / sizeof (TargetLun[0]);
+    NumEntries = ARRAY_SIZE (TargetLun);
     if (ParseUnitAddressHexList (
           OfwNode[FirstNonBridge + 2].UnitAddress,
           TargetLun,
@@ -958,7 +958,7 @@ TranslatePciOfwNodes (
     UINTN  RequiredEntries;
     UINT8  *Eui64;
 
-    RequiredEntries = sizeof (Namespace) / sizeof (Namespace[0]);
+    RequiredEntries = ARRAY_SIZE (Namespace);
     NumEntries = RequiredEntries;
     if (ParseUnitAddressHexList (
           OfwNode[FirstNonBridge + 1].UnitAddress,
@@ -986,6 +986,50 @@ TranslatePciOfwNodes (
       Eui64[7], Eui64[6], Eui64[5], Eui64[4],
       Eui64[3], Eui64[2], Eui64[1], Eui64[0]
       );
+  } else if (NumNodes >= FirstNonBridge + 2 &&
+             SubstringEq (OfwNode[FirstNonBridge + 0].DriverName, "usb") &&
+             SubstringEq (OfwNode[FirstNonBridge + 1].DriverName, "storage")) {
+    //
+    // OpenFirmware device path (usb-storage device in XHCI port):
+    //
+    //   /pci@i0cf8/usb@3[,1]/storage@2/channel@0/disk@0,0
+    //        ^         ^  ^          ^         ^      ^ ^
+    //        |         |  |          |         fixed  fixed
+    //        |         |  |          XHCI port number, 1-based
+    //        |         |  PCI function corresponding to XHCI (optional)
+    //        |         PCI slot holding XHCI
+    //        PCI root at system bus port, PIO
+    //
+    // UEFI device path prefix:
+    //
+    //   PciRoot(0x0)/Pci(0x3,0x1)/USB(0x1,0x0)
+    //                        ^        ^
+    //                        |        XHCI port number in 0-based notation
+    //                        0x0 if PCI function is 0, or absent from OFW
+    //
+    RETURN_STATUS ParseStatus;
+    UINT64        OneBasedXhciPort;
+
+    NumEntries = 1;
+    ParseStatus = ParseUnitAddressHexList (
+                    OfwNode[FirstNonBridge + 1].UnitAddress,
+                    &OneBasedXhciPort,
+                    &NumEntries
+                    );
+    if (RETURN_ERROR (ParseStatus) || OneBasedXhciPort == 0) {
+      return RETURN_UNSUPPORTED;
+    }
+
+    Written = UnicodeSPrintAsciiFormat (
+                Translated,
+                *TranslatedSize * sizeof (*Translated), // BufferSize in bytes
+                "PciRoot(0x%x)%s/Pci(0x%Lx,0x%Lx)/USB(0x%Lx,0x0)",
+                PciRoot,
+                Bridges,
+                PciDevFun[0],
+                PciDevFun[1],
+                OneBasedXhciPort - 1
+                );
   } else {
     //
     // Generic OpenFirmware device path for PCI devices:
@@ -1117,12 +1161,12 @@ TranslateMmioOfwNodes (
     //
     // UEFI device path prefix:
     //
-    //   <VenHwString>/HD(
+    //   <VenHwString>
     //
     Written = UnicodeSPrintAsciiFormat (
                 Translated,
                 *TranslatedSize * sizeof (*Translated), // BufferSize in bytes
-                "%s/HD(",
+                "%s",
                 VenHwString
                 );
   } else if (NumNodes >= 3 &&
@@ -1145,7 +1189,7 @@ TranslateMmioOfwNodes (
     UINT64 TargetLun[2];
 
     TargetLun[1] = 0;
-    NumEntries = sizeof (TargetLun) / sizeof (TargetLun[0]);
+    NumEntries = ARRAY_SIZE (TargetLun);
     if (ParseUnitAddressHexList (
           OfwNode[2].UnitAddress,
           TargetLun,
@@ -1173,14 +1217,14 @@ TranslateMmioOfwNodes (
     //                |                             fixed
     //                base address of virtio-mmio register block
     //
-    // UEFI device path prefix (dependent on presence of nonzero PCI function):
+    // UEFI device path prefix:
     //
-    //   <VenHwString>/MAC(
+    //   <VenHwString>
     //
     Written = UnicodeSPrintAsciiFormat (
                 Translated,
                 *TranslatedSize * sizeof (*Translated), // BufferSize in bytes
-                "%s/MAC(",
+                "%s",
                 VenHwString
                 );
   } else {
@@ -1405,6 +1449,156 @@ TranslateOfwPath (
   default:
     ASSERT (0);
   }
+  return Status;
+}
+
+
+/**
+  Connect devices based on the boot order retrieved from QEMU.
+
+  Attempt to retrieve the "bootorder" fw_cfg file from QEMU. Translate the
+  OpenFirmware device paths therein to UEFI device path fragments. Connect the
+  devices identified by the UEFI devpath prefixes as narrowly as possible, then
+  connect all their child devices, recursively.
+
+  If this function fails, then platform BDS should fall back to
+  EfiBootManagerConnectAll(), or some other method for connecting any expected
+  boot devices.
+
+  @retval RETURN_SUCCESS            The "bootorder" fw_cfg file has been
+                                    parsed, and the referenced device-subtrees
+                                    have been connected.
+
+  @retval RETURN_UNSUPPORTED        QEMU's fw_cfg is not supported.
+
+  @retval RETURN_NOT_FOUND          Empty or nonexistent "bootorder" fw_cfg
+                                    file.
+
+  @retval RETURN_INVALID_PARAMETER  Parse error in the "bootorder" fw_cfg file.
+
+  @retval RETURN_OUT_OF_RESOURCES   Memory allocation failed.
+
+  @return                           Error statuses propagated from underlying
+                                    functions.
+**/
+RETURN_STATUS
+EFIAPI
+ConnectDevicesFromQemu (
+  VOID
+  )
+{
+  RETURN_STATUS        Status;
+  FIRMWARE_CONFIG_ITEM FwCfgItem;
+  UINTN                FwCfgSize;
+  CHAR8                *FwCfg;
+  EFI_STATUS           EfiStatus;
+  EXTRA_ROOT_BUS_MAP   *ExtraPciRoots;
+  CONST CHAR8          *FwCfgPtr;
+  UINTN                NumConnected;
+  UINTN                TranslatedSize;
+  CHAR16               Translated[TRANSLATION_OUTPUT_SIZE];
+
+  Status = QemuFwCfgFindFile ("bootorder", &FwCfgItem, &FwCfgSize);
+  if (RETURN_ERROR (Status)) {
+    return Status;
+  }
+
+  if (FwCfgSize == 0) {
+    return RETURN_NOT_FOUND;
+  }
+
+  FwCfg = AllocatePool (FwCfgSize);
+  if (FwCfg == NULL) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
+
+  QemuFwCfgSelectItem (FwCfgItem);
+  QemuFwCfgReadBytes (FwCfgSize, FwCfg);
+  if (FwCfg[FwCfgSize - 1] != '\0') {
+    Status = RETURN_INVALID_PARAMETER;
+    goto FreeFwCfg;
+  }
+  DEBUG ((DEBUG_VERBOSE, "%a: FwCfg:\n", __FUNCTION__));
+  DEBUG ((DEBUG_VERBOSE, "%a\n", FwCfg));
+  DEBUG ((DEBUG_VERBOSE, "%a: FwCfg: <end>\n", __FUNCTION__));
+
+  if (FeaturePcdGet (PcdQemuBootOrderPciTranslation)) {
+    EfiStatus = CreateExtraRootBusMap (&ExtraPciRoots);
+    if (EFI_ERROR (EfiStatus)) {
+      Status = (RETURN_STATUS)EfiStatus;
+      goto FreeFwCfg;
+    }
+  } else {
+    ExtraPciRoots = NULL;
+  }
+
+  //
+  // Translate each OpenFirmware path to a UEFI devpath prefix.
+  //
+  FwCfgPtr = FwCfg;
+  NumConnected = 0;
+  TranslatedSize = ARRAY_SIZE (Translated);
+  Status = TranslateOfwPath (&FwCfgPtr, ExtraPciRoots, Translated,
+             &TranslatedSize);
+  while (!RETURN_ERROR (Status)) {
+    EFI_DEVICE_PATH_PROTOCOL *DevicePath;
+    EFI_HANDLE               Controller;
+
+    //
+    // Convert the UEFI devpath prefix to binary representation.
+    //
+    ASSERT (Translated[TranslatedSize] == L'\0');
+    DevicePath = ConvertTextToDevicePath (Translated);
+    if (DevicePath == NULL) {
+      Status = RETURN_OUT_OF_RESOURCES;
+      goto FreeExtraPciRoots;
+    }
+    //
+    // Advance along DevicePath, connecting the nodes individually, and asking
+    // drivers not to produce sibling nodes. Retrieve the controller handle
+    // associated with the full DevicePath -- this is the device that QEMU's
+    // OFW devpath refers to.
+    //
+    EfiStatus = EfiBootManagerConnectDevicePath (DevicePath, &Controller);
+    FreePool (DevicePath);
+    if (EFI_ERROR (EfiStatus)) {
+      Status = (RETURN_STATUS)EfiStatus;
+      goto FreeExtraPciRoots;
+    }
+    //
+    // Because QEMU's OFW devpaths have lesser expressive power than UEFI
+    // devpaths (i.e., DevicePath is considered a prefix), connect the tree
+    // rooted at Controller, recursively. If no children are produced
+    // (EFI_NOT_FOUND), that's OK.
+    //
+    EfiStatus = gBS->ConnectController (Controller, NULL, NULL, TRUE);
+    if (EFI_ERROR (EfiStatus) && EfiStatus != EFI_NOT_FOUND) {
+      Status = (RETURN_STATUS)EfiStatus;
+      goto FreeExtraPciRoots;
+    }
+    ++NumConnected;
+    //
+    // Move to the next OFW devpath.
+    //
+    TranslatedSize = ARRAY_SIZE (Translated);
+    Status = TranslateOfwPath (&FwCfgPtr, ExtraPciRoots, Translated,
+               &TranslatedSize);
+  }
+
+  if (Status == RETURN_NOT_FOUND && NumConnected > 0) {
+    DEBUG ((DEBUG_INFO, "%a: %Lu OpenFirmware device path(s) connected\n",
+      __FUNCTION__, (UINT64)NumConnected));
+    Status = RETURN_SUCCESS;
+  }
+
+FreeExtraPciRoots:
+  if (ExtraPciRoots != NULL) {
+    DestroyExtraRootBusMap (ExtraPciRoots);
+  }
+
+FreeFwCfg:
+  FreePool (FwCfg);
+
   return Status;
 }
 
@@ -1699,8 +1893,8 @@ PruneBootVariables (
   translated fragments against the current list of boot options, and rewrite
   the BootOrder NvVar so that it corresponds to the order described in fw_cfg.
 
-  Platform BDS should call this function after EfiBootManagerConnectAll () and
-  EfiBootManagerRefreshAllBootOption () return.
+  Platform BDS should call this function after connecting any expected boot
+  devices and calling EfiBootManagerRefreshAllBootOption ().
 
   @retval RETURN_SUCCESS            BootOrder NvVar rewritten.
 
@@ -1719,6 +1913,7 @@ PruneBootVariables (
 
 **/
 RETURN_STATUS
+EFIAPI
 SetBootOrderFromQemu (
   VOID
   )
@@ -1803,7 +1998,7 @@ SetBootOrderFromQemu (
   //
   // translate each OpenFirmware path
   //
-  TranslatedSize = sizeof (Translated) / sizeof (Translated[0]);
+  TranslatedSize = ARRAY_SIZE (Translated);
   Status = TranslateOfwPath (&FwCfgPtr, ExtraPciRoots, Translated,
              &TranslatedSize);
   while (Status == RETURN_SUCCESS ||
@@ -1817,7 +2012,8 @@ SetBootOrderFromQemu (
       // match translated OpenFirmware path against all active boot options
       //
       for (Idx = 0; Idx < ActiveCount; ++Idx) {
-        if (Match (
+        if (!ActiveOption[Idx].Appended &&
+            Match (
               Translated,
               TranslatedSize, // contains length, not size, in CHAR16's here
               ActiveOption[Idx].BootOption->FilePath
@@ -1830,12 +2026,11 @@ SetBootOrderFromQemu (
           if (Status != RETURN_SUCCESS) {
             goto ErrorFreeExtraPciRoots;
           }
-          break;
         }
       } // scanned all active boot options
     }   // translation successful
 
-    TranslatedSize = sizeof (Translated) / sizeof (Translated[0]);
+    TranslatedSize = ARRAY_SIZE (Translated);
     Status = TranslateOfwPath (&FwCfgPtr, ExtraPciRoots, Translated,
                &TranslatedSize);
   } // scanning of OpenFirmware paths done
@@ -1865,7 +2060,8 @@ SetBootOrderFromQemu (
                     BootOrder.Data
                     );
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "%a: setting BootOrder: %r\n", __FUNCTION__, Status));
+      DEBUG ((DEBUG_ERROR, "%a: setting BootOrder: %r\n", __FUNCTION__,
+        Status));
       goto ErrorFreeExtraPciRoots;
     }
 
@@ -1901,6 +2097,7 @@ ErrorFreeFwCfg:
   @return  The TimeoutDefault argument for PlatformBdsEnterFrontPage().
 **/
 UINT16
+EFIAPI
 GetFrontPageTimeoutFromQemu (
   VOID
   )

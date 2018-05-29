@@ -1,7 +1,7 @@
 ## @file
 #  Check a patch for various format issues
 #
-#  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
 #
 #  This program and the accompanying materials are licensed and made
 #  available under the terms and conditions of the BSD License which
@@ -16,7 +16,7 @@
 from __future__ import print_function
 
 VersionNumber = '0.1'
-__copyright__ = "Copyright (c) 2015, Intel Corporation  All rights reserved."
+__copyright__ = "Copyright (c) 2015 - 2016, Intel Corporation  All rights reserved."
 
 import email
 import argparse
@@ -75,10 +75,13 @@ class CommitMessageCheck:
             count += 1
 
     def check_contributed_under(self):
-        cu_msg='Contributed-under: TianoCore Contribution Agreement 1.0'
+        cu_msg='Contributed-under: TianoCore Contribution Agreement 1.1'
         if self.msg.find(cu_msg) < 0:
-            self.error('Missing Contributed-under! (Note: this must be ' +
-                       'added by the code contributor!)')
+            # Allow 1.0 for now while EDK II community transitions to 1.1
+            cu_msg='Contributed-under: TianoCore Contribution Agreement 1.0'
+            if self.msg.find(cu_msg) < 0:
+                self.error('Missing Contributed-under! (Note: this must be ' +
+                           'added by the code contributor!)')
 
     @staticmethod
     def make_signature_re(sig, re_input=False):
@@ -197,7 +200,7 @@ class CommitMessageCheck:
             self.error('Empty commit message!')
             return
 
-        if count >= 1 and len(lines[0]) > 76:
+        if count >= 1 and len(lines[0]) >= 72:
             self.error('First line of commit message (subject line) ' +
                        'is too long.')
 
@@ -210,7 +213,7 @@ class CommitMessageCheck:
                        'empty.')
 
         for i in range(2, count):
-            if (len(lines[i]) > 76 and
+            if (len(lines[i]) >= 76 and
                 len(lines[i].split()) > 1 and
                 not lines[i].startswith('git-svn-id:')):
                 self.error('Line %d of commit message is too long.' % (i + 1))
@@ -243,6 +246,7 @@ class GitDiffCheck:
         self.count = len(self.lines)
         self.line_num = 0
         self.state = START
+        self.new_bin = []
         while self.line_num < self.count and self.format_ok:
             line_num = self.line_num
             self.run()
@@ -254,6 +258,11 @@ class GitDiffCheck:
             return
         if self.ok:
             print('The code passed all checks.')
+        if self.new_bin:
+            print('\nWARNING - The following binary files will be added ' +
+                  'into the repository:')
+            for binary in self.new_bin:
+                print('  ' + binary)
 
     def run(self):
         line = self.lines[self.line_num]
@@ -265,7 +274,7 @@ class GitDiffCheck:
             if line.startswith('@@ '):
                 self.state = PRE_PATCH
             elif len(line) >= 1 and line[0] not in ' -+' and \
-                 not line.startswith(r'\ No newline '):
+                 not line.startswith(r'\ No newline ') and not self.binary:
                 for line in self.lines[self.line_num + 1:]:
                     if line.startswith('diff --git'):
                         self.format_error('diff found after end of patch')
@@ -276,21 +285,25 @@ class GitDiffCheck:
         if self.state == START:
             if line.startswith('diff --git'):
                 self.state = PRE_PATCH
-                self.set_filename(None)
+                self.filename = line[13:].split(' ',1)[0]
+                self.is_newfile = False
+                self.force_crlf = not self.filename.endswith('.sh')
             elif len(line.rstrip()) != 0:
                 self.format_error("didn't find diff command")
             self.line_num += 1
         elif self.state == PRE_PATCH:
-            if line.startswith('+++ b/'):
-                self.set_filename(line[6:].rstrip())
             if line.startswith('@@ '):
                 self.state = PATCH
                 self.binary = False
-            elif line.startswith('GIT binary patch'):
+            elif line.startswith('GIT binary patch') or \
+                 line.startswith('Binary files'):
                 self.state = PATCH
                 self.binary = True
+                if self.is_newfile:
+                    self.new_bin.append(self.filename)
             else:
                 ok = False
+                self.is_newfile = self.newfile_prefix_re.match(line)
                 for pfx in self.pre_patch_prefixes:
                     if line.startswith(pfx):
                         ok = True
@@ -300,7 +313,7 @@ class GitDiffCheck:
         elif self.state == PATCH:
             if self.binary:
                 pass
-            if line.startswith('-'):
+            elif line.startswith('-'):
                 pass
             elif line.startswith('+'):
                 self.check_added_line(line[1:])
@@ -320,25 +333,31 @@ class GitDiffCheck:
         'new mode ',
         'similarity index ',
         'rename ',
-        'Binary files ',
         )
 
     line_endings = ('\r\n', '\n\r', '\n', '\r')
 
-    def set_filename(self, filename):
-        self.hunk_filename = filename
-        if filename:
-            self.force_crlf = not filename.endswith('.sh')
-        else:
-            self.force_crlf = True
+    newfile_prefix_re = \
+        re.compile(r'''^
+                       index\ 0+\.\.
+                   ''',
+                   re.VERBOSE)
 
     def added_line_error(self, msg, line):
         lines = [ msg ]
-        if self.hunk_filename is not None:
-            lines.append('File: ' + self.hunk_filename)
+        if self.filename is not None:
+            lines.append('File: ' + self.filename)
         lines.append('Line: ' + line)
 
         self.error(*lines)
+
+    old_debug_re = \
+        re.compile(r'''
+                        DEBUG \s* \( \s* \( \s*
+                        (?: DEBUG_[A-Z_]+ \s* \| \s*)*
+                        EFI_D_ ([A-Z_]+)
+                   ''',
+                   re.VERBOSE)
 
     def check_added_line(self, line):
         eol = ''
@@ -356,6 +375,12 @@ class GitDiffCheck:
             self.added_line_error('Tab character used', line)
         if len(stripped) < len(line):
             self.added_line_error('Trailing whitespace found', line)
+
+        mo = self.old_debug_re.search(line)
+        if mo is not None:
+            self.added_line_error('EFI_D_' + mo.group(1) + ' was used, '
+                                  'but DEBUG_' + mo.group(1) +
+                                  ' is now recommended', line)
 
     split_diff_re = re.compile(r'''
                                    (?P<cmd>
@@ -436,6 +461,14 @@ class CheckOnePatch:
                    ''',
                    re.IGNORECASE | re.VERBOSE | re.MULTILINE)
 
+    subject_prefix_re = \
+        re.compile(r'''^
+                       \s* (\[
+                        [^\[\]]* # Allow all non-brackets
+                       \])* \s*
+                   ''',
+                   re.VERBOSE)
+
     def find_patch_pieces(self):
         if sys.version_info < (3, 0):
             patch = self.patch.encode('ascii', 'ignore')
@@ -472,14 +505,7 @@ class CheckOnePatch:
 
         self.commit_subject = pmail['subject'].replace('\r\n', '')
         self.commit_subject = self.commit_subject.replace('\n', '')
-
-        pfx_start = self.commit_subject.find('[')
-        if pfx_start >= 0:
-            pfx_end = self.commit_subject.find(']')
-            if pfx_end > pfx_start:
-                self.commit_prefix = self.commit_subject[pfx_start + 1 : pfx_end]
-                self.commit_subject = self.commit_subject[pfx_end + 1 :].lstrip()
-
+        self.commit_subject = self.subject_prefix_re.sub('', self.commit_subject, 1)
 
 class CheckGitCommits:
     """Reads patches from git based on the specified git revision range.

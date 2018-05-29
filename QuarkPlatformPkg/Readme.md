@@ -46,57 +46,13 @@
   - Install
 * ASL compiler: Available from http://www.acpica.org
   - Install into ```C:\ASL``` to match default tools_def.txt configuration.
+* Python 2.7: Available from http://www.python.org
 
 Create a new directory for an EDK II WORKSPACE.
 
 The code block below shows the GIT clone operations required to pull the EDK II
-source tree, the FatPkg sources, the pre-built versions of BaseTools as WIN32
-binaries, and the edk2-non-osi repository that provides a binary file for the
+source tree and the edk2-non-osi repository that provides a binary file for the
 Quark Remote Management Unit (RMU).
-
-Next it sets environment variables that must be set before running
-```edksetup.bat```. Since content is being pulled from multiple repositories,
-the EDK II [Multiple Workspace](
-https://github.com/tianocore/tianocore.github.io/wiki/Multiple_Workspace)
-feature is used.
-
-Next, the ```edksetup.bat``` file is run to complete the initialization of an
-EDK II build environment.  Two example build commands are shown.  The first one
-in ```QuarkPlatformPlg/Quark.dsc``` builds a full UEFI firmware image that is
-able to boot the built-in UEFI Shell and Linux from a micro SD FLASH card.  The
-second one in ```QuarkPlatformPkg/QuarkMin.dsc``` builds a minimal firmware
-image that is useful for initial power-on and debug of new features.
-
-```cmd
-git clone https://github.com/tianocore/edk2.git
-git clone https://github.com/tianocore/edk2-FatPkg.git FatPkg
-git clone https://github.com/tianocore/edk2-BaseTools-win32.git
-git clone https://github.com/tianocore/edk2-non-osi.git
-
-set WORKSPACE=%CD%
-set PACKAGES_PATH=%WORKSPACE%\edk2;%WORKSPACE%\edk2-non-osi
-set EDK_TOOLS_BIN=%WORKSPACE%\edk2-BaseTools-win32
-
-cd edk2
-edksetup.bat
-
-build -a IA32 -t VS2015x86 -p QuarkPlatformPkg/Quark.dsc
-build -a IA32 -t VS2015x86 -p QuarkPlatformPkg/QuarkMin.dsc
-```
-
-## **Linux Build Instructions**
-
-### Pre-requisites
-
-* GIT client
-* GCC 4.9 compiler
-* ASL compiler: Available from http://www.acpica.org.
-
-Create a new directory for an EDK II WORKSPACE.
-
-The code block below shows the GIT clone operations required to pull the EDK II
-source tree, the FatPkg sources, and the edk2-non-osi repository that provides a
-binary file for the Quark Remote Management Unit (RMU).
 
 Next it sets environment variables that must be set before running
 ```edksetup.bat```. Since content is being pulled from multiple repositories,
@@ -113,18 +69,64 @@ able to boot the built-in UEFI Shell and Linux from a micro SD FLASH card.  The
 second one in ```QuarkPlatformPkg/QuarkMin.dsc``` builds a minimal firmware
 image that is useful for initial power-on and debug of new features.
 
+```cmd
+git clone https://github.com/tianocore/edk2.git
+git clone https://github.com/tianocore/edk2-non-osi.git
+
+set PYTHON_HOME=c:\Python27
+set WORKSPACE=%CD%
+set PACKAGES_PATH=%WORKSPACE%\edk2;%WORKSPACE%\edk2-non-osi\Silicon\Intel
+set EDK_TOOLS_PATH=%WORKSPACE%\edk2\BaseTools
+cd %WORKSPACE%\edk2
+
+BaseTools\toolsetup.bat Rebuild
+
+edksetup.bat Rebuild
+
+build -a IA32 -t VS2015x86 -p QuarkPlatformPkg/Quark.dsc
+build -a IA32 -t VS2015x86 -p QuarkPlatformPkg/QuarkMin.dsc
+```
+
+## **Linux Build Instructions**
+
+### Pre-requisites
+
+* GIT client
+* GCC 4.9 compiler
+* ASL compiler: Available from http://www.acpica.org.
+* Python 2.7
+
+Create a new directory for an EDK II WORKSPACE.
+
+The code block below shows the GIT clone operations required to pull the EDK II
+source tree and the edk2-non-osi repository that provides a binary file for the
+Quark Remote Management Unit (RMU).
+
+Next it sets environment variables that must be set before running
+```edksetup.bat```. Since content is being pulled from multiple repositories,
+the EDK II [Multiple Workspace](
+https://github.com/tianocore/tianocore.github.io/wiki/Multiple_Workspace)
+feature is used.
+
+Next, the EDK II BaseTools required to build firmware images are built.
+
+Next, the ```edksetup.sh``` file is run to complete the initialization of an
+EDK II build environment.  Two example build commands are shown.  The first one
+in ```QuarkPlatformPlg/Quark.dsc``` builds a full UEFI firmware image that is
+able to boot the built-in UEFI Shell and Linux from a micro SD FLASH card.  The
+second one in ```QuarkPlatformPkg/QuarkMin.dsc``` builds a minimal firmware
+image that is useful for initial power-on and debug of new features.
+
 ```sh
 git clone https://github.com/tianocore/edk2.git
-git clone https://github.com/tianocore/edk2-FatPkg.git FatPkg
 git clone https://github.com/tianocore/edk2-non-osi.git
 
 export WORKSPACE=$PWD
-export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-non-osi
+export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-non-osi/Silicon/Intel
 export EDK_TOOLS_PATH=$WORKSPACE/edk2/BaseTools
-
-make -C edk2/BaseTools
-
 cd $WORKSPACE/edk2
+
+make -C BaseTools
 
 . edksetup.sh BaseTools
 
@@ -146,6 +148,8 @@ features on the build command line using ```-D``` flags.
 | ```SECURE_BOOT_ENABLE```   |             FALSE | TRUE, FALSE          |
 | ```MEASURED_BOOT_ENABLE``` |             FALSE | TRUE, FALSE          |
 | ```TPM_12_HARDWARE```      |              NONE | NONE, LPC, ATMEL_I2C, INFINEON_I2C |
+| ```CAPSULE_ENABLE```       |             FALSE | TRUE, FALSE          |
+| ```RECOVERY_ENABLE```      |             FALSE | TRUE, FALSE          |
 
 * ```GALILEO``` - Used to specify the type of Intel(R) Galileo board type.  The
   default is ```GEN2``` for the [Intel(R) Galileo Gen 2 Development Board](
@@ -199,6 +203,22 @@ features on the build command line using ```-D``` flags.
   has been tested with the [CryptoShield](https://www.sparkfun.com/products/13183)
   available from [SparkFun](https://www.sparkfun.com/).
 
+* ```CAPSULE_ENABLE``` - Used to enable/disable capsule update features.
+  The default is FALSE for disabled.  Add ```-D CAPSULE_ENABLE``` to the
+  build command line to enable capsule update features.
+  The build process generate capsule update image - QUARKFIRMWAREUPDATECAPSULEFMPPKCS7.Cap.
+  The user need copy QUARKFIRMWAREUPDATECAPSULEFMPPKCS7.Cap and CapsuleApp.efi
+  to a storage media attached to the Quark Board.
+  Then the user can boot to shell and run ```CapsuleApp QUARKFIRMWAREUPDATECAPSULEFMPPKCS7.Cap```.
+  In next reboot, the system firmware is updated.
+
+* ```RECOVERY_ENABLE``` - Used to enable/disable recovery features.
+  The default is FALSE for disabled.  Add ```-D RECOVERY_ENABLE``` to the
+  build command line to enable recovery features.
+  The build process generates the recovery capsule image - QUARKREC.Cap.
+  Then the user need copy QUARKREC.Cap to a USB KEY, plug the USB KEY to the Quark Board.
+  In next boot, if a user runs ForceRecovery.efi in shell, or if a user presses the RESET button during power on, warm reset or REBOOT,
+  or if the FvMain is corrupted in flash, the system will boot into recovery mode.
 
 ### **Example Build Commands**
 
@@ -224,8 +244,7 @@ Enable UEFI Secure Boot features:
 
 Enable UEFI Secure Boot and Measured Boot using Atmel I2C TPM hardware device:
 
-```build -a IA32 -t VS2015x86 -p QuarkPlatformPkg/Quark.dsc -D UEFI_SECURE_BOOT
--D MEASURED_BOOT_ENABLE -D TPM_12_HARDWARE=ATMEL_I2C```
+```build -a IA32 -t VS2015x86 -p QuarkPlatformPkg/Quark.dsc -D UEFI_SECURE_BOOT -D MEASURED_BOOT_ENABLE -D TPM_12_HARDWARE=ATMEL_I2C```
 
 ## **FLASH Update using DediProg SF100**
 

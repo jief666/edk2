@@ -1,7 +1,7 @@
 ## @file
 # This is NT32 FDF file with UEFI HII features enabled
 #
-# Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2007 - 2017, Intel Corporation. All rights reserved.<BR>
 # (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 #
 #    This program and the accompanying materials
@@ -28,10 +28,10 @@
 ################################################################################
 [FD.Nt32]
 BaseAddress   = 0x0|gEfiNt32PkgTokenSpaceGuid.PcdWinNtFdBaseAddress          #The base address of the FLASH Device.
-Size          = 0x00380000|gEfiNt32PkgTokenSpaceGuid.PcdWinNtFirmwareFdSize  #The size in bytes of the FLASH Device
+Size          = 0x00480000|gEfiNt32PkgTokenSpaceGuid.PcdWinNtFirmwareFdSize  #The size in bytes of the FLASH Device
 ErasePolarity = 1
 BlockSize     = 0x10000
-NumBlocks     = 0x38
+NumBlocks     = 0x48
 
 ################################################################################
 #
@@ -48,11 +48,11 @@ NumBlocks     = 0x38
 # RegionType <FV, DATA, or FILE>
 #
 ################################################################################
-0x00000000|0x00360000
+0x00000000|0x00460000
 gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashFvRecoveryBase|gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashFvRecoverySize
 FV = FvRecovery
 
-0x00360000|0x0000c000
+0x00460000|0x0000c000
 gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashNvStorageVariableBase|gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
 #NV_VARIABLE_STORE
 DATA = {
@@ -93,11 +93,11 @@ DATA = {
   0x5A, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 }
 
-0x0036c000|0x00002000
+0x0046c000|0x00002000
 #NV_EVENT_LOG
 gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashNvStorageEventLogBase|gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashNvStorageEventLogSize
 
-0x0036e000|0x00002000
+0x0046e000|0x00002000
 gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashNvStorageFtwWorkingBase|gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
 #NV_FTW_WORKING
 DATA = {
@@ -111,7 +111,7 @@ DATA = {
   0xE0, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 }
 
-0x00370000|0x00010000
+0x00470000|0x00010000
 #NV_FTW_SPARE
 gEfiNt32PkgTokenSpaceGuid.PcdWinNtFlashNvStorageFtwSpareBase|gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
 
@@ -171,6 +171,9 @@ APRIORI DXE {
   INF  MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
   INF  MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
   INF  Nt32Pkg/MetronomeDxe/MetronomeDxe.inf
+  INF  MdeModulePkg/Universal/ReportStatusCodeRouter/RuntimeDxe/ReportStatusCodeRouterRuntimeDxe.inf
+  INF  MdeModulePkg/Universal/StatusCodeHandler/RuntimeDxe/StatusCodeHandlerRuntimeDxe.inf
+  INF  Nt32Pkg/WinNtOemHookStatusCodeHandlerDxe/WinNtOemHookStatusCodeHandlerDxe.inf
   }
 
 INF  MdeModulePkg/Core/Pei/PeiMain.inf
@@ -197,7 +200,7 @@ INF  MdeModulePkg/Core/Dxe/DxeMain.inf
 INF  MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
 INF  Nt32Pkg/MetronomeDxe/MetronomeDxe.inf
 INF  Nt32Pkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
-INF  Nt32Pkg/ResetRuntimeDxe/ResetRuntimeDxe.inf
+INF  MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
 INF  MdeModulePkg/Core/RuntimeDxe/RuntimeDxe.inf
 INF  Nt32Pkg/FvbServicesRuntimeDxe/FvbServicesRuntimeDxe.inf
 INF  MdeModulePkg/Universal/SecurityStubDxe/SecurityStubDxe.inf
@@ -253,15 +256,30 @@ INF  MdeModulePkg/Universal/Network/Ip4Dxe/Ip4Dxe.inf
 INF  MdeModulePkg/Universal/Network/MnpDxe/MnpDxe.inf
 INF  MdeModulePkg/Universal/Network/VlanConfigDxe/VlanConfigDxe.inf
 INF  MdeModulePkg/Universal/Network/Mtftp4Dxe/Mtftp4Dxe.inf
-INF  MdeModulePkg/Universal/Network/Tcp4Dxe/Tcp4Dxe.inf
 INF  MdeModulePkg/Universal/Network/Udp4Dxe/Udp4Dxe.inf
 INF  Nt32Pkg/SnpNt32Dxe/SnpNt32Dxe.inf
+!if $(NETWORK_IP6_ENABLE) == TRUE
+INF  NetworkPkg/Ip6Dxe/Ip6Dxe.inf
+INF  NetworkPkg/Dhcp6Dxe/Dhcp6Dxe.inf
+INF  NetworkPkg/Udp6Dxe/Udp6Dxe.inf
+INF  NetworkPkg/Mtftp6Dxe/Mtftp6Dxe.inf
+INF  NetworkPkg/TcpDxe/TcpDxe.inf
+INF  NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf
+INF  NetworkPkg/IScsiDxe/IScsiDxe.inf
+!else
+INF  MdeModulePkg/Universal/Network/Tcp4Dxe/Tcp4Dxe.inf
 INF  MdeModulePkg/Universal/Network/UefiPxeBcDxe/UefiPxeBcDxe.inf
 INF  MdeModulePkg/Universal/Network/IScsiDxe/IScsiDxe.inf
+!endif
 INF  NetworkPkg/HttpBootDxe/HttpBootDxe.inf
 INF  NetworkPkg/DnsDxe/DnsDxe.inf
 INF  NetworkPkg/HttpDxe/HttpDxe.inf
 INF  NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
+!if $(TLS_ENABLE) == TRUE
+INF  NetworkPkg/TlsDxe/TlsDxe.inf
+INF  NetworkPkg/TlsAuthConfigDxe/TlsAuthConfigDxe.inf
+!endif
+INF  MdeModulePkg/Application/BootManagerMenuApp/BootManagerMenuApp.inf
 ################################################################################
 #
 # FILE statements are provided so that a platform integrator can include
@@ -271,18 +289,16 @@ INF  NetworkPkg/HttpUtilitiesDxe/HttpUtilitiesDxe.inf
 #
 ################################################################################
 !ifndef $(USE_OLD_SHELL)
-INF  ShellBinPkg/UefiShell/UefiShell.inf
+INF  ShellPkg/Application/Shell/Shell.inf
 !else
 INF  EdkShellBinPkg/FullShell/FullShell.inf
 !endif
 
 INF FatPkg/EnhancedFatDxe/Fat.inf
+INF MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
-FILE FREEFORM = PCD(gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdLogoFile) {
-    SECTION RAW = MdeModulePkg/Logo/Logo.bmp
-  }
-
-
+INF MdeModulePkg/Logo/LogoDxe.inf
+INF MdeModulePkg/Universal/LoadFileOnFv2/LoadFileOnFv2.inf
 ################################################################################
 #
 # Rules are use with the [FV] section's module INF type to define

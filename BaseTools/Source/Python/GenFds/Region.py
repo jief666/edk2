@@ -1,7 +1,7 @@
 ## @file
 # process FD Region generation
 #
-#  Copyright (c) 2007 - 2015, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -18,6 +18,7 @@
 from struct import *
 from GenFdsGlobalVariable import GenFdsGlobalVariable
 import StringIO
+import string
 from CommonDataClass.FdfClass import RegionClassObject
 import Common.LongFilePathOs as os
 from stat import *
@@ -25,6 +26,7 @@ from Common import EdkLogger
 from Common.BuildToolError import *
 from Common.LongFilePathSupport import OpenLongFilePath as open
 from Common.MultipleWorkspace import MultipleWorkspace as mws
+from Common.DataType import BINARY_FILE_TYPE_FV
 
 ## generate Region
 #
@@ -38,6 +40,25 @@ class Region(RegionClassObject):
     def __init__(self):
         RegionClassObject.__init__(self)
 
+
+    ## PadBuffer()
+    #
+    #   Add padding bytes to the Buffer
+    #
+    #   @param Buffer         The buffer the generated region data will be put
+    #                         in
+    #   @param ErasePolarity  Flash erase polarity
+    #   @param Size           Number of padding bytes requested
+    #
+
+    def PadBuffer(self, Buffer, ErasePolarity, Size):
+        if Size > 0:
+            if (ErasePolarity == '1') :
+                PadByte = pack('B', 0xFF)
+            else:
+                PadByte = pack('B', 0)
+            PadData = ''.join(PadByte for i in xrange(0, Size))
+            Buffer.write(PadData)
 
     ## AddToBuffer()
     #
@@ -54,13 +75,16 @@ class Region(RegionClassObject):
     #   @retval string      Generated FV file path
     #
 
-    def AddToBuffer(self, Buffer, BaseAddress, BlockSizeList, ErasePolarity, ImageBinDict, vtfDict=None, MacroDict={}):
+    def AddToBuffer(self, Buffer, BaseAddress, BlockSizeList, ErasePolarity, ImageBinDict, vtfDict=None, MacroDict={}, Flag=False):
         Size = self.Size
-        GenFdsGlobalVariable.InfLogger('\nGenerate Region at Offset 0x%X' % self.Offset)
-        GenFdsGlobalVariable.InfLogger("   Region Size = 0x%X" % Size)
+        if not Flag:
+            GenFdsGlobalVariable.InfLogger('\nGenerate Region at Offset 0x%X' % self.Offset)
+            GenFdsGlobalVariable.InfLogger("   Region Size = 0x%X" % Size)
         GenFdsGlobalVariable.SharpCounter = 0
+        if Flag and (self.RegionType != BINARY_FILE_TYPE_FV):
+            return
 
-        if self.RegionType == 'FV':
+        if self.RegionType == BINARY_FILE_TYPE_FV:
             #
             # Get Fv from FvDict
             #
@@ -71,26 +95,29 @@ class Region(RegionClassObject):
                 FileName = None
                 if RegionData.endswith(".fv"):
                     RegionData = GenFdsGlobalVariable.MacroExtend(RegionData, MacroDict)
-                    GenFdsGlobalVariable.InfLogger('   Region FV File Name = .fv : %s' % RegionData)
+                    if not Flag:
+                        GenFdsGlobalVariable.InfLogger('   Region FV File Name = .fv : %s' % RegionData)
                     if RegionData[1] != ':' :
                         RegionData = mws.join (GenFdsGlobalVariable.WorkSpaceDir, RegionData)
                     if not os.path.exists(RegionData):
                         EdkLogger.error("GenFds", FILE_NOT_FOUND, ExtraData=RegionData)
 
                     FileName = RegionData
-                elif RegionData.upper() + 'fv' in ImageBinDict.keys():
-                    GenFdsGlobalVariable.InfLogger('   Region Name = FV')
+                elif RegionData.upper() + 'fv' in ImageBinDict:
+                    if not Flag:
+                        GenFdsGlobalVariable.InfLogger('   Region Name = FV')
                     FileName = ImageBinDict[RegionData.upper() + 'fv']
                 else:
                     #
                     # Generate FvImage.
                     #
                     FvObj = None
-                    if RegionData.upper() in GenFdsGlobalVariable.FdfParser.Profile.FvDict.keys():
-                        FvObj = GenFdsGlobalVariable.FdfParser.Profile.FvDict.get(RegionData.upper())
+                    if RegionData.upper() in GenFdsGlobalVariable.FdfParser.Profile.FvDict:
+                        FvObj = GenFdsGlobalVariable.FdfParser.Profile.FvDict[RegionData.upper()]
 
-                    if FvObj != None :
-                        GenFdsGlobalVariable.InfLogger('   Region Name = FV')
+                    if FvObj is not None :
+                        if not Flag:
+                            GenFdsGlobalVariable.InfLogger('   Region Name = FV')
                         #
                         # Call GenFv tool
                         #
@@ -104,7 +131,10 @@ class Region(RegionClassObject):
                         FvBaseAddress = '0x%X' % self.FvAddress
                         BlockSize = None
                         BlockNum = None
-                        FvObj.AddToBuffer(FvBuffer, FvBaseAddress, BlockSize, BlockNum, ErasePolarity, vtfDict)
+                        FvObj.AddToBuffer(FvBuffer, FvBaseAddress, BlockSize, BlockNum, ErasePolarity, vtfDict, Flag=Flag)
+                        if Flag:
+                            continue
+
                         if FvBuffer.len > Size:
                             FvBuffer.close()
                             EdkLogger.error("GenFds", GENFDS_ERROR,
@@ -122,26 +152,22 @@ class Region(RegionClassObject):
                 #
                 # Add the exist Fv image into FD buffer
                 #
-                if FileName != None:
-                    FileLength = os.stat(FileName)[ST_SIZE]
-                    if FileLength > Size:
-                        EdkLogger.error("GenFds", GENFDS_ERROR,
-                                        "Size of FV File (%s) is larger than Region Size 0x%X specified." \
-                                        % (RegionData, Size))
-                    BinFile = open(FileName, 'r+b')
-                    Buffer.write(BinFile.read())
-                    BinFile.close()
-                    Size = Size - FileLength
+                if not Flag:
+                    if FileName is not None:
+                        FileLength = os.stat(FileName)[ST_SIZE]
+                        if FileLength > Size:
+                            EdkLogger.error("GenFds", GENFDS_ERROR,
+                                            "Size of FV File (%s) is larger than Region Size 0x%X specified." \
+                                            % (RegionData, Size))
+                        BinFile = open(FileName, 'rb')
+                        Buffer.write(BinFile.read())
+                        BinFile.close()
+                        Size = Size - FileLength
             #
             # Pad the left buffer
             #
-            if Size > 0:
-                if (ErasePolarity == '1') :
-                    PadData = 0xFF
-                else :
-                    PadData = 0
-                for i in range(0, Size):
-                    Buffer.write(pack('B', PadData))
+            if not Flag:
+                self.PadBuffer(Buffer, ErasePolarity, Size)
 
         if self.RegionType == 'CAPSULE':
             #
@@ -157,7 +183,7 @@ class Region(RegionClassObject):
                         EdkLogger.error("GenFds", FILE_NOT_FOUND, ExtraData=RegionData)
 
                     FileName = RegionData
-                elif RegionData.upper() + 'cap' in ImageBinDict.keys():
+                elif RegionData.upper() + 'cap' in ImageBinDict:
                     GenFdsGlobalVariable.InfLogger('   Region Name = CAPSULE')
                     FileName = ImageBinDict[RegionData.upper() + 'cap']
                 else:
@@ -165,10 +191,10 @@ class Region(RegionClassObject):
                     # Generate Capsule image and Put it into FD buffer
                     #
                     CapsuleObj = None
-                    if RegionData.upper() in GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict.keys():
+                    if RegionData.upper() in GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict:
                         CapsuleObj = GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict[RegionData.upper()]
 
-                    if CapsuleObj != None :
+                    if CapsuleObj is not None :
                         CapsuleObj.CapsuleName = RegionData.upper()
                         GenFdsGlobalVariable.InfLogger('   Region Name = CAPSULE')
                         #
@@ -187,20 +213,14 @@ class Region(RegionClassObject):
                     EdkLogger.error("GenFds", GENFDS_ERROR,
                                     "Size 0x%X of Capsule File (%s) is larger than Region Size 0x%X specified." \
                                     % (FileLength, RegionData, Size))
-                BinFile = open(FileName, 'r+b')
+                BinFile = open(FileName, 'rb')
                 Buffer.write(BinFile.read())
                 BinFile.close()
                 Size = Size - FileLength
             #
             # Pad the left buffer
             #
-            if Size > 0:
-                if (ErasePolarity == '1') :
-                    PadData = 0xFF
-                else :
-                    PadData = 0
-                for i in range(0, Size):
-                    Buffer.write(pack('B', PadData))
+            self.PadBuffer(Buffer, ErasePolarity, Size)
 
         if self.RegionType in ('FILE', 'INF'):
             for RegionData in self.RegionDataList:
@@ -232,13 +252,7 @@ class Region(RegionClassObject):
             #
             # Pad the left buffer
             #
-            if Size > 0:
-                if (ErasePolarity == '1') :
-                    PadData = 0xFF
-                else :
-                    PadData = 0
-                for i in range(0, Size):
-                    Buffer.write(pack('B', PadData))
+            self.PadBuffer(Buffer, ErasePolarity, Size)
 
         if self.RegionType == 'DATA' :
             GenFdsGlobalVariable.InfLogger('   Region Name = DATA')
@@ -255,22 +269,11 @@ class Region(RegionClassObject):
             #
             # Pad the left buffer
             #
-            if Size > 0:
-                if (ErasePolarity == '1') :
-                    PadData = 0xFF
-                else :
-                    PadData = 0
-                for i in range(0, Size):
-                    Buffer.write(pack('B', PadData))
+            self.PadBuffer(Buffer, ErasePolarity, Size)
 
-        if self.RegionType == None:
+        if self.RegionType is None:
             GenFdsGlobalVariable.InfLogger('   Region Name = None')
-            if (ErasePolarity == '1') :
-                PadData = 0xFF
-            else :
-                PadData = 0
-            for i in range(0, Size):
-                Buffer.write(pack('B', PadData))
+            self.PadBuffer(Buffer, ErasePolarity, Size)
 
     def GetFvAlignValue(self, Str):
         AlignValue = 1
@@ -331,7 +334,7 @@ class Region(RegionClassObject):
             # first check whether FvObj.BlockSizeList items have only "BlockSize" or "NumBlocks",
             # if so, use ExpectedList
             for Item in FvObj.BlockSizeList:
-                if Item[0] == None or Item[1] == None:
+                if Item[0] is None or Item[1] is None:
                     FvObj.BlockSizeList = ExpectedList
                     break
             # make sure region size is no smaller than the summed block size in FV

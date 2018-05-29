@@ -1,7 +1,7 @@
 /** @file
 Functions implementation related with DHCPv4/v6 for DNS driver.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -269,7 +269,7 @@ GetDns4ServerFromDhcp4 (
   EFI_STATUS                          Status;
   EFI_HANDLE                          Image;
   EFI_HANDLE                          Controller;
-  BOOLEAN                             MediaPresent;
+  EFI_STATUS                          MediaStatus;
   EFI_HANDLE                          MnpChildHandle;  
   EFI_MANAGED_NETWORK_PROTOCOL        *Mnp;
   EFI_MANAGED_NETWORK_CONFIG_DATA     MnpConfigData;
@@ -316,9 +316,9 @@ GetDns4ServerFromDhcp4 (
   //
   // Check media.
   //
-  MediaPresent = TRUE;
-  NetLibDetectMedia (Controller, &MediaPresent);
-  if (!MediaPresent) {
+  MediaStatus = EFI_SUCCESS;
+  NetLibDetectMediaWaitTimeout (Controller, DNS_CHECK_MEDIA_GET_DHCP_WAITING_TIME, &MediaStatus);
+  if (MediaStatus != EFI_SUCCESS) {
     return EFI_NO_MEDIA;
   }
 
@@ -462,7 +462,7 @@ GetDns4ServerFromDhcp4 (
   
   ParaList[0]->OpCode  = DHCP4_TAG_TYPE;
   ParaList[0]->Length  = 1;
-  ParaList[0]->Data[0] = DHCP4_MSG_INFORM;
+  ParaList[0]->Data[0] = DHCP4_MSG_REQUEST;
   
   ParaList[1] = AllocateZeroPool (sizeof (EFI_DHCP4_PACKET_OPTION));
   if (ParaList[1] == NULL) {
@@ -620,7 +620,7 @@ GetDns6ServerFromDhcp6 (
   EFI_DHCP6_PACKET_OPTION   *Oro;
   EFI_DHCP6_RETRANSMISSION  InfoReqReXmit;
   EFI_EVENT                 Timer;
-  BOOLEAN                   MediaPresent;
+  EFI_STATUS                MediaStatus;
   DNS6_SERVER_INFOR         DnsServerInfor;
 
   Dhcp6Handle = NULL;
@@ -635,9 +635,9 @@ GetDns6ServerFromDhcp6 (
   //
   // Check media status before doing DHCP.
   //
-  MediaPresent = TRUE;
-  NetLibDetectMedia (Controller, &MediaPresent);
-  if (!MediaPresent) {
+  MediaStatus = EFI_SUCCESS;
+  NetLibDetectMediaWaitTimeout (Controller, DNS_CHECK_MEDIA_GET_DHCP_WAITING_TIME, &MediaStatus);
+  if (MediaStatus != EFI_SUCCESS) {
     return EFI_NO_MEDIA;
   }
 

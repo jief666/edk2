@@ -1,7 +1,7 @@
 /** @file
   SMM IPL that produces SMM related runtime protocols and load the SMM Core into SMRAM
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials are licensed and made available 
   under the terms and conditions of the BSD License which accompanies this 
   distribution.  The full text of the license may be found at        
@@ -41,6 +41,14 @@
 #include <Library/ReportStatusCodeLib.h>
 
 #include "PiSmmCorePrivateData.h"
+
+#define SMRAM_CAPABILITIES  (EFI_MEMORY_WB | EFI_MEMORY_UC)
+
+#define MEMORY_CACHE_ATTRIBUTES (EFI_MEMORY_UC | EFI_MEMORY_WC | \
+                                 EFI_MEMORY_WT | EFI_MEMORY_WB | \
+                                 EFI_MEMORY_WP | EFI_MEMORY_UCE)
+
+#define MEMORY_PAGE_ATTRIBUTES  (EFI_MEMORY_XP | EFI_MEMORY_RP | EFI_MEMORY_RO)
 
 //
 // Function prototypes from produced protocols
@@ -90,20 +98,30 @@ SmmBase2GetSmstLocation (
   be called in physical mode prior to SetVirtualAddressMap() and in virtual mode 
   after SetVirtualAddressMap().
 
-  @param[in]     This                The EFI_SMM_COMMUNICATION_PROTOCOL instance.
-  @param[in, out] CommBuffer          A pointer to the buffer to convey into SMRAM.
-  @param[in, out] CommSize            The size of the data buffer being passed in.On exit, the size of data
-                                     being returned. Zero if the handler does not wish to reply with any data.
+  @param[in] This                The EFI_SMM_COMMUNICATION_PROTOCOL instance.
+  @param[in, out] CommBuffer     A pointer to the buffer to convey into SMRAM.
+  @param[in, out] CommSize       The size of the data buffer being passed in. On exit, the size of data
+                                 being returned. Zero if the handler does not wish to reply with any data.
+                                 This parameter is optional and may be NULL.
 
-  @retval EFI_SUCCESS                The message was successfully posted.
-  @retval EFI_INVALID_PARAMETER      The CommBuffer was NULL.
+  @retval EFI_SUCCESS            The message was successfully posted.
+  @retval EFI_INVALID_PARAMETER  The CommBuffer was NULL.
+  @retval EFI_BAD_BUFFER_SIZE    The buffer is too large for the MM implementation.
+                                 If this error is returned, the MessageLength field
+                                 in the CommBuffer header or the integer pointed by
+                                 CommSize, are updated to reflect the maximum payload
+                                 size the implementation can accommodate.
+  @retval EFI_ACCESS_DENIED      The CommunicateBuffer parameter or CommSize parameter,
+                                 if not omitted, are in address range that cannot be
+                                 accessed by the MM environment.
+
 **/
 EFI_STATUS
 EFIAPI
 SmmCommunicationCommunicate (
   IN CONST EFI_SMM_COMMUNICATION_PROTOCOL  *This,
   IN OUT VOID                              *CommBuffer,
-  IN OUT UINTN                             *CommSize
+  IN OUT UINTN                             *CommSize OPTIONAL
   );
 
 /**
@@ -263,13 +281,14 @@ EFI_PHYSICAL_ADDRESS       mSmramCacheBase;
 UINT64                     mSmramCacheSize;
 
 EFI_SMM_COMMUNICATE_HEADER mCommunicateHeader;
+EFI_LOAD_FIXED_ADDRESS_CONFIGURATION_TABLE    *mLMFAConfigurationTable = NULL;
 
 //
 // Table of Protocol notification and GUIDed Event notifications that the SMM IPL requires
 //
 SMM_IPL_EVENT_NOTIFICATION  mSmmIplEvents[] = {
   //
-  // Declare protocol notification on the SMM Configuration protocol.  When this notification is etablished, 
+  // Declare protocol notification on the SMM Configuration protocol.  When this notification is established,
   // the associated event is immediately signalled, so the notification function will be executed and the 
   // SMM Configuration Protocol will be found if it is already in the handle database.
   //
@@ -281,7 +300,7 @@ SMM_IPL_EVENT_NOTIFICATION  mSmmIplEvents[] = {
   //
   { TRUE,  TRUE,  &gEfiDxeSmmReadyToLockProtocolGuid, SmmIplReadyToLockEventNotify,      &gEfiDxeSmmReadyToLockProtocolGuid, TPL_CALLBACK, NULL },
   //
-  // Declare event notification on EndOfDxe event.  When this notification is etablished, 
+  // Declare event notification on EndOfDxe event.  When this notification is established,
   // the associated event is immediately signalled, so the notification function will be executed and the 
   // SMM End Of Dxe Protocol will be found if it is already in the handle database.
   //
@@ -439,37 +458,55 @@ SmmBase2GetSmstLocation (
   after SetVirtualAddressMap().
 
   @param[in] This                The EFI_SMM_COMMUNICATION_PROTOCOL instance.
-  @param[in, out] CommBuffer          A pointer to the buffer to convey into SMRAM.
-  @param[in, out] CommSize            The size of the data buffer being passed in.On exit, the size of data
+  @param[in, out] CommBuffer     A pointer to the buffer to convey into SMRAM.
+  @param[in, out] CommSize       The size of the data buffer being passed in. On exit, the size of data
                                  being returned. Zero if the handler does not wish to reply with any data.
+                                 This parameter is optional and may be NULL.
 
   @retval EFI_SUCCESS            The message was successfully posted.
   @retval EFI_INVALID_PARAMETER  The CommBuffer was NULL.
+  @retval EFI_BAD_BUFFER_SIZE    The buffer is too large for the MM implementation.
+                                 If this error is returned, the MessageLength field
+                                 in the CommBuffer header or the integer pointed by
+                                 CommSize, are updated to reflect the maximum payload
+                                 size the implementation can accommodate.
+  @retval EFI_ACCESS_DENIED      The CommunicateBuffer parameter or CommSize parameter,
+                                 if not omitted, are in address range that cannot be
+                                 accessed by the MM environment.
+
 **/
 EFI_STATUS
 EFIAPI
 SmmCommunicationCommunicate (
   IN CONST EFI_SMM_COMMUNICATION_PROTOCOL  *This,
   IN OUT VOID                              *CommBuffer,
-  IN OUT UINTN                             *CommSize
+  IN OUT UINTN                             *CommSize OPTIONAL
   )
 {
   EFI_STATUS                  Status;
   EFI_SMM_COMMUNICATE_HEADER  *CommunicateHeader;
   BOOLEAN                     OldInSmm;
+  UINTN                       TempCommSize;
 
   //
   // Check parameters
   //
-  if ((CommBuffer == NULL) || (CommSize == NULL)) {
+  if (CommBuffer == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  //
-  // CommSize must hold HeaderGuid and MessageLength
-  //
-  if (*CommSize < OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data)) {
-    return EFI_INVALID_PARAMETER;
+  CommunicateHeader = (EFI_SMM_COMMUNICATE_HEADER *) CommBuffer;
+
+  if (CommSize == NULL) {
+    TempCommSize = OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data) + CommunicateHeader->MessageLength;
+  } else {
+    TempCommSize = *CommSize;
+    //
+    // CommSize must hold HeaderGuid and MessageLength
+    //
+    if (TempCommSize < OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data)) {
+      return EFI_INVALID_PARAMETER;
+    }
   }
 
   //
@@ -480,7 +517,7 @@ SmmCommunicationCommunicate (
     // Put arguments for Software SMI in gSmmCorePrivate
     //
     gSmmCorePrivate->CommunicationBuffer = CommBuffer;
-    gSmmCorePrivate->BufferSize          = *CommSize;
+    gSmmCorePrivate->BufferSize          = TempCommSize;
 
     //
     // Generate Software SMI
@@ -493,15 +530,17 @@ SmmCommunicationCommunicate (
     //
     // Return status from software SMI 
     //
-    *CommSize = gSmmCorePrivate->BufferSize;
+    if (CommSize != NULL) {
+      *CommSize = gSmmCorePrivate->BufferSize;
+    }
     return gSmmCorePrivate->ReturnStatus;
   }
 
   //
   // If we are in SMM, then the execution mode must be physical, which means that
   // OS established virtual addresses can not be used.  If SetVirtualAddressMap()
-  // has been called, then a direct invocation of the Software SMI is not 
-  // not allowed so return EFI_INVALID_PARAMETER.
+  // has been called, then a direct invocation of the Software SMI is not allowed,
+  // so return EFI_INVALID_PARAMETER.
   //
   if (EfiGoneVirtual()) {
     return EFI_INVALID_PARAMETER;
@@ -521,22 +560,19 @@ SmmCommunicationCommunicate (
   gSmmCorePrivate->InSmm = TRUE;
 
   //
-  // Already in SMM and before SetVirtualAddressMap(), so call SmiManage() directly.
+  // Before SetVirtualAddressMap(), we are in SMM or SMRAM is open and unlocked, call SmiManage() directly.
   //
-  CommunicateHeader = (EFI_SMM_COMMUNICATE_HEADER *)CommBuffer;
-  *CommSize -= OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data);
+  TempCommSize -= OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data);
   Status = gSmmCorePrivate->Smst->SmiManage (
                                     &CommunicateHeader->HeaderGuid, 
                                     NULL, 
                                     CommunicateHeader->Data, 
-                                    CommSize
+                                    &TempCommSize
                                     );
-
-  //
-  // Update CommunicationBuffer, BufferSize and ReturnStatus
-  // Communicate service finished, reset the pointer to CommBuffer to NULL
-  //
-  *CommSize += OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data);
+  TempCommSize += OFFSET_OF (EFI_SMM_COMMUNICATE_HEADER, Data);
+  if (CommSize != NULL) {
+    *CommSize = TempCommSize;
+  }
 
   //
   // Restore original InSmm state
@@ -810,13 +846,13 @@ SmmIplSetVirtualAddressNotify (
 }
 
 /**
-  Get the fixed loadding address from image header assigned by build tool. This function only be called
+  Get the fixed loading address from image header assigned by build tool. This function only be called
   when Loading module at Fixed address feature enabled.
 
   @param  ImageContext              Pointer to the image context structure that describes the PE/COFF
                                     image that needs to be examined by this function.
   @retval EFI_SUCCESS               An fixed loading address is assigned to this image by build tools .
-  @retval EFI_NOT_FOUND             The image has no assigned fixed loadding address.
+  @retval EFI_NOT_FOUND             The image has no assigned fixed loading address.
 **/
 EFI_STATUS
 GetPeCoffImageFixLoadingAssignedAddress(
@@ -827,7 +863,7 @@ GetPeCoffImageFixLoadingAssignedAddress(
    EFI_STATUS                         Status;
    EFI_IMAGE_SECTION_HEADER           SectionHeader;
    EFI_IMAGE_OPTIONAL_HEADER_UNION    *ImgHdr;
-   EFI_PHYSICAL_ADDRESS               FixLoaddingAddress;
+   EFI_PHYSICAL_ADDRESS               FixLoadingAddress;
    UINT16                             Index;
    UINTN                              Size;
    UINT16                             NumberOfSections;
@@ -839,19 +875,17 @@ GetPeCoffImageFixLoadingAssignedAddress(
    //
    SmmCodeSize = EFI_PAGES_TO_SIZE (PcdGet32(PcdLoadFixAddressSmmCodePageNumber));
  
-   FixLoaddingAddress = 0;
+   FixLoadingAddress = 0;
    Status = EFI_NOT_FOUND;
-   SmramBase = mCurrentSmramRange->CpuStart;
+   SmramBase = mLMFAConfigurationTable->SmramBase;
    //
    // Get PeHeader pointer
    //
    ImgHdr = (EFI_IMAGE_OPTIONAL_HEADER_UNION *)((CHAR8* )ImageContext->Handle + ImageContext->PeCoffHeaderOffset);
-   SectionHeaderOffset = (UINTN)(
-                                 ImageContext->PeCoffHeaderOffset +
-                                 sizeof (UINT32) +
-                                 sizeof (EFI_IMAGE_FILE_HEADER) +
-                                 ImgHdr->Pe32.FileHeader.SizeOfOptionalHeader
-                                 );
+   SectionHeaderOffset = ImageContext->PeCoffHeaderOffset +
+                         sizeof (UINT32) +
+                         sizeof (EFI_IMAGE_FILE_HEADER) +
+                         ImgHdr->Pe32.FileHeader.SizeOfOptionalHeader;
    NumberOfSections = ImgHdr->Pe32.FileHeader.NumberOfSections;
 
    //
@@ -879,21 +913,21 @@ GetPeCoffImageFixLoadingAssignedAddress(
        // Build tool saves the offset to SMRAM base as image base in PointerToRelocations & PointerToLineNumbers fields in the
        // first section header that doesn't point to code section in image header. And there is an assumption that when the
        // feature is enabled, if a module is assigned a loading address by tools, PointerToRelocations & PointerToLineNumbers
-       // fields should NOT be Zero, or else, these 2 fileds should be set to Zero
+       // fields should NOT be Zero, or else, these 2 fields should be set to Zero
        //
        ValueInSectionHeader = ReadUnaligned64((UINT64*)&SectionHeader.PointerToRelocations);
        if (ValueInSectionHeader != 0) {
          //
-         // Found first section header that doesn't point to code section in which uild tool saves the
+         // Found first section header that doesn't point to code section in which build tool saves the
          // offset to SMRAM base as image base in PointerToRelocations & PointerToLineNumbers fields
          //
-         FixLoaddingAddress = (EFI_PHYSICAL_ADDRESS)(SmramBase + (INT64)ValueInSectionHeader);
+         FixLoadingAddress = (EFI_PHYSICAL_ADDRESS)(SmramBase + (INT64)ValueInSectionHeader);
 
-         if (SmramBase + SmmCodeSize > FixLoaddingAddress && SmramBase <=  FixLoaddingAddress) {
+         if (SmramBase + SmmCodeSize > FixLoadingAddress && SmramBase <=  FixLoadingAddress) {
            //
-           // The assigned address is valid. Return the specified loadding address
+           // The assigned address is valid. Return the specified loading address
            //
-           ImageContext->ImageAddress = FixLoaddingAddress;
+           ImageContext->ImageAddress = FixLoadingAddress;
            Status = EFI_SUCCESS;
          }
        }
@@ -901,7 +935,7 @@ GetPeCoffImageFixLoadingAssignedAddress(
      }
      SectionHeaderOffset += sizeof (EFI_IMAGE_SECTION_HEADER);
    }
-   DEBUG ((EFI_D_INFO|EFI_D_LOAD, "LOADING MODULE FIXED INFO: Loading module at fixed address %x, Status = %r \n", FixLoaddingAddress, Status));
+   DEBUG ((EFI_D_INFO|EFI_D_LOAD, "LOADING MODULE FIXED INFO: Loading module at fixed address %x, Status = %r \n", FixLoadingAddress, Status));
    return Status;
 }
 /**
@@ -973,6 +1007,10 @@ ExecuteSmmCoreFromSmram (
       // Since the memory range to load SMM CORE will be cut out in SMM core, so no need to allocate and free this range
       //
       PageCount = 0;
+      //
+      // Reserved Smram Region for SmmCore is not used, and remove it from SmramRangeCount.
+      //
+      gSmmCorePrivate->SmramRangeCount --;
     } else {
       DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR: Loading module at fixed address at address failed\n"));
       //
@@ -1018,7 +1056,7 @@ ExecuteSmmCoreFromSmram (
   }
   
   ImageContext.ImageAddress += ImageContext.SectionAlignment - 1;
-  ImageContext.ImageAddress &= ~((EFI_PHYSICAL_ADDRESS)(ImageContext.SectionAlignment - 1));
+  ImageContext.ImageAddress &= ~((EFI_PHYSICAL_ADDRESS)ImageContext.SectionAlignment - 1);
 
   //
   // Print debug message showing SMM Core load address.
@@ -1299,6 +1337,7 @@ GetFullSmramRanges (
   UINTN                             Index2;
   EFI_SMRAM_DESCRIPTOR              *FullSmramRanges;
   UINTN                             TempSmramRangeCount;
+  UINTN                             AdditionSmramRangeCount;
   EFI_SMRAM_DESCRIPTOR              *TempSmramRanges;
   UINTN                             SmramRangeCount;
   EFI_SMRAM_DESCRIPTOR              *SmramRanges;
@@ -1332,12 +1371,22 @@ GetFullSmramRanges (
     }
   }
 
+  //
+  // Reserve one entry for SMM Core in the full SMRAM ranges.
+  //
+  AdditionSmramRangeCount = 1;
+  if (PcdGet64(PcdLoadModuleAtFixAddressEnable) != 0) {
+    //
+    // Reserve two entries for all SMM drivers and SMM Core in the full SMRAM ranges.
+    //
+    AdditionSmramRangeCount = 2;
+  }
+
   if (SmramReservedCount == 0) {
     //
     // No reserved SMRAM entry from SMM Configuration Protocol.
-    // Reserve one entry for SMM Core in the full SMRAM ranges.
     //
-    *FullSmramRangeCount = SmramRangeCount + 1;
+    *FullSmramRangeCount = SmramRangeCount + AdditionSmramRangeCount;
     Size = (*FullSmramRangeCount) * sizeof (EFI_SMRAM_DESCRIPTOR);
     FullSmramRanges = (EFI_SMRAM_DESCRIPTOR *) AllocateZeroPool (Size);
     ASSERT (FullSmramRanges != NULL);
@@ -1449,10 +1498,9 @@ GetFullSmramRanges (
   ASSERT (TempSmramRangeCount <= MaxCount);
 
   //
-  // Sort the entries,
-  // and reserve one entry for SMM Core in the full SMRAM ranges.
+  // Sort the entries
   //
-  FullSmramRanges = AllocateZeroPool ((TempSmramRangeCount + 1) * sizeof (EFI_SMRAM_DESCRIPTOR));
+  FullSmramRanges = AllocateZeroPool ((TempSmramRangeCount + AdditionSmramRangeCount) * sizeof (EFI_SMRAM_DESCRIPTOR));
   ASSERT (FullSmramRanges != NULL);
   *FullSmramRangeCount = 0;
   do {
@@ -1472,7 +1520,7 @@ GetFullSmramRanges (
     TempSmramRanges[Index].PhysicalSize = 0;
   } while (*FullSmramRangeCount < TempSmramRangeCount);
   ASSERT (*FullSmramRangeCount == TempSmramRangeCount);
-  *FullSmramRangeCount += 1;
+  *FullSmramRangeCount += AdditionSmramRangeCount;
 
   FreePool (SmramRanges);
   FreePool (SmramReservedRanges);
@@ -1507,9 +1555,10 @@ SmmIplEntry (
   UINT64                          MaxSize;
   VOID                            *Registration;
   UINT64                          SmmCodeSize;
-  EFI_LOAD_FIXED_ADDRESS_CONFIGURATION_TABLE    *LMFAConfigurationTable;
   EFI_CPU_ARCH_PROTOCOL           *CpuArch;
   EFI_STATUS                      SetAttrStatus;
+  EFI_SMRAM_DESCRIPTOR            *SmramRangeSmmDriver;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR MemDesc;
 
   //
   // Fill in the image handle of the SMM IPL so the SMM Core can use this as the 
@@ -1576,21 +1625,48 @@ SmmIplEntry (
 
     GetSmramCacheRange (mCurrentSmramRange, &mSmramCacheBase, &mSmramCacheSize);
     //
-    // If CPU AP is present, attempt to set SMRAM cacheability to WB
+    // Make sure we can change the desired memory attributes.
+    //
+    Status = gDS->GetMemorySpaceDescriptor (
+                    mSmramCacheBase,
+                    &MemDesc
+                    );
+    ASSERT_EFI_ERROR (Status);
+    if ((MemDesc.Capabilities & SMRAM_CAPABILITIES) != SMRAM_CAPABILITIES) {
+      gDS->SetMemorySpaceCapabilities (
+             mSmramCacheBase,
+             mSmramCacheSize,
+             MemDesc.Capabilities | SMRAM_CAPABILITIES
+             );
+    }
+    //
+    // If CPU AP is present, attempt to set SMRAM cacheability to WB and clear
+    // all paging attributes.
     // Note that it is expected that cacheability of SMRAM has been set to WB if CPU AP
     // is not available here.
     //
     CpuArch = NULL;
     Status = gBS->LocateProtocol (&gEfiCpuArchProtocolGuid, NULL, (VOID **)&CpuArch);
     if (!EFI_ERROR (Status)) {
-      Status = gDS->SetMemorySpaceAttributes(
-                      mSmramCacheBase, 
+      MemDesc.Attributes &= ~(MEMORY_CACHE_ATTRIBUTES | MEMORY_PAGE_ATTRIBUTES);
+      MemDesc.Attributes |= EFI_MEMORY_WB;
+      Status = gDS->SetMemorySpaceAttributes (
+                      mSmramCacheBase,
                       mSmramCacheSize,
-                      EFI_MEMORY_WB
+                      MemDesc.Attributes
                       );
       if (EFI_ERROR (Status)) {
         DEBUG ((DEBUG_WARN, "SMM IPL failed to set SMRAM window to EFI_MEMORY_WB\n"));
-      }  
+      }
+
+      DEBUG_CODE (
+        gDS->GetMemorySpaceDescriptor (
+               mSmramCacheBase,
+               &MemDesc
+               );
+        DEBUG ((DEBUG_INFO, "SMRAM attributes: %016lx\n", MemDesc.Attributes));
+        ASSERT ((MemDesc.Attributes & MEMORY_PAGE_ATTRIBUTES) == 0);
+      );
     }
     //
     // if Loading module at Fixed Address feature is enabled, save the SMRAM base to Load
@@ -1610,15 +1686,28 @@ SmmIplEntry (
       //
       Status = EfiGetSystemConfigurationTable (
                 &gLoadFixedAddressConfigurationTableGuid,
-               (VOID **) &LMFAConfigurationTable
+               (VOID **) &mLMFAConfigurationTable
                );
-      if (!EFI_ERROR (Status) && LMFAConfigurationTable != NULL) {
-        LMFAConfigurationTable->SmramBase = mCurrentSmramRange->CpuStart;
+      if (!EFI_ERROR (Status) && mLMFAConfigurationTable != NULL) {
+        mLMFAConfigurationTable->SmramBase = mCurrentSmramRange->CpuStart;
         //
         // Print the SMRAM base
         //
-        DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: TSEG BASE is %x. \n", LMFAConfigurationTable->SmramBase));
+        DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: TSEG BASE is %x. \n", mLMFAConfigurationTable->SmramBase));
       }
+
+      //
+      // Fill the Smram range for all SMM code
+      //
+      SmramRangeSmmDriver = &gSmmCorePrivate->SmramRanges[gSmmCorePrivate->SmramRangeCount - 2];
+      SmramRangeSmmDriver->CpuStart      = mCurrentSmramRange->CpuStart;
+      SmramRangeSmmDriver->PhysicalStart = mCurrentSmramRange->PhysicalStart;
+      SmramRangeSmmDriver->RegionState   = mCurrentSmramRange->RegionState | EFI_ALLOCATED;
+      SmramRangeSmmDriver->PhysicalSize  = SmmCodeSize;
+
+      mCurrentSmramRange->PhysicalSize  -= SmmCodeSize;
+      mCurrentSmramRange->CpuStart       = mCurrentSmramRange->CpuStart + SmmCodeSize;
+      mCurrentSmramRange->PhysicalStart  = mCurrentSmramRange->PhysicalStart + SmmCodeSize;
     }
     //
     // Load SMM Core into SMRAM and execute it from SMRAM

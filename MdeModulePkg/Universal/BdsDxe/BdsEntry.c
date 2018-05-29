@@ -5,7 +5,7 @@
   After DxeCore finish DXE phase, gEfiBdsArchProtocolGuid->BdsEntry will be invoked
   to enter BDS phase.
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
 This program and the accompanying materials
@@ -86,6 +86,81 @@ BdsDxeOnConnectConInCallBack (
     DEBUG ((EFI_D_WARN, "[Bds] Connect ConIn failed - %r!!!\n", Status));
   }
 }
+/**
+  Notify function for event group EFI_EVENT_GROUP_READY_TO_BOOT. This is used to
+  check whether there is remaining deferred load images.
+
+  @param[in]  Event   The Event that is being processed.
+  @param[in]  Context The Event Context.
+
+**/
+VOID
+EFIAPI
+CheckDeferredLoadImageOnReadyToBoot (
+  IN EFI_EVENT        Event,
+  IN VOID             *Context
+  )
+{
+  EFI_STATUS                         Status;
+  EFI_DEFERRED_IMAGE_LOAD_PROTOCOL   *DeferredImage;
+  UINTN                              HandleCount;
+  EFI_HANDLE                         *Handles;
+  UINTN                              Index;
+  UINTN                              ImageIndex;
+  EFI_DEVICE_PATH_PROTOCOL           *ImageDevicePath;
+  VOID                               *Image;
+  UINTN                              ImageSize;
+  BOOLEAN                            BootOption;
+  CHAR16                             *DevicePathStr;
+
+  //
+  // Find all the deferred image load protocols.
+  //
+  HandleCount = 0;
+  Handles = NULL;
+  Status = gBS->LocateHandleBuffer (
+    ByProtocol,
+    &gEfiDeferredImageLoadProtocolGuid,
+    NULL,
+    &HandleCount,
+    &Handles
+  );
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  for (Index = 0; Index < HandleCount; Index++) {
+    Status = gBS->HandleProtocol (Handles[Index], &gEfiDeferredImageLoadProtocolGuid, (VOID **) &DeferredImage);
+    if (EFI_ERROR (Status)) {
+      continue;
+    }
+
+    for (ImageIndex = 0; ; ImageIndex++) {
+      //
+      // Load all the deferred images in this protocol instance.
+      //
+      Status = DeferredImage->GetImageInfo (
+        DeferredImage,
+        ImageIndex,
+        &ImageDevicePath,
+        (VOID **) &Image,
+        &ImageSize,
+        &BootOption
+      );
+      if (EFI_ERROR (Status)) {
+        break;
+      }
+      DevicePathStr = ConvertDevicePathToText (ImageDevicePath, FALSE, FALSE);
+      DEBUG ((DEBUG_LOAD, "[Bds] Image was deferred but not loaded: %s.\n", DevicePathStr));
+      if (DevicePathStr != NULL) {
+        FreePool (DevicePathStr);
+      }
+    }
+  }
+  if (Handles != NULL) {
+    FreePool (Handles);
+  }
+}
 
 /**
 
@@ -119,6 +194,21 @@ BdsInitialize (
                   );
   ASSERT_EFI_ERROR (Status);
 
+  DEBUG_CODE (
+    EFI_EVENT   Event;
+    //
+    // Register notify function to check deferred images on ReadyToBoot Event.
+    //
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    CheckDeferredLoadImageOnReadyToBoot,
+                    NULL,
+                    &gEfiEventReadyToBootGuid,
+                    &Event
+                    );
+    ASSERT_EFI_ERROR (Status);
+  );
   return Status;
 }
 
@@ -280,6 +370,11 @@ BootBootOptions (
   UINTN                              Index;
 
   //
+  // Report Status Code to indicate BDS starts attempting booting from the UEFI BootOrder list.
+  //
+  REPORT_STATUS_CODE (EFI_PROGRESS_CODE, (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_DXE_BS_PC_ATTEMPT_BOOT_ORDER_EVENT));
+
+  //
   // Attempt boot each boot option
   //
   for (Index = 0; Index < BootOptionCount; Index++) {
@@ -353,17 +448,28 @@ ProcessLoadOptions (
       LoadOptionType = LoadOptions[Index].OptionType;
     }
     ASSERT (LoadOptionType == LoadOptions[Index].OptionType);
+    ASSERT (LoadOptionType != LoadOptionTypeBoot);
 
     Status = EfiBootManagerProcessLoadOption (&LoadOptions[Index]);
 
+    //
+    // Status indicates whether the load option is loaded and executed
+    // LoadOptions[Index].Status is what the load option returns
+    //
     if (!EFI_ERROR (Status)) {
-      if (LoadOptionType == LoadOptionTypePlatformRecovery) {
-        //
-        // Stop processing if any entry is successful
-        //
+      //
+      // Stop processing if any PlatformRecovery#### returns success.
+      //
+      if ((LoadOptions[Index].Status == EFI_SUCCESS) &&
+          (LoadOptionType == LoadOptionTypePlatformRecovery)) {
         break;
       }
-      if ((LoadOptions[Index].Attributes & LOAD_OPTION_FORCE_RECONNECT) != 0) {
+
+      //
+      // Only set ReconnectAll flag when the load option executes successfully.
+      //
+      if (!EFI_ERROR (LoadOptions[Index].Status) &&
+          (LoadOptions[Index].Attributes & LOAD_OPTION_FORCE_RECONNECT) != 0) {
         ReconnectAll = TRUE;
       }
     }
@@ -529,53 +635,51 @@ BdsFormalizeEfiGlobalVariable (
 }
 
 /**
+  Enter an infinite loop of calling the Boot Manager Menu.
 
-  Allocate a block of memory that will contain performance data to OS.
+  This is a last resort alternative to BdsEntry() giving up for good. This
+  function never returns.
 
+  @param[in] BootManagerMenu  The EFI_BOOT_MANAGER_LOAD_OPTION located and/or
+                              created by the EfiBootManagerGetBootManagerMenu()
+                              call in BdsEntry().
 **/
 VOID
-BdsAllocateMemoryForPerformanceData (
-  VOID
+BdsBootManagerMenuLoop (
+  IN EFI_BOOT_MANAGER_LOAD_OPTION *BootManagerMenu
   )
 {
-  EFI_STATUS                    Status;
-  EFI_PHYSICAL_ADDRESS          AcpiLowMemoryBase;
-  EDKII_VARIABLE_LOCK_PROTOCOL  *VariableLock;
-
-  AcpiLowMemoryBase = 0x0FFFFFFFFULL;
+  EFI_INPUT_KEY Key;
 
   //
-  // Allocate a block of memory that will contain performance data to OS.
+  // Normally BdsDxe does not print anything to the system console, but this is
+  // a last resort -- the end-user will likely not see any DEBUG messages
+  // logged in this situation.
   //
-  Status = gBS->AllocatePages (
-                  AllocateMaxAddress,
-                  EfiReservedMemoryType,
-                  EFI_SIZE_TO_PAGES (PERF_DATA_MAX_LENGTH),
-                  &AcpiLowMemoryBase
-                  );
-  if (!EFI_ERROR (Status)) {
+  // AsciiPrint() will NULL-check gST->ConOut internally. We check gST->ConIn
+  // here to see if it makes sense to request and wait for a keypress.
+  //
+  if (gST->ConIn != NULL) {
+    AsciiPrint (
+      "%a: No bootable option or device was found.\n"
+      "%a: Press any key to enter the Boot Manager Menu.\n",
+      gEfiCallerBaseName,
+      gEfiCallerBaseName
+      );
+    BdsWaitForSingleEvent (gST->ConIn->WaitForKey, 0);
+
     //
-    // Save the pointer to variable for use in S3 resume.
+    // Drain any queued keys.
     //
-    Status = BdsDxeSetVariableAndReportStatusCodeOnError (
-               L"PerfDataMemAddr",
-               &gPerformanceProtocolGuid,
-               EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-               sizeof (EFI_PHYSICAL_ADDRESS),
-               &AcpiLowMemoryBase
-               );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((EFI_D_ERROR, "[Bds] PerfDataMemAddr (%08x) cannot be saved to NV storage.\n", AcpiLowMemoryBase));
+    while (!EFI_ERROR (gST->ConIn->ReadKeyStroke (gST->ConIn, &Key))) {
+      //
+      // just throw away Key
+      //
     }
-    //
-    // Mark L"PerfDataMemAddr" variable to read-only if the Variable Lock protocol exists
-    // Still lock it even the variable cannot be saved to prevent it's set by 3rd party code.
-    //
-    Status = gBS->LocateProtocol (&gEdkiiVariableLockProtocolGuid, NULL, (VOID **) &VariableLock);
-    if (!EFI_ERROR (Status)) {
-      Status = VariableLock->RequestToLock (VariableLock, L"PerfDataMemAddr", &gPerformanceProtocolGuid);
-      ASSERT_EFI_ERROR (Status);
-    }
+  }
+
+  for (;;) {
+    EfiBootManagerBoot (BootManagerMenu);
   }
 }
 
@@ -625,10 +729,6 @@ BdsEntry (
   PERF_START (NULL, "BDS", NULL, 0);
   DEBUG ((EFI_D_INFO, "[Bds] Entry...\n"));
 
-  PERF_CODE (
-    BdsAllocateMemoryForPerformanceData ();
-  );
-
   //
   // Fill in FirmwareVendor and FirmwareRevision from PCDs
   //
@@ -654,7 +754,7 @@ BdsEntry (
   Status = gBS->LocateProtocol (&gEdkiiVariableLockProtocolGuid, NULL, (VOID **) &VariableLock);
   DEBUG ((EFI_D_INFO, "[BdsDxe] Locate Variable Lock protocol - %r\n", Status));
   if (!EFI_ERROR (Status)) {
-    for (Index = 0; Index < sizeof (mReadOnlyVariables) / sizeof (mReadOnlyVariables[0]); Index++) {
+    for (Index = 0; Index < ARRAY_SIZE (mReadOnlyVariables); Index++) {
       Status = VariableLock->RequestToLock (VariableLock, mReadOnlyVariables[Index], &gEfiGlobalVariableGuid);
       ASSERT_EFI_ERROR (Status);
     }
@@ -702,7 +802,8 @@ BdsEntry (
   ASSERT_EFI_ERROR (Status);
 
   //
-  // Cache and remove the "BootNext" NV variable.
+  // Cache the "BootNext" NV variable before calling any PlatformBootManagerLib APIs
+  // This could avoid the "BootNext" set by PlatformBootManagerLib be consumed in this boot.
   //
   GetEfiGlobalVariable2 (EFI_BOOT_NEXT_VARIABLE_NAME, (VOID **) &BootNext, &DataSize);
   if (DataSize != sizeof (UINT16)) {
@@ -711,17 +812,6 @@ BdsEntry (
     }
     BootNext = NULL;
   }
-  Status = gRT->SetVariable (
-                  EFI_BOOT_NEXT_VARIABLE_NAME,
-                  &gEfiGlobalVariableGuid,
-                  0,
-                  0,
-                  NULL
-                  );
-  //
-  // Deleting NV variable shouldn't fail unless it doesn't exist.
-  //
-  ASSERT (Status == EFI_SUCCESS || Status == EFI_NOT_FOUND);
 
   //
   // Initialize the platform language variables
@@ -736,7 +826,7 @@ BdsEntry (
   FilePath = FileDevicePath (NULL, EFI_REMOVABLE_MEDIA_FILE_NAME);
   Status = EfiBootManagerInitializeLoadOption (
              &LoadOption,
-             0,
+             LoadOptionNumberUnassigned,
              LoadOptionTypePlatformRecovery,
              LOAD_OPTION_ACTIVE,
              L"Default PlatformRecovery",
@@ -745,9 +835,24 @@ BdsEntry (
              0
              );
   ASSERT_EFI_ERROR (Status);
-  EfiBootManagerLoadOptionToVariable (&LoadOption);
+  LoadOptions = EfiBootManagerGetLoadOptions (&LoadOptionCount, LoadOptionTypePlatformRecovery);
+  if (EfiBootManagerFindLoadOption (&LoadOption, LoadOptions, LoadOptionCount) == -1) {
+    for (Index = 0; Index < LoadOptionCount; Index++) {
+      //
+      // The PlatformRecovery#### options are sorted by OptionNumber.
+      // Find the the smallest unused number as the new OptionNumber.
+      //
+      if (LoadOptions[Index].OptionNumber != Index) {
+        break;
+      }
+    }
+    LoadOption.OptionNumber = Index;
+    Status = EfiBootManagerLoadOptionToVariable (&LoadOption);
+    ASSERT_EFI_ERROR (Status);
+  }
   EfiBootManagerFreeLoadOption (&LoadOption);
   FreePool (FilePath);
+  EfiBootManagerFreeLoadOptions (LoadOptions, LoadOptionCount);
 
   //
   // Report Status Code to indicate connecting drivers will happen
@@ -756,6 +861,23 @@ BdsEntry (
     EFI_PROGRESS_CODE,
     (EFI_SOFTWARE_DXE_BS_DRIVER | EFI_SW_DXE_BS_PC_BEGIN_CONNECTING_DRIVERS)
     );
+
+  //
+  // Initialize ConnectConIn event before calling platform code.
+  //
+  if (PcdGetBool (PcdConInConnectOnDemand)) {
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_CALLBACK,
+                    BdsDxeOnConnectConInCallBack,
+                    NULL,
+                    &gConnectConInEventGuid,
+                    &gConnectConInEvent
+                    );
+    if (EFI_ERROR (Status)) {
+      gConnectConInEvent = NULL;
+    }
+  }
 
   //
   // Do the platform init, can be customized by OEM/IBV
@@ -789,21 +911,9 @@ BdsEntry (
   if (PcdGetBool (PcdConInConnectOnDemand)) {
     EfiBootManagerConnectConsoleVariable (ConOut);
     EfiBootManagerConnectConsoleVariable (ErrOut);
-
     //
-    // Initialize ConnectConIn event
+    // Do not connect ConIn devices when lazy ConIn feature is ON.
     //
-    Status = gBS->CreateEventEx (
-                    EVT_NOTIFY_SIGNAL,
-                    TPL_CALLBACK,
-                    BdsDxeOnConnectConInCallBack,
-                    NULL,
-                    &gConnectConInEventGuid,
-                    &gConnectConInEvent
-                    );
-    if (EFI_ERROR (Status)) {
-      gConnectConInEvent = NULL;
-    }
   } else {
     EfiBootManagerConnectAllDefaultConsoles ();
   }
@@ -926,10 +1036,25 @@ BdsEntry (
 
     EfiBootManagerHotkeyBoot ();
 
-    //
-    // Boot to "BootNext"
-    //
     if (BootNext != NULL) {
+      //
+      // Delete "BootNext" NV variable before transferring control to it to prevent loops.
+      //
+      Status = gRT->SetVariable (
+                      EFI_BOOT_NEXT_VARIABLE_NAME,
+                      &gEfiGlobalVariableGuid,
+                      0,
+                      0,
+                      NULL
+                      );
+      //
+      // Deleting NV variable shouldn't fail unless it doesn't exist.
+      //
+      ASSERT (Status == EFI_SUCCESS || Status == EFI_NOT_FOUND);
+
+      //
+      // Boot to "BootNext"
+      //
       UnicodeSPrint (BootNextVariableName, sizeof (BootNextVariableName), L"Boot%04x", *BootNext);
       Status = EfiBootManagerVariableToLoadOption (BootNextVariableName, &LoadOption);
       if (!EFI_ERROR (Status)) {
@@ -957,14 +1082,17 @@ BdsEntry (
     } while (BootSuccess);
   }
 
-  if (BootManagerMenuStatus != EFI_NOT_FOUND) {
-    EfiBootManagerFreeLoadOption (&BootManagerMenu);
-  }
-
   if (!BootSuccess) {
     LoadOptions = EfiBootManagerGetLoadOptions (&LoadOptionCount, LoadOptionTypePlatformRecovery);
     ProcessLoadOptions (LoadOptions, LoadOptionCount);
     EfiBootManagerFreeLoadOptions (LoadOptions, LoadOptionCount);
+  }
+
+  //
+  // If BootManagerMenu is available, fall back to it indefinitely.
+  //
+  if (BootManagerMenuStatus != EFI_NOT_FOUND) {
+    BdsBootManagerMenuLoop (&BootManagerMenu);
   }
 
   DEBUG ((EFI_D_ERROR, "[Bds] Unable to boot!\n"));
@@ -981,8 +1109,7 @@ BdsEntry (
   @param  VendorGuid             A unique identifier for the vendor.
   @param  Attributes             Attributes bitmask to set for the variable.
   @param  DataSize               The size in bytes of the Data buffer. Unless the EFI_VARIABLE_APPEND_WRITE, 
-                                 EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS, or 
-                                 EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS attribute is set, a size of zero 
+                                 or EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS attribute is set, a size of zero
                                  causes the variable to be deleted. When the EFI_VARIABLE_APPEND_WRITE attribute is 
                                  set, then a SetVariable() call with a DataSize of zero will not cause any change to 
                                  the variable value (the timestamp associated with the variable may be updated however 
@@ -1000,9 +1127,8 @@ BdsEntry (
   @retval EFI_DEVICE_ERROR       The variable could not be retrieved due to a hardware error.
   @retval EFI_WRITE_PROTECTED    The variable in question is read-only.
   @retval EFI_WRITE_PROTECTED    The variable in question cannot be deleted.
-  @retval EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS 
-                                 or EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACESS being set, but the AuthInfo 
-                                 does NOT pass the validation check carried out by the firmware.
+  @retval EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACESS
+                                 being set, but the AuthInfo does NOT pass the validation check carried out by the firmware.
 
   @retval EFI_NOT_FOUND          The variable trying to be updated or deleted was not found.
 **/

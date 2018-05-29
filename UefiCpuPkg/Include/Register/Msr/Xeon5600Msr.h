@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-6.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.7.
 
 **/
 
@@ -25,6 +25,23 @@
 #define __XEON_5600_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Intel(R) Xeon(R) Processor Series 5600?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_XEON_5600_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x06 && \
+   (                        \
+    DisplayModel == 0x25 || \
+    DisplayModel == 0x2C    \
+    )                       \
+   )
 
 /**
   Core. AES Configuration (RW-L) Privileged post-BIOS agent must provide a #GP
@@ -43,6 +60,7 @@
   Msr.Uint64 = AsmReadMsr64 (MSR_XEON_5600_FEATURE_CONFIG);
   AsmWriteMsr64 (MSR_XEON_5600_FEATURE_CONFIG, Msr.Uint64);
   @endcode
+  @note MSR_XEON_5600_FEATURE_CONFIG is defined as MSR_FEATURE_CONFIG in SDM.
 **/
 #define MSR_XEON_5600_FEATURE_CONFIG             0x0000013C
 
@@ -92,6 +110,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_XEON_5600_OFFCORE_RSP_1);
   AsmWriteMsr64 (MSR_XEON_5600_OFFCORE_RSP_1, Msr);
   @endcode
+  @note MSR_XEON_5600_OFFCORE_RSP_1 is defined as MSR_OFFCORE_RSP_1 in SDM.
 **/
 #define MSR_XEON_5600_OFFCORE_RSP_1              0x000001A7
 
@@ -112,6 +131,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_XEON_5600_TURBO_RATIO_LIMIT);
   @endcode
+  @note MSR_XEON_5600_TURBO_RATIO_LIMIT is defined as MSR_TURBO_RATIO_LIMIT in SDM.
 **/
 #define MSR_XEON_5600_TURBO_RATIO_LIMIT          0x000001AD
 
@@ -176,6 +196,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_XEON_5600_IA32_ENERGY_PERF_BIAS);
   AsmWriteMsr64 (MSR_XEON_5600_IA32_ENERGY_PERF_BIAS, Msr);
   @endcode
+  @note MSR_XEON_5600_IA32_ENERGY_PERF_BIAS is defined as IA32_ENERGY_PERF_BIAS in SDM.
 **/
 #define MSR_XEON_5600_IA32_ENERGY_PERF_BIAS      0x000001B0
 

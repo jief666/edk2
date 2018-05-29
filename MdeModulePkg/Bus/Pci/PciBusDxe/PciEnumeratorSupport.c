@@ -1,7 +1,7 @@
 /** @file
   PCI emumeration support functions implementation for PCI Bus module.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2015 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
@@ -16,6 +16,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include "PciBus.h"
 
 extern CHAR16  *mBarTypeStr[];
+
+#define OLD_ALIGN   0xFFFFFFFFFFFFFFFFULL
+#define EVEN_ALIGN  0xFFFFFFFFFFFFFFFEULL
+#define SQUAD_ALIGN 0xFFFFFFFFFFFFFFFDULL
+#define DQUAD_ALIGN 0xFFFFFFFFFFFFFFFCULL
 
 /**
   This routine is used to check whether the pci device is present.
@@ -599,14 +604,14 @@ GatherPpbInfo (
 
   //
   // if PcdPciBridgeIoAlignmentProbe is TRUE, PCI bus driver probes
-  // PCI bridge supporting non-stardard I/O window alignment less than 4K.
+  // PCI bridge supporting non-standard I/O window alignment less than 4K.
   //
 
   PciIoDevice->BridgeIoAlignment = 0xFFF;
   if (FeaturePcdGet (PcdPciBridgeIoAlignmentProbe)) {
     //
     // Check any bits of bit 3-1 of I/O Base Register are writable.
-    // if so, it is assumed non-stardard I/O window alignment is supported by this bridge.
+    // if so, it is assumed non-standard I/O window alignment is supported by this bridge.
     // Per spec, bit 3-1 of I/O Base Register are reserved bits, so its content can't be assumed.
     //
     Value = (UINT8)(Temp ^ (BIT3 | BIT2 | BIT1));
@@ -1249,9 +1254,11 @@ DetermineDeviceAttribute (
     PciSetDeviceAttribute (PciIoDevice, OldCommand, OldBridgeControl, EFI_SET_ATTRIBUTES);
 
     //
-    // Enable other supported attributes but not defined in PCI_IO_PROTOCOL
-    //
-    PCI_ENABLE_COMMAND_REGISTER (PciIoDevice, EFI_PCI_COMMAND_MEMORY_WRITE_AND_INVALIDATE);
+    // Enable other PCI supported attributes but not defined in PCI_IO_PROTOCOL
+    // For PCI Express devices, Memory Write and Invalidate is hardwired to 0b so only enable it for PCI devices.
+    if (!PciIoDevice->IsPciExp) {
+      PCI_ENABLE_COMMAND_REGISTER (PciIoDevice, EFI_PCI_COMMAND_MEMORY_WRITE_AND_INVALIDATE);
+    }
   }
 
   FastB2BSupport = TRUE;
@@ -1336,7 +1343,6 @@ UpdatePciInfo (
 {
   EFI_STATUS                        Status;
   UINTN                             BarIndex;
-  UINTN                             BarEndIndex;
   BOOLEAN                           SetFlag;
   VOID                              *Configuration;
   EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Ptr;
@@ -1390,23 +1396,19 @@ UpdatePciInfo (
       break;
     }
 
-    BarIndex    = (UINTN) Ptr->AddrTranslationOffset;
-    BarEndIndex = BarIndex;
+    for (BarIndex = 0; BarIndex < PCI_MAX_BAR; BarIndex++) {
+      if ((Ptr->AddrTranslationOffset != MAX_UINT64) &&
+          (Ptr->AddrTranslationOffset != MAX_UINT8) &&
+          (Ptr->AddrTranslationOffset != BarIndex)
+          ) {
+        //
+        // Skip updating when AddrTranslationOffset is not MAX_UINT64 or MAX_UINT8 (wide match).
+        // Skip updating when current BarIndex doesn't equal to AddrTranslationOffset.
+        // Comparing against MAX_UINT8 is to keep backward compatibility.
+        //
+        continue;
+      }
 
-    //
-    // Update all the bars in the device
-    //
-    if (BarIndex == PCI_BAR_ALL) {
-      BarIndex    = 0;
-      BarEndIndex = PCI_MAX_BAR - 1;
-    }
-
-    if (BarIndex > PCI_MAX_BAR) {
-      Ptr++;
-      continue;
-    }
-
-    for (; BarIndex <= BarEndIndex; BarIndex++) {
       SetFlag = FALSE;
       switch (Ptr->ResType) {
       case ACPI_ADDRESS_SPACE_TYPE_MEM:
@@ -1472,7 +1474,7 @@ UpdatePciInfo (
         //
         // Update the new length for the device
         //
-        if (Ptr->AddrLen != PCI_BAR_NOCHANGE) {
+        if (Ptr->AddrLen != 0) {
           PciIoDevice->PciBar[BarIndex].Length = Ptr->AddrLen;
         }
       }
@@ -1488,6 +1490,8 @@ UpdatePciInfo (
 
 /**
   This routine will update the alignment with the new alignment.
+  Compare with OLD_ALIGN/EVEN_ALIGN/SQUAD_ALIGN/DQUAD_ALIGN is to keep
+  backward compatibility.
 
   @param Alignment    Input Old alignment. Output updated alignment.
   @param NewAlignment New alignment.
@@ -1506,15 +1510,15 @@ SetNewAlign (
   // The new alignment is the same as the original,
   // so skip it
   //
-  if (NewAlignment == PCI_BAR_OLD_ALIGN) {
+  if ((NewAlignment == 0) || (NewAlignment == OLD_ALIGN)) {
     return ;
   }
   //
   // Check the validity of the parameter
   //
-   if (NewAlignment != PCI_BAR_EVEN_ALIGN  &&
-       NewAlignment != PCI_BAR_SQUAD_ALIGN &&
-       NewAlignment != PCI_BAR_DQUAD_ALIGN ) {
+   if (NewAlignment != EVEN_ALIGN  &&
+       NewAlignment != SQUAD_ALIGN &&
+       NewAlignment != DQUAD_ALIGN ) {
     *Alignment = NewAlignment;
     return ;
   }
@@ -1533,15 +1537,15 @@ SetNewAlign (
   //
   // Adjust the alignment to even, quad or double quad boundary
   //
-  if (NewAlignment == PCI_BAR_EVEN_ALIGN) {
+  if (NewAlignment == EVEN_ALIGN) {
     if ((OldAlignment & 0x01) != 0) {
       OldAlignment = OldAlignment + 2 - (OldAlignment & 0x01);
     }
-  } else if (NewAlignment == PCI_BAR_SQUAD_ALIGN) {
+  } else if (NewAlignment == SQUAD_ALIGN) {
     if ((OldAlignment & 0x03) != 0) {
       OldAlignment = OldAlignment + 4 - (OldAlignment & 0x03);
     }
-  } else if (NewAlignment == PCI_BAR_DQUAD_ALIGN) {
+  } else if (NewAlignment == DQUAD_ALIGN) {
     if ((OldAlignment & 0x07) != 0) {
       OldAlignment = OldAlignment + 8 - (OldAlignment & 0x07);
     }

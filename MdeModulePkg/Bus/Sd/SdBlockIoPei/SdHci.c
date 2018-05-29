@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -929,7 +929,7 @@ BuildAdmaDescTable (
   UINT64                    Remaining;
   UINT32                    Address;
 
-  Data    = (EFI_PHYSICAL_ADDRESS)(UINTN)Trb->Data;
+  Data    = Trb->DataPhy;
   DataLen = Trb->DataLen;
   //
   // Only support 32bit ADMA Descriptor Table
@@ -998,6 +998,8 @@ SdPeimCreateTrb (
   SD_TRB                      *Trb;
   EFI_STATUS                  Status;
   SD_HC_SLOT_CAP              Capability;
+  EDKII_IOMMU_OPERATION       MapOp;
+  UINTN                       MapLength;
 
   //
   // Calculate a divisor for SD clock frequency
@@ -1007,7 +1009,7 @@ SdPeimCreateTrb (
     return NULL;
   }
 
-  Trb = SdPeimAllocateMem (Slot->Private->Pool, sizeof (SD_TRB));
+  Trb = AllocateZeroPool (sizeof (SD_TRB));
   if (Trb == NULL) {
     return NULL;
   }
@@ -1032,13 +1034,29 @@ SdPeimCreateTrb (
     goto Error;
   }
 
-  if (Trb->DataLen < Trb->BlockSize) {
+  if ((Trb->DataLen != 0) && (Trb->DataLen < Trb->BlockSize)) {
     Trb->BlockSize = (UINT16)Trb->DataLen;
   }
 
   if (Packet->SdCmdBlk->CommandIndex == SD_SEND_TUNING_BLOCK) {
     Trb->Mode = SdPioMode;
   } else {
+    if (Trb->Read) {
+      MapOp = EdkiiIoMmuOperationBusMasterWrite;
+    } else {
+      MapOp = EdkiiIoMmuOperationBusMasterRead;
+    }
+
+    if (Trb->DataLen != 0) {
+      MapLength = Trb->DataLen;
+      Status = IoMmuMap (MapOp, Trb->Data, &MapLength, &Trb->DataPhy, &Trb->DataMap);
+
+      if (EFI_ERROR (Status) || (MapLength != Trb->DataLen)) {
+        DEBUG ((DEBUG_ERROR, "SdPeimCreateTrb: Fail to map data buffer.\n"));
+        goto Error;
+      }
+    }
+
     if (Trb->DataLen == 0) {
       Trb->Mode = SdNoData;
     } else if (Capability.Adma2 != 0) {
@@ -1071,12 +1089,16 @@ SdPeimFreeTrb (
   IN SD_TRB           *Trb
   )
 {
+  if ((Trb != NULL) && (Trb->DataMap != NULL)) {
+    IoMmuUnmap (Trb->DataMap);
+  }
+
   if ((Trb != NULL) && (Trb->AdmaDesc != NULL)) {
     SdPeimFreeMem (Trb->Slot->Private->Pool, Trb->AdmaDesc, Trb->AdmaDescSize);
   }
 
   if (Trb != NULL) {
-    SdPeimFreeMem (Trb->Slot->Private->Pool, Trb, sizeof (SD_TRB));
+    FreePool (Trb);
   }
   return;
 }
@@ -1241,11 +1263,11 @@ SdPeimExecTrb (
   SdPeimHcLedOnOff (Bar, TRUE);
 
   if (Trb->Mode == SdSdmaMode) {
-    if ((UINT64)(UINTN)Trb->Data >= 0x100000000ul) {
+    if ((UINT64)(UINTN)Trb->DataPhy >= 0x100000000ul) {
       return EFI_INVALID_PARAMETER;
     }
 
-    SdmaAddr = (UINT32)(UINTN)Trb->Data;
+    SdmaAddr = (UINT32)(UINTN)Trb->DataPhy;
     Status   = SdPeimHcRwMmio (Bar + SD_HC_SDMA_ADDR, FALSE, sizeof (SdmaAddr), &SdmaAddr);
     if (EFI_ERROR (Status)) {
       return Status;
@@ -1485,7 +1507,7 @@ SdPeimCheckTrbResult (
     //
     // Update SDMA Address register.
     //
-    SdmaAddr = SD_SDMA_ROUND_UP ((UINT32)(UINTN)Trb->Data, SD_SDMA_BOUNDARY);
+    SdmaAddr = SD_SDMA_ROUND_UP ((UINT32)(UINTN)Trb->DataPhy, SD_SDMA_BOUNDARY);
     Status   = SdPeimHcRwMmio (
                  Bar + SD_HC_SDMA_ADDR,
                  FALSE,
@@ -1495,7 +1517,7 @@ SdPeimCheckTrbResult (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-    Trb->Data = (VOID*)(UINTN)SdmaAddr;
+    Trb->DataPhy = (UINT32)(UINTN)SdmaAddr;
   }
 
   if ((Packet->SdCmdBlk->CommandType != SdCommandTypeAdtc) &&
@@ -2647,6 +2669,7 @@ SdPeimSetBusMode (
   //
   // Get the supported bus speed from SWITCH cmd return data group #1.
   //
+  ZeroMem (SwitchResp, sizeof (SwitchResp));
   Status = SdPeimSwitch (Slot, 0xF, 0xF, 0xF, 0xF, FALSE, SwitchResp);
   if (EFI_ERROR (Status)) {
     return Status;
@@ -2753,7 +2776,7 @@ SdPeimIdentification (
   UINT32                         PresentState;
   UINT8                          HostCtrl2;
   SD_HC_SLOT_CAP                 Capability;
-
+  UINTN                          Retry;
   //
   // 1. Send Cmd0 to the device
   //
@@ -2841,12 +2864,20 @@ SdPeimIdentification (
   //    Note here we only support the cards complied with SD physical
   //    layer simplified spec version 2.0 and version 3.0 and above.
   //
+  Ocr   = 0;
+  Retry = 0;
   do {
     Status = SdPeimSendOpCond (Slot, 0, Ocr, S18r, Xpc, TRUE, &Ocr);
     if (EFI_ERROR (Status)) {
       DEBUG ((EFI_D_ERROR, "SdPeimIdentification: SdPeimSendOpCond fails with %r Ocr %x, S18r %x, Xpc %x\n", Status, Ocr, S18r, Xpc));
       return EFI_DEVICE_ERROR;
     }
+
+    if (Retry++ == 100) {
+      DEBUG ((EFI_D_ERROR, "SdPeimIdentification: SdPeimSendOpCond fails too many times\n"));
+      return EFI_DEVICE_ERROR;
+    }
+    MicroSecondDelay (10 * 1000);
   } while ((Ocr & BIT31) == 0);
 
   //

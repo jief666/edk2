@@ -33,19 +33,21 @@
 
 [Sources]
   PlatformBm.c
-  QuietBoot.c
 
 [Packages]
-  IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
 
 [LibraryClasses]
   BaseLib
   BaseMemoryLib
+  BootLogoLib
+  CapsuleLib
   DebugLib
   DevicePathLib
   DxeServicesLib
+  HobLib
   MemoryAllocationLib
   PcdLib
   PrintLib
@@ -54,12 +56,10 @@
   UefiLib
 
 [FeaturePcd]
-  gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdBootlogoOnlyEnable
   gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport
 
 [FixedPcd]
-  gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdLogoFile
-  gEfiIntelFrameworkModulePkgTokenSpaceGuid.PcdShellFile
+  gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultDataBits
   gEfiMdePkgTokenSpaceGuid.PcdUartDefaultParity
@@ -75,11 +75,12 @@
   gEfiFileSystemVolumeLabelInfoIdGuid
   gEfiEndOfDxeEventGroupGuid
   gEfiTtyTermGuid
+  gUefiShellFileGuid
 
 [Protocols]
   gEfiDevicePathProtocolGuid
   gEfiGraphicsOutputProtocolGuid
   gEfiLoadedImageProtocolGuid
-  gEfiOEMBadgingProtocolGuid
   gEfiPciRootBridgeIoProtocolGuid
   gEfiSimpleFileSystemProtocolGuid
+  gEsrtManagementProtocolGuid

@@ -1,7 +1,7 @@
 /** @file
   Hotkey library functions.
 
-Copyright (c) 2011 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2011 - 2017, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
@@ -42,7 +42,7 @@ VOID                         *mBmTxtInExRegistration  = NULL;
 **/
 UINTN
 BmSizeOfKeyOption (
-  EFI_BOOT_MANAGER_KEY_OPTION  *KeyOption
+  IN CONST EFI_BOOT_MANAGER_KEY_OPTION  *KeyOption
   )
 {
   return OFFSET_OF (EFI_BOOT_MANAGER_KEY_OPTION, Keys)
@@ -61,8 +61,8 @@ BmSizeOfKeyOption (
 **/
 BOOLEAN
 BmIsKeyOptionValid (
-  IN EFI_BOOT_MANAGER_KEY_OPTION     *KeyOption,
-  IN UINTN                           KeyOptionSize
+  IN CONST EFI_BOOT_MANAGER_KEY_OPTION *KeyOption,
+  IN       UINTN                       KeyOptionSize
 )
 {
   UINT16   OptionName[BM_OPTION_NAME_LEN];
@@ -158,16 +158,15 @@ BmCollectKeyOptions (
 {
   UINTN                        Index;
   BM_COLLECT_KEY_OPTIONS_PARAM *Param;
-  EFI_BOOT_MANAGER_KEY_OPTION  *KeyOption;
+  VOID                         *KeyOption;
   UINT16                       OptionNumber;
   UINTN                        KeyOptionSize;
 
   Param = (BM_COLLECT_KEY_OPTIONS_PARAM *) Context;
 
   if (BmIsKeyOptionVariable (Name, Guid, &OptionNumber)) {
-    GetEfiGlobalVariable2 (Name, (VOID**) &KeyOption, &KeyOptionSize);
+    GetEfiGlobalVariable2 (Name, &KeyOption, &KeyOptionSize);
     ASSERT (KeyOption != NULL);
-    KeyOption->OptionNumber = OptionNumber;
     if (BmIsKeyOptionValid (KeyOption, KeyOptionSize)) {
       Param->KeyOptions = ReallocatePool (
                             Param->KeyOptionCount * sizeof (EFI_BOOT_MANAGER_KEY_OPTION),
@@ -179,12 +178,13 @@ BmCollectKeyOptions (
       // Insert the key option in order
       //
       for (Index = 0; Index < Param->KeyOptionCount; Index++) {
-        if (KeyOption->OptionNumber < Param->KeyOptions[Index].OptionNumber) {
+        if (OptionNumber < Param->KeyOptions[Index].OptionNumber) {
           break;
         }
       }
       CopyMem (&Param->KeyOptions[Index + 1], &Param->KeyOptions[Index], (Param->KeyOptionCount - Index) * sizeof (EFI_BOOT_MANAGER_KEY_OPTION));
-      CopyMem (&Param->KeyOptions[Index], KeyOption, BmSizeOfKeyOption (KeyOption));
+      CopyMem (&Param->KeyOptions[Index], KeyOption, KeyOptionSize);
+      Param->KeyOptions[Index].OptionNumber = OptionNumber;
       Param->KeyOptionCount++;
     }
     FreePool (KeyOption);
@@ -218,21 +218,6 @@ BmGetKeyOptions (
   *Count = Param.KeyOptionCount;
 
   return Param.KeyOptions;
-}
-
-/**
-  Callback function for event.
-  
-  @param    Event          Event for this callback function.
-  @param    Context        Context pass to this function.
-**/
-VOID
-EFIAPI
-BmEmptyFunction (
-  IN EFI_EVENT                Event,
-  IN VOID                     *Context
-  )
-{
 }
 
 /**
@@ -680,7 +665,7 @@ BmProcessKeyOption (
 
   KeyShiftStateCount = 0;
   BmGenerateKeyShiftState (0, KeyOption, EFI_SHIFT_STATE_VALID, KeyShiftStates, &KeyShiftStateCount);
-  ASSERT (KeyShiftStateCount <= sizeof (KeyShiftStates) / sizeof (KeyShiftStates[0]));
+  ASSERT (KeyShiftStateCount <= ARRAY_SIZE (KeyShiftStates));
 
   EfiAcquireLock (&mBmHotkeyLock);
 
@@ -885,13 +870,13 @@ EfiBootManagerStartHotkeyService (
   EFI_EVENT                    Event;
   UINT32                       *BootOptionSupport;
 
-  Status = GetEfiGlobalVariable2 (EFI_BOOT_OPTION_SUPPORT_VARIABLE_NAME, (VOID **) &BootOptionSupport, NULL);
-  ASSERT (BootOptionSupport != NULL);
-
-  if ((*BootOptionSupport & EFI_BOOT_OPTION_SUPPORT_KEY)  != 0) {
-    mBmHotkeySupportCount = ((*BootOptionSupport & EFI_BOOT_OPTION_SUPPORT_COUNT) >> LowBitSet32 (EFI_BOOT_OPTION_SUPPORT_COUNT));
+  GetEfiGlobalVariable2 (EFI_BOOT_OPTION_SUPPORT_VARIABLE_NAME, (VOID **) &BootOptionSupport, NULL);
+  if (BootOptionSupport != NULL) {
+    if ((*BootOptionSupport & EFI_BOOT_OPTION_SUPPORT_KEY)  != 0) {
+      mBmHotkeySupportCount = ((*BootOptionSupport & EFI_BOOT_OPTION_SUPPORT_COUNT) >> LowBitSet32 (EFI_BOOT_OPTION_SUPPORT_COUNT));
+    }
+    FreePool (BootOptionSupport);
   }
-  FreePool (BootOptionSupport);
 
   if (mBmHotkeySupportCount == 0) {
     DEBUG ((EFI_D_INFO, "Bds: BootOptionSupport NV variable forbids starting the hotkey service.\n"));
@@ -901,7 +886,7 @@ EfiBootManagerStartHotkeyService (
   Status = gBS->CreateEvent (
                   EVT_NOTIFY_WAIT,
                   TPL_CALLBACK,
-                  BmEmptyFunction,
+                  EfiEventEmptyFunction,
                   NULL,
                   &mBmHotkeyTriggered
                   );

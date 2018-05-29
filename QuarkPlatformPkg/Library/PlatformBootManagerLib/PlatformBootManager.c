@@ -2,7 +2,7 @@
 This file include all platform action which can be customized
 by IBV/OEM.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -14,8 +14,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 
 #include "PlatformBootManager.h"
-
-EFI_GUID mUefiShellFileGuid = {0x7C04A583, 0x9E3E, 0x4f1c, {0xAD, 0x65, 0xE0, 0x52, 0x68, 0xD0, 0xB4, 0xD1 }};
 
 /**
   Return the index of the load option in the load option array.
@@ -205,6 +203,8 @@ PlatformBootManagerBeforeConsole (
   EFI_INPUT_KEY                 Enter;
   EFI_INPUT_KEY                 F2;
   EFI_BOOT_MANAGER_LOAD_OPTION  BootOption;
+  ESRT_MANAGEMENT_PROTOCOL      *EsrtManagement;
+  EFI_BOOT_MODE                 BootMode;
   EFI_ACPI_S3_SAVE_PROTOCOL     *AcpiS3Save;
   EFI_HANDLE                    Handle;
   EFI_EVENT                     EndOfDxeEvent;
@@ -244,7 +244,41 @@ PlatformBootManagerBeforeConsole (
   //
   // Register UEFI Shell
   //
-  PlatformRegisterFvBootOption (&mUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+  PlatformRegisterFvBootOption (&gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+
+  Status = gBS->LocateProtocol(&gEsrtManagementProtocolGuid, NULL, (VOID **)&EsrtManagement);
+  if (EFI_ERROR(Status)) {
+    EsrtManagement = NULL;
+  }
+
+  BootMode = GetBootModeHob();
+  switch (BootMode) {
+  case BOOT_ON_FLASH_UPDATE:
+    DEBUG((DEBUG_INFO, "ProcessCapsules Before EndOfDxe ......\n"));
+    Status = ProcessCapsules ();
+    DEBUG((DEBUG_INFO, "ProcessCapsules %r\n", Status));
+    break;
+  case BOOT_IN_RECOVERY_MODE:
+    break;
+  case BOOT_ASSUMING_NO_CONFIGURATION_CHANGES:
+  case BOOT_WITH_MINIMAL_CONFIGURATION:
+  case BOOT_ON_S4_RESUME:
+    if (EsrtManagement != NULL) {
+      //
+      // Lock ESRT cache repository before EndofDxe if ESRT sync is not needed
+      //
+      EsrtManagement->LockEsrtRepository();
+    }
+    break;
+  default:
+    //
+    // Require to sync ESRT from FMP in a new boot
+    //
+    if (EsrtManagement != NULL) {
+      EsrtManagement->SyncEsrtFmp();
+    }
+    break;
+  }
 
   //
   // Prepare for S3
@@ -285,6 +319,11 @@ PlatformBootManagerBeforeConsole (
                   NULL
                   );
   ASSERT_EFI_ERROR (Status);
+
+  //
+  // Dispatch deferred images after EndOfDxe event and ReadyToLock installation.
+  //
+  EfiBootManagerDispatchDeferredImages ();
 }
 
 /**
@@ -303,7 +342,58 @@ PlatformBootManagerAfterConsole (
   VOID
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                     Status;
+  EFI_BOOT_MODE                  BootMode;
+  ESRT_MANAGEMENT_PROTOCOL       *EsrtManagement;
+  VOID                           *Buffer;
+  UINTN                          Size;
+
+  Status = gBS->LocateProtocol(&gEsrtManagementProtocolGuid, NULL, (VOID **)&EsrtManagement);
+  if (EFI_ERROR(Status)) {
+    EsrtManagement = NULL;
+  }
+
+  BootMode = GetBootModeHob();
+
+  DEBUG((DEBUG_INFO, "PlatformBootManagerAfterConsole(): BootMode = %02x\n", BootMode));
+
+  switch (BootMode) {
+  case BOOT_ASSUMING_NO_CONFIGURATION_CHANGES:
+  case BOOT_WITH_MINIMAL_CONFIGURATION:
+  case BOOT_ON_S4_RESUME:
+    EfiBootManagerRefreshAllBootOption ();
+    break;
+
+  case BOOT_ON_FLASH_UPDATE:
+    if (FeaturePcdGet(PcdSupportUpdateCapsuleReset)) {
+      EfiBootManagerConnectAll ();
+      EfiBootManagerRefreshAllBootOption ();
+
+      //
+      // Always sync ESRT Cache from FMP Instances after connect all and before capsule process
+      //
+      if (EsrtManagement != NULL) {
+        EsrtManagement->SyncEsrtFmp();
+      }
+
+      DEBUG((DEBUG_INFO, "ProcessCapsules After ConnectAll ......\n"));
+      Status = ProcessCapsules();
+      DEBUG((DEBUG_INFO, "ProcessCapsules %r\n", Status));
+    }
+    break;
+
+  default:
+    EfiBootManagerConnectAll ();
+    EfiBootManagerRefreshAllBootOption ();
+
+    //
+    // Sync ESRT Cache from FMP Instance on demand after Connect All
+    //
+    if (EsrtManagement != NULL) {
+      EsrtManagement->SyncEsrtFmp();
+    }
+    break;
+  }
 
   Print (
     L"\n"
@@ -311,6 +401,40 @@ PlatformBootManagerAfterConsole (
     L"ENTER   to boot directly.\n"
     L"\n"
     );
+
+  //
+  // Check if the platform is using test key.
+  //
+  Status = GetSectionFromAnyFv(
+             PcdGetPtr(PcdEdkiiRsa2048Sha256TestPublicKeyFileGuid),
+             EFI_SECTION_RAW,
+             0,
+             &Buffer,
+             &Size
+             );
+  if (!EFI_ERROR(Status)) {
+    if ((Size == PcdGetSize(PcdRsa2048Sha256PublicKeyBuffer)) &&
+        (CompareMem(Buffer, PcdGetPtr(PcdRsa2048Sha256PublicKeyBuffer), Size) == 0)) {
+      Print(L"WARNING: Recovery Test Key is used.\n");
+      PcdSetBoolS(PcdTestKeyUsed, TRUE);
+    }
+    FreePool(Buffer);
+  }
+  Status = GetSectionFromAnyFv(
+             PcdGetPtr(PcdEdkiiPkcs7TestPublicKeyFileGuid),
+             EFI_SECTION_RAW,
+             0,
+             &Buffer,
+             &Size
+             );
+  if (!EFI_ERROR(Status)) {
+    if ((Size == PcdGetSize(PcdPkcs7CertBuffer)) &&
+        (CompareMem(Buffer, PcdGetPtr(PcdPkcs7CertBuffer), Size) == 0)) {
+      Print(L"WARNING: Capsule Test Key is used.\n");
+      PcdSetBoolS(PcdTestKeyUsed, TRUE);
+    }
+    FreePool(Buffer);
+  }
 
   //
   // Use a DynamicHii type pcd to save the boot status, which is used to

@@ -2,7 +2,8 @@
   This library is only intended to be used by PlatformBootManagerLib
   to show progress bar and LOGO.
 
-Copyright (c) 2011 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2011 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2016, Microsoft Corporation<BR>
 This program and the accompanying materials are licensed and made available under
 the terms and conditions of the BSD License that accompanies this distribution.
 The full text of the license may be found at
@@ -13,30 +14,23 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 **/
 
-#include <PiDxe.h>
+#include <Uefi.h>
+#include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleTextOut.h>
 #include <Protocol/PlatformLogo.h>
-#include <Protocol/GraphicsOutput.h>
 #include <Protocol/UgaDraw.h>
 #include <Protocol/BootLogo.h>
+#include <Protocol/BootLogo2.h>
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/DxeServicesLib.h>
 #include <Library/PcdLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
-#include <Library/ImageDecoderLib.h>
 
 /**
-  Show LOGO on all consoles.
-
-  @param[in]  ImageFormat Format of the image file.
-  @param[in]  LogoFile    The file name of logo to display.
-  @param[in]  Attribute   The display attributes of the image returned.
-  @param[in]  OffsetX     The X offset of the image regarding the Attribute.
-  @param[in]  OffsetY     The Y offset of the image regarding the Attribute.
+  Show LOGO returned from Edkii Platform Logo protocol on all consoles.
 
   @retval EFI_SUCCESS     Logo was displayed.
   @retval EFI_UNSUPPORTED Logo was not found or cannot be displayed.
@@ -44,42 +38,41 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 BootLogoEnableLogo (
-  IN  IMAGE_FORMAT                          ImageFormat,
-  IN  EFI_GUID                              *Logo,
-  IN  EDKII_PLATFORM_LOGO_DISPLAY_ATTRIBUTE Attribute,
-  IN  INTN                                  OffsetX,
-  IN  INTN                                  OffsetY
+  VOID
   )
 {
-  EFI_STATUS                    Status;
-  EDKII_PLATFORM_LOGO_PROTOCOL  *PlatformLogo;
-  UINT32                        SizeOfX;
-  UINT32                        SizeOfY;
-  INTN                          DestX;
-  INTN                          DestY;
-  UINT8                         *ImageData;
-  UINTN                         ImageSize;
-  UINTN                         BltSize;
-  UINT32                        Instance;
-  UINTN                         Height;
-  UINTN                         Width;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL *Blt;
-  EFI_UGA_DRAW_PROTOCOL         *UgaDraw;
-  UINT32                        ColorDepth;
-  UINT32                        RefreshRate;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
-  EFI_BOOT_LOGO_PROTOCOL        *BootLogo;
-  UINTN                         NumberOfLogos;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL *LogoBlt;
-  UINTN                         LogoDestX;
-  UINTN                         LogoDestY;
-  UINTN                         LogoHeight;
-  UINTN                         LogoWidth;
-  UINTN                         NewDestX;
-  UINTN                         NewDestY;
-  UINTN                         NewHeight;
-  UINTN                         NewWidth;
-  UINTN                         BufferSize;
+  EFI_STATUS                            Status;
+  EDKII_PLATFORM_LOGO_PROTOCOL          *PlatformLogo;
+  EDKII_PLATFORM_LOGO_DISPLAY_ATTRIBUTE Attribute;
+  INTN                                  OffsetX;
+  INTN                                  OffsetY;
+  UINT32                                SizeOfX;
+  UINT32                                SizeOfY;
+  INTN                                  DestX;
+  INTN                                  DestY;
+  UINT32                                Instance;
+  EFI_IMAGE_INPUT                       Image;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL         *Blt;
+  EFI_UGA_DRAW_PROTOCOL                 *UgaDraw;
+  UINT32                                ColorDepth;
+  UINT32                                RefreshRate;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL          *GraphicsOutput;
+  EFI_BOOT_LOGO_PROTOCOL                *BootLogo;
+  EDKII_BOOT_LOGO2_PROTOCOL             *BootLogo2;
+  UINTN                                 NumberOfLogos;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL         *LogoBlt;
+  UINTN                                 LogoDestX;
+  UINTN                                 LogoDestY;
+  UINTN                                 LogoHeight;
+  UINTN                                 LogoWidth;
+  UINTN                                 NewDestX;
+  UINTN                                 NewDestY;
+  UINTN                                 BufferSize;
+
+  Status  = gBS->LocateProtocol (&gEdkiiPlatformLogoProtocolGuid, NULL, (VOID **) &PlatformLogo);
+  if (EFI_ERROR (Status)) {
+    return EFI_UNSUPPORTED;
+  }
 
   UgaDraw = NULL;
   //
@@ -100,21 +93,20 @@ BootLogoEnableLogo (
     return EFI_UNSUPPORTED;
   }
 
-  Status  = gBS->LocateProtocol (&gEdkiiPlatformLogoProtocolGuid, NULL, (VOID **) &PlatformLogo);
-  if (EFI_ERROR (Status)) {
-    PlatformLogo = NULL;
-  }
-
-  if ((Logo == NULL) && (PlatformLogo == NULL)) {
-    return EFI_UNSUPPORTED;
-  }
-
   //
   // Try to open Boot Logo Protocol.
   //
   Status = gBS->LocateProtocol (&gEfiBootLogoProtocolGuid, NULL, (VOID **) &BootLogo);
   if (EFI_ERROR (Status)) {
     BootLogo = NULL;
+  }
+
+  //
+  // Try to open Boot Logo 2 Protocol.
+  //
+  Status = gBS->LocateProtocol (&gEdkiiBootLogo2ProtocolGuid, NULL, (VOID **) &BootLogo2);
+  if (EFI_ERROR (Status)) {
+    BootLogo2 = NULL;
   }
 
   //
@@ -142,59 +134,29 @@ BootLogoEnableLogo (
   LogoWidth = 0;
   NewDestX = 0;
   NewDestY = 0;
-  NewHeight = 0;
-  NewWidth = 0;
   Instance = 0;
   DestX = 0;
   DestY = 0;
   while (TRUE) {
-    ImageData = NULL;
-    ImageSize = 0;
-
-    if (PlatformLogo != NULL) {
-      //
-      // Get image from OEMBadging protocol.
-      //
-      Status = PlatformLogo->GetImage (
-                               PlatformLogo,
-                               &Instance,
-                               &ImageFormat,
-                               &ImageData,
-                               &ImageSize,
-                               &Attribute,
-                               &OffsetX,
-                               &OffsetY
-                               );
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-    } else {
-      //
-      // Get the specified image from FV.
-      //
-      Status = GetSectionFromAnyFv (Logo, EFI_SECTION_RAW, 0, (VOID **) &ImageData, &ImageSize);
-      if (EFI_ERROR (Status)) {
-        return EFI_UNSUPPORTED;
-      }
+    //
+    // Get image from PlatformLogo protocol.
+    //
+    Status = PlatformLogo->GetImage (
+                             PlatformLogo,
+                             &Instance,
+                             &Image,
+                             &Attribute,
+                             &OffsetX,
+                             &OffsetY
+                             );
+    if (EFI_ERROR (Status)) {
+      break;
     }
 
     if (Blt != NULL) {
       FreePool (Blt);
     }
-
-    Status = DecodeImage (ImageFormat, ImageData, ImageSize, &Blt, &BltSize, &Width, &Height);
-    FreePool (ImageData);
-    if (EFI_ERROR (Status)) {
-      if (Logo != NULL) {
-        //
-        // Directly return failure for single LOGO
-        //
-        return Status;
-      } else {
-        continue;
-      }
-    }
+    Blt = Image.Bitmap;
 
     //
     // Calculate the display position according to Attribute.
@@ -205,42 +167,43 @@ BootLogoEnableLogo (
       DestY = 0;
       break;
     case EdkiiPlatformLogoDisplayAttributeCenterTop:
-      DestX = (SizeOfX - Width) / 2;
+      DestX = (SizeOfX - Image.Width) / 2;
       DestY = 0;
       break;
     case EdkiiPlatformLogoDisplayAttributeRightTop:
-      DestX = SizeOfX - Width;
+      DestX = SizeOfX - Image.Width;
       DestY = 0;
       break;
 
     case EdkiiPlatformLogoDisplayAttributeCenterLeft:
       DestX = 0;
-      DestY = (SizeOfY - Height) / 2;
+      DestY = (SizeOfY - Image.Height) / 2;
       break;
     case EdkiiPlatformLogoDisplayAttributeCenter:
-      DestX = (SizeOfX - Width) / 2;
-      DestY = (SizeOfY - Height) / 2;
+      DestX = (SizeOfX - Image.Width) / 2;
+      DestY = (SizeOfY - Image.Height) / 2;
       break;
     case EdkiiPlatformLogoDisplayAttributeCenterRight:
-      DestX = SizeOfX - Width;
-      DestY = (SizeOfY - Height) / 2;
+      DestX = SizeOfX - Image.Width;
+      DestY = (SizeOfY - Image.Height) / 2;
       break;
 
     case EdkiiPlatformLogoDisplayAttributeLeftBottom:
       DestX = 0;
-      DestY = SizeOfY - Height;
+      DestY = SizeOfY - Image.Height;
       break;
     case EdkiiPlatformLogoDisplayAttributeCenterBottom:
-      DestX = (SizeOfX - Width) / 2;
-      DestY = SizeOfY - Height;
+      DestX = (SizeOfX - Image.Width) / 2;
+      DestY = SizeOfY - Image.Height;
       break;
     case EdkiiPlatformLogoDisplayAttributeRightBottom:
-      DestX = SizeOfX - Width;
-      DestY = SizeOfY - Height;
+      DestX = SizeOfX - Image.Width;
+      DestY = SizeOfY - Image.Height;
       break;
 
     default:
       ASSERT (FALSE);
+      continue;
       break;
     }
 
@@ -257,9 +220,9 @@ BootLogoEnableLogo (
                                    0,
                                    (UINTN) DestX,
                                    (UINTN) DestY,
-                                   Width,
-                                   Height,
-                                   Width * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL)
+                                   Image.Width,
+                                   Image.Height,
+                                   Image.Width * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL)
                                    );
       } else {
         ASSERT (UgaDraw != NULL);
@@ -271,9 +234,9 @@ BootLogoEnableLogo (
                             0,
                             (UINTN) DestX,
                             (UINTN) DestY,
-                            Width,
-                            Height,
-                            Width * sizeof (EFI_UGA_PIXEL)
+                            Image.Width,
+                            Image.Height,
+                            Image.Width * sizeof (EFI_UGA_PIXEL)
                             );
       }
 
@@ -283,37 +246,31 @@ BootLogoEnableLogo (
       if (!EFI_ERROR (Status)) {
         NumberOfLogos++;
 
-        if (LogoWidth == 0) {
+        if (NumberOfLogos == 1) {
           //
           // The first Logo.
           //
           LogoDestX = (UINTN) DestX;
           LogoDestY = (UINTN) DestY;
-          LogoWidth = Width;
-          LogoHeight = Height;
+          LogoWidth = Image.Width;
+          LogoHeight = Image.Height;
         } else {
           //
           // Merge new logo with old one.
           //
           NewDestX = MIN ((UINTN) DestX, LogoDestX);
           NewDestY = MIN ((UINTN) DestY, LogoDestY);
-          NewWidth = MAX ((UINTN) DestX + Width, LogoDestX + LogoWidth) - NewDestX;
-          NewHeight = MAX ((UINTN) DestY + Height, LogoDestY + LogoHeight) - NewDestY;
+          LogoWidth = MAX ((UINTN) DestX + Image.Width, LogoDestX + LogoWidth) - NewDestX;
+          LogoHeight = MAX ((UINTN) DestY + Image.Height, LogoDestY + LogoHeight) - NewDestY;
 
           LogoDestX = NewDestX;
           LogoDestY = NewDestY;
-          LogoWidth = NewWidth;
-          LogoHeight = NewHeight;
         }
       }
     }
-
-    if (PlatformLogo == NULL) {
-      break;
-    }
   }
 
-  if (BootLogo == NULL || NumberOfLogos == 0) {
+  if ((BootLogo == NULL && BootLogo2 == NULL) || NumberOfLogos == 0) {
     //
     // No logo displayed.
     //
@@ -384,7 +341,24 @@ BootLogoEnableLogo (
   }
 
   if (!EFI_ERROR (Status)) {
-    BootLogo->SetBootLogo (BootLogo, LogoBlt, LogoDestX, LogoDestY, LogoWidth, LogoHeight);
+    //
+    // Attempt to register logo with Boot Logo 2 Protocol first
+    //
+    if (BootLogo2 != NULL) {
+      Status = BootLogo2->SetBootLogo (BootLogo2, LogoBlt, LogoDestX, LogoDestY, LogoWidth, LogoHeight);
+    }
+    //
+    // If Boot Logo 2 Protocol is not available or registration with Boot Logo 2
+    // Protocol failed, then attempt to register logo with Boot Logo Protocol
+    //
+    if (EFI_ERROR (Status) && BootLogo != NULL) {
+      Status = BootLogo->SetBootLogo (BootLogo, LogoBlt, LogoDestX, LogoDestY, LogoWidth, LogoHeight);
+    }
+    //
+    // Status of this function is EFI_SUCCESS even if registration with Boot
+    // Logo 2 Protocol or Boot Logo Protocol fails.
+    //
+    Status = EFI_SUCCESS;
   }
   FreePool (LogoBlt);
 

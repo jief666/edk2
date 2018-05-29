@@ -2,7 +2,7 @@
   Misc support routines for TCP driver.
 
   (C) Copyright 2014 Hewlett-Packard Development Company, L.P.<BR>
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
@@ -86,6 +86,7 @@ TcpInitTcbLocal (
   // First window size is never scaled
   //
   Tcb->RcvWndScale  = 0;
+  Tcb->RetxmitSeqMax = 0;
 
   Tcb->ProbeTimerOn = FALSE;
 }
@@ -613,7 +614,7 @@ TcpSetState (
   ASSERT (State < (sizeof (mTcpStateName) / sizeof (CHAR16 *)));
 
   DEBUG (
-    (EFI_D_INFO,
+    (EFI_D_NET,
     "Tcb (%p) state %s --> %s\n",
     Tcb,
     mTcpStateName[Tcb->State],
@@ -862,7 +863,7 @@ TcpOnAppConsume (
       if (TcpOld < Tcb->RcvMss) {
 
         DEBUG (
-          (EFI_D_INFO,
+          (EFI_D_NET,
           "TcpOnAppConsume: send a window update for a window closed Tcb %p\n",
           Tcb)
           );
@@ -871,7 +872,7 @@ TcpOnAppConsume (
       } else if (Tcb->DelayedAck == 0) {
 
         DEBUG (
-          (EFI_D_INFO,
+          (EFI_D_NET,
           "TcpOnAppConsume: scheduled a delayed ACK to update window for Tcb %p\n",
           Tcb)
           );

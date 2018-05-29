@@ -1,15 +1,15 @@
 /** @file
 
-  Copyright (c) 2004  - 2014, Intel Corporation. All rights reserved.<BR>
-                                                                                   
-  This program and the accompanying materials are licensed and made available under
-  the terms and conditions of the BSD License that accompanies this distribution.  
-  The full text of the license may be found at                                     
-  http://opensource.org/licenses/bsd-license.php.                                  
-                                                                                   
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,            
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.    
-                                                                                   
+  Copyright (c) 2004  - 2016, Intel Corporation. All rights reserved.<BR>
+
+  This program and the accompanying materials are licensed and made available under
+  the terms and conditions of the BSD License that accompanies this distribution.
+  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php.
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
 
 
 **/
@@ -78,11 +78,11 @@ SpiFlashBlockErase (
   UINT32              SpiAddress;
 
   SpiAddress = (UINT32)(UINTN)(BaseAddress) - (UINT32)FlashDeviceBase;
-  SectorSize = SECTOR_SIZE_64KB;
+  SectorSize = SECTOR_SIZE_4KB;
   while ( (NumBytes > 0) && (NumBytes <= MAX_FWH_SIZE) ) {
     Status = mSpiProtocol->Execute (
                              mSpiProtocol,
-                             SPI_BERASE,
+                             SPI_SERASE,
                              SPI_WREN,
                              FALSE,
                              TRUE,
@@ -430,11 +430,11 @@ LibFvbFlashDeviceSupportInit (
             //
             // Found a matching SPI device, FlashIndex now contains flash device.
             //
-            DEBUG ((EFI_D_ERROR, "OK - Found SPI Flash Type in SPI Flash Driver, Device Type ID 0 = 0x%02x!\n", mInitTable[FlashIndex].DeviceId0));
-            DEBUG ((EFI_D_ERROR, "Device Type ID 1 = 0x%02x!\n", mInitTable[FlashIndex].DeviceId1));
+            DEBUG ((DEBUG_ERROR, "OK - Found SPI Flash Type in SPI Flash Driver, Device Type ID 0 = 0x%02x!\n", mInitTable[FlashIndex].DeviceId0));
+            DEBUG ((DEBUG_ERROR, "Device Type ID 1 = 0x%02x!\n", mInitTable[FlashIndex].DeviceId1));
 
             if (mInitTable[FlashIndex].BiosStartOffset == (UINTN) (-1)) {
-              DEBUG ((EFI_D_ERROR, "ERROR - The size of BIOS image is bigger than SPI Flash device!\n"));
+              DEBUG ((DEBUG_ERROR, "ERROR - The size of BIOS image is bigger than SPI Flash device!\n"));
               CpuDeadLoop ();
             }
             break;
@@ -447,18 +447,18 @@ LibFvbFlashDeviceSupportInit (
     }
   }
 
-  DEBUG ((EFI_D_ERROR, "SPI flash chip VID = 0x%X, DID0 = 0x%X, DID1 = 0x%X\n", SfId[0], SfId[1], SfId[2]));
+  DEBUG ((DEBUG_ERROR, "SPI flash chip VID = 0x%X, DID0 = 0x%X, DID1 = 0x%X\n", SfId[0], SfId[1], SfId[2]));
 
   if (FlashIndex < EnumSpiFlashMax)  {
     return EFI_SUCCESS;
   } else {
   if (SpiReadError != 0) {
-      DEBUG ((EFI_D_ERROR, "ERROR - SPI Read ID execution failed! Error Count = %d\n", SpiReadError));
-   }    
+      DEBUG ((DEBUG_ERROR, "ERROR - SPI Read ID execution failed! Error Count = %d\n", SpiReadError));
+   }
     else {
       if (SpiNotMatchError != 0) {
-        DEBUG ((EFI_D_ERROR, "ERROR - No supported SPI flash chip found! Error Count = %d\n", SpiNotMatchError));
-        DEBUG ((EFI_D_ERROR, "SPI flash chip VID = 0x%X, DID0 = 0x%X, DID1 = 0x%X\n", SfId[0], SfId[1], SfId[2]));
+        DEBUG ((DEBUG_ERROR, "ERROR - No supported SPI flash chip found! Error Count = %d\n", SpiNotMatchError));
+        DEBUG ((DEBUG_ERROR, "SPI flash chip VID = 0x%X, DID0 = 0x%X, DID1 = 0x%X\n", SfId[0], SfId[1], SfId[2]));
       }
     }
     return EFI_UNSUPPORTED;

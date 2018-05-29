@@ -2,9 +2,9 @@
   Provides interface to shell internal functions for shell commands.
 
   This library is for use ONLY by shell commands linked into the shell application.
-  This library will not funciton if it is used for UEFI Shell 2.0 Applications.
+  This library will not function if it is used for UEFI Shell 2.0 Applications.
 
-  Copyright (c) 2009 - 2014, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
   (C) Copyright 2013-2014 Hewlett-Packard Development Company, L.P.<BR>
   This program and the accompanying materials
@@ -21,10 +21,9 @@
 #define _SHELL_COMMAND_LIB_
 
 #include <Uefi.h>
-#include <ShellBase.h>
 
-#include <Protocol/EfiShell.h>
-#include <Protocol/EfiShellParameters.h>
+#include <Protocol/Shell.h>
+#include <Protocol/ShellParameters.h>
 #include <Protocol/UnicodeCollation.h>
 #include <Protocol/SimpleFileSystem.h>
 
@@ -49,7 +48,7 @@ typedef struct {
 /// List of Mappings - DeviceName and Drive Letter(ism).
 extern        SHELL_MAP_LIST                      gShellMapList;
 /// Pointer to node of current directory in the mMapList.
-extern        SHELL_MAP_LIST                      *gShellCurDir;
+extern        SHELL_MAP_LIST                      *gShellCurMapping;
 
 /**
   Returns the help MAN fileName for a given shell command.
@@ -695,6 +694,7 @@ FreeBufferList (
   @param[in] UserData     Pointer to some data.
 **/
 VOID
+EFIAPI
 DumpHex (
   IN UINTN        Indent,
   IN UINTN        Offset,
@@ -704,7 +704,7 @@ DumpHex (
 
 /**
   Dump HEX data into buffer.
-   
+
   @param[in] Buffer     HEX data to be dumped in Buffer.
   @param[in] Indent     How many spaces to indent the output.
   @param[in] Offset     The offset of the printing.
@@ -712,6 +712,7 @@ DumpHex (
   @param[in] UserData   The data to print out.
 **/
 CHAR16*
+EFIAPI
 CatSDumpHex (
   IN CHAR16  *Buffer,
   IN UINTN   Indent,

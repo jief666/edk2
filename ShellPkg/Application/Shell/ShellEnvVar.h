@@ -34,19 +34,18 @@ extern ENV_VAR_LIST    gShellEnvVarList;
 
 
 /**
-  Reports whether an environment variable is Volatile or Non-Volatile
-
-  This will use the Runtime Services call GetVariable to to search for the variable.
+  Reports whether an environment variable is Volatile or Non-Volatile.
 
   @param EnvVarName             The name of the environment variable in question
+  @param Volatile               Return TRUE if the environment variable is volatile
 
-  @retval TRUE                  This environment variable is Volatile
-  @retval FALSE                 This environment variable is NON-Volatile
+  @retval EFI_SUCCESS           The volatile attribute is returned successfully
+  @retval others                Some errors happened.
 **/
-BOOLEAN
-EFIAPI
+EFI_STATUS
 IsVolatileEnv (
-  IN CONST CHAR16 *EnvVarName
+  IN CONST CHAR16 *EnvVarName,
+  OUT BOOLEAN     *Volatile
   );
 
 /**
@@ -157,7 +156,6 @@ IsVolatileEnv (
   @retval EFI_SUCCESS           the list was created sucessfully.
 **/
 EFI_STATUS
-EFIAPI
 GetEnvironmentVariableList(
   IN OUT LIST_ENTRY *List
   );
@@ -175,7 +173,6 @@ GetEnvironmentVariableList(
   @retval EFI_SUCCESS           The list was Set sucessfully.
 **/
 EFI_STATUS
-EFIAPI
 SetEnvironmentVariableList(
   IN LIST_ENTRY *List
   );
@@ -196,7 +193,6 @@ SetEnvironmentVariableList(
   @sa SetEnvironmentVariableList
 **/
 EFI_STATUS
-EFIAPI
 SetEnvironmentVariables(
   IN CONST CHAR16 **Environment
   );
@@ -207,7 +203,6 @@ SetEnvironmentVariables(
   @param[in] List               The pointer to pointer to list.
 **/
 VOID
-EFIAPI
 FreeEnvironmentVariableList(
   IN LIST_ENTRY *List
   );
@@ -241,11 +236,14 @@ ShellFindEnvVarInList (
   @param Key        The name of the environment variable.
   @param Value      The value of environment variable.
   @param ValueSize  The size in bytes of the environment variable
-                    including the tailing CHAR_NELL
+                    including the tailing CHAR_NULL
   @param Atts       The attributes of the variable.
 
+  @retval EFI_SUCCESS  The environment variable was added to list successfully.
+  @retval others       Some errors happened.
+
 **/
-VOID
+EFI_STATUS
 ShellAddEnvVarToList (
   IN CONST CHAR16     *Key,
   IN CONST CHAR16     *Value,

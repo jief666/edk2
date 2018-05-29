@@ -1,7 +1,7 @@
 /** @file
   The header files of the driver binding and service binding protocol for HttpDxe driver.
 
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 
   This program and the accompanying materials
@@ -24,6 +24,7 @@
 // Libraries
 //
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
@@ -50,12 +51,19 @@
 #include <Protocol/Dns6.h>
 #include <Protocol/Ip4Config2.h>
 #include <Protocol/Ip6Config.h>
+#include <Protocol/Tls.h>
+#include <Protocol/TlsConfig.h>
 
-
+#include <Guid/ImageAuthentication.h>
 //
 // Produced Protocols
 //
 #include <Protocol/Http.h>
+
+#include <Guid/TlsAuthentication.h>
+#include <Guid/HttpTlsCipherList.h>
+
+#include <IndustryStandard/Tls1.h>
 
 //
 // Driver Version
@@ -79,6 +87,7 @@ extern EFI_HTTP_UTILITIES_PROTOCOL  *mHttpUtilities;
 #include "ComponentName.h"
 #include "HttpImpl.h"
 #include "HttpProto.h"
+#include "HttpsSupport.h"
 #include "HttpDns.h"
 
 typedef struct {
@@ -358,7 +367,7 @@ HttpDxeIp6DriverBindingStop (
 
   @retval EFI_SUCCES            The protocol was added to ChildHandle.
   @retval EFI_INVALID_PARAMETER This is NULL, or ChildHandle is NULL.
-  @retval EFI_OUT_OF_RESOURCES  There are not enough resources availabe to create
+  @retval EFI_OUT_OF_RESOURCES  There are not enough resources available to create
                                 the child.
   @retval other                 The child handle was not created.
 

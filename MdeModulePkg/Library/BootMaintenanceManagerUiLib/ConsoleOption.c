@@ -567,7 +567,7 @@ LocateSerialIo (
     Vendor.Header.Type                = MESSAGING_DEVICE_PATH;
     Vendor.Header.SubType             = MSG_VENDOR_DP;
 
-    for (Index2 = 0; Index2 < (sizeof (TerminalTypeGuid) / sizeof (TerminalTypeGuid[0])); Index2++) {
+    for (Index2 = 0; Index2 < (ARRAY_SIZE (TerminalTypeGuid)); Index2++) {
       CopyMem (&Vendor.Guid, &TerminalTypeGuid[Index2], sizeof (EFI_GUID));
       SetDevicePathNodeLength (&Vendor.Header, sizeof (VENDOR_DEVICE_PATH));
       NewDevicePath = AppendDevicePathNode (
@@ -1031,6 +1031,7 @@ GetConsoleInCheck (
   BM_MENU_ENTRY       *NewMenuEntry; 
   UINT8               *ConInCheck;
   BM_CONSOLE_CONTEXT  *NewConsoleContext;
+  BM_TERMINAL_CONTEXT *NewTerminalContext;
 
   ASSERT (CallbackData != NULL);
 
@@ -1040,6 +1041,13 @@ GetConsoleInCheck (
     NewMenuEntry      = BOpt_GetMenuEntry (&ConsoleInpMenu, Index);
     NewConsoleContext = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;  
     ConInCheck[Index] = NewConsoleContext->IsActive;
+  }
+
+  for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
+    NewMenuEntry                = BOpt_GetMenuEntry (&TerminalMenu, Index);
+    NewTerminalContext          = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+    ASSERT (Index + ConsoleInpMenu.MenuNumber < MAX_MENU_NUMBER);
+    ConInCheck[Index + ConsoleInpMenu.MenuNumber] = NewTerminalContext->IsConIn;
   }
 }
 
@@ -1060,7 +1068,8 @@ GetConsoleOutCheck (
   BM_MENU_ENTRY       *NewMenuEntry; 
   UINT8               *ConOutCheck;
   BM_CONSOLE_CONTEXT  *NewConsoleContext;
-  
+  BM_TERMINAL_CONTEXT *NewTerminalContext;
+
   ASSERT (CallbackData != NULL);
   ConOutCheck = &CallbackData->BmmFakeNvData.ConsoleOutCheck[0];
   for (Index = 0; ((Index < ConsoleOutMenu.MenuNumber) && \
@@ -1068,6 +1077,13 @@ GetConsoleOutCheck (
     NewMenuEntry      = BOpt_GetMenuEntry (&ConsoleOutMenu, Index);
     NewConsoleContext = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;  
     ConOutCheck[Index] = NewConsoleContext->IsActive;
+  }
+
+  for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
+    NewMenuEntry                = BOpt_GetMenuEntry (&TerminalMenu, Index);
+    NewTerminalContext          = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+    ASSERT (Index + ConsoleOutMenu.MenuNumber < MAX_MENU_NUMBER);
+    ConOutCheck[Index + ConsoleOutMenu.MenuNumber] = NewTerminalContext->IsConOut;
   }
 }
 
@@ -1088,6 +1104,7 @@ GetConsoleErrCheck (
   BM_MENU_ENTRY       *NewMenuEntry; 
   UINT8               *ConErrCheck;
   BM_CONSOLE_CONTEXT  *NewConsoleContext;
+  BM_TERMINAL_CONTEXT *NewTerminalContext;
 
   ASSERT (CallbackData != NULL);
   ConErrCheck = &CallbackData->BmmFakeNvData.ConsoleErrCheck[0];
@@ -1096,6 +1113,13 @@ GetConsoleErrCheck (
     NewMenuEntry      = BOpt_GetMenuEntry (&ConsoleErrMenu, Index);
     NewConsoleContext = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;  
     ConErrCheck[Index] = NewConsoleContext->IsActive;
+  }
+
+  for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
+    NewMenuEntry                = BOpt_GetMenuEntry (&TerminalMenu, Index);
+    NewTerminalContext          = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+    ASSERT (Index + ConsoleErrMenu.MenuNumber < MAX_MENU_NUMBER);
+    ConErrCheck[Index + ConsoleErrMenu.MenuNumber] = NewTerminalContext->IsStdErr;
   }
 }
 
@@ -1131,21 +1155,21 @@ GetTerminalAttribute (
         break;
       }
     }
-    for (AttributeIndex = 0; AttributeIndex < sizeof (DataBitsList) / sizeof (DataBitsList[0]); AttributeIndex++) {
+    for (AttributeIndex = 0; AttributeIndex < ARRAY_SIZE (DataBitsList); AttributeIndex++) {
       if (NewTerminalContext->DataBits == (UINT64) (DataBitsList[AttributeIndex].Value)) {
         NewTerminalContext->DataBitsIndex = AttributeIndex;
         break;
       }
     }    
 
-    for (AttributeIndex = 0; AttributeIndex < sizeof (ParityList) / sizeof (ParityList[0]); AttributeIndex++) {
+    for (AttributeIndex = 0; AttributeIndex < ARRAY_SIZE (ParityList); AttributeIndex++) {
       if (NewTerminalContext->Parity == (UINT64) (ParityList[AttributeIndex].Value)) {
         NewTerminalContext->ParityIndex = AttributeIndex;
         break;
       }
     }
 
-    for (AttributeIndex = 0; AttributeIndex < sizeof (StopBitsList) / sizeof (StopBitsList[0]); AttributeIndex++) {
+    for (AttributeIndex = 0; AttributeIndex < ARRAY_SIZE (StopBitsList); AttributeIndex++) {
       if (NewTerminalContext->StopBits == (UINT64) (StopBitsList[AttributeIndex].Value)) {
         NewTerminalContext->StopBitsIndex = AttributeIndex;
         break;

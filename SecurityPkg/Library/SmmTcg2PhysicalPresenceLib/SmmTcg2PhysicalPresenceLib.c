@@ -10,7 +10,7 @@
   Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction() and Tcg2PhysicalPresenceLibGetUserConfirmationStatusFunction()
   will receive untrusted input and do validation.
 
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials 
 are licensed and made available under the terms and conditions of the BSD License 
 which accompanies this distribution.  The full text of the license may be found at 
@@ -27,11 +27,16 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <Protocol/SmmVariable.h>
 
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/Tcg2PpVendorLib.h>
 #include <Library/SmmServicesTableLib.h>
 
+#define     PP_INF_VERSION_1_2    "1.2"
+
 EFI_SMM_VARIABLE_PROTOCOL  *mTcg2PpSmmVariable;
+BOOLEAN                    mIsTcg2PPVerLowerThan_1_3 = FALSE;
 
 /**
   The handler for TPM physical presence function:
@@ -89,26 +94,27 @@ Tcg2PhysicalPresenceLibReturnOperationResponseToOsFunction (
   This API should be invoked in OS runtime phase to interface with ACPI method.
 
   Caution: This function may receive untrusted input.
-  
-  @param[in]      OperationRequest TPM physical presence operation request.
-  @param[in]      RequestParameter TPM physical presence operation request parameter.
+
+  @param[in, out]  Pointer to OperationRequest TPM physical presence operation request.
+  @param[in, out]  Pointer to RequestParameter TPM physical presence operation request parameter.
 
   @return Return Code for Submit TPM Operation Request to Pre-OS Environment and
-          Submit TPM Operation Request to Pre-OS Environment 2.
-**/
+        Submit TPM Operation Request to Pre-OS Environment 2.
+  **/
 UINT32
-EFIAPI
-Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
-  IN UINT32                 OperationRequest,
-  IN UINT32                 RequestParameter
+Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunctionEx (
+  IN OUT UINT32               *OperationRequest,
+  IN OUT UINT32               *RequestParameter
   )
 {
   EFI_STATUS                        Status;
+  UINT32                            ReturnCode;
   UINTN                             DataSize;
   EFI_TCG2_PHYSICAL_PRESENCE        PpData;
   EFI_TCG2_PHYSICAL_PRESENCE_FLAGS  Flags;
 
-  DEBUG ((EFI_D_INFO, "[TPM2] SubmitRequestToPreOSFunction, Request = %x, %x\n", OperationRequest, RequestParameter));
+  DEBUG ((EFI_D_INFO, "[TPM2] SubmitRequestToPreOSFunction, Request = %x, %x\n", *OperationRequest, *RequestParameter));
+  ReturnCode = TCG_PP_SUBMIT_REQUEST_TO_PREOS_SUCCESS;
 
   //
   // Get the Physical Presence variable
@@ -123,21 +129,20 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
                                  );
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR, "[TPM2] Get PP variable failure! Status = %r\n", Status));
-    return TCG_PP_SUBMIT_REQUEST_TO_PREOS_GENERAL_FAILURE;
+    ReturnCode = TCG_PP_SUBMIT_REQUEST_TO_PREOS_GENERAL_FAILURE;
+    goto EXIT;
   }
 
-  if ((OperationRequest > TCG2_PHYSICAL_PRESENCE_NO_ACTION_MAX) &&
-      (OperationRequest < TCG2_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION) ) {
-    //
-    // This command requires UI to prompt user for Auth data.
-    //
-    return TCG_PP_SUBMIT_REQUEST_TO_PREOS_NOT_IMPLEMENTED;
+  if ((*OperationRequest > TCG2_PHYSICAL_PRESENCE_NO_ACTION_MAX) &&
+      (*OperationRequest < TCG2_PHYSICAL_PRESENCE_STORAGE_MANAGEMENT_BEGIN) ) {
+    ReturnCode = TCG_PP_SUBMIT_REQUEST_TO_PREOS_NOT_IMPLEMENTED;
+    goto EXIT;
   }
 
-  if ((PpData.PPRequest != OperationRequest) ||
-      (PpData.PPRequestParameter != RequestParameter)) {
-    PpData.PPRequest = (UINT8)OperationRequest;
-    PpData.PPRequestParameter = RequestParameter;
+  if ((PpData.PPRequest != *OperationRequest) ||
+      (PpData.PPRequestParameter != *RequestParameter)) {
+    PpData.PPRequest = (UINT8)*OperationRequest;
+    PpData.PPRequestParameter = *RequestParameter;
     DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
     Status = mTcg2PpSmmVariable->SmmSetVariable (
                                    TCG2_PHYSICAL_PRESENCE_VARIABLE,
@@ -146,14 +151,14 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
                                    DataSize,
                                    &PpData
                                    );
+    if (EFI_ERROR (Status)) { 
+      DEBUG ((EFI_D_ERROR, "[TPM2] Set PP variable failure! Status = %r\n", Status));
+      ReturnCode = TCG_PP_SUBMIT_REQUEST_TO_PREOS_GENERAL_FAILURE;
+      goto EXIT;
+    }
   }
 
-  if (EFI_ERROR (Status)) { 
-    DEBUG ((EFI_D_ERROR, "[TPM2] Set PP variable failure! Status = %r\n", Status));
-    return TCG_PP_SUBMIT_REQUEST_TO_PREOS_GENERAL_FAILURE;
-  }
-
-  if (OperationRequest >= TCG2_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION) {
+  if (*OperationRequest >= TCG2_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION) {
     DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE_FLAGS);
     Status = mTcg2PpSmmVariable->SmmGetVariable (
                                    TCG2_PHYSICAL_PRESENCE_FLAGS_VARIABLE,
@@ -163,12 +168,62 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
                                    &Flags
                                    );
     if (EFI_ERROR (Status)) {
-      Flags.PPFlags = TCG2_BIOS_TPM_MANAGEMENT_FLAG_DEFAULT;
+      Flags.PPFlags = TCG2_BIOS_TPM_MANAGEMENT_FLAG_DEFAULT | TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_DEFAULT;
     }
-    return Tcg2PpVendorLibSubmitRequestToPreOSFunction (OperationRequest, Flags.PPFlags, RequestParameter);
+    ReturnCode = Tcg2PpVendorLibSubmitRequestToPreOSFunction (*OperationRequest, Flags.PPFlags, *RequestParameter);
   }
 
-  return TCG_PP_SUBMIT_REQUEST_TO_PREOS_SUCCESS;
+EXIT:
+  //
+  // Sync PPRQ/PPRM from PP Variable if PP submission fails
+  //
+  if (ReturnCode != TCG_PP_SUBMIT_REQUEST_TO_PREOS_SUCCESS) {
+    DEBUG ((EFI_D_ERROR, "[TPM2] Submit PP Request failure! Sync PPRQ/PPRM with PP variable.\n", Status));
+    DataSize = sizeof (EFI_TCG2_PHYSICAL_PRESENCE);
+    ZeroMem(&PpData, DataSize);
+    Status = mTcg2PpSmmVariable->SmmGetVariable (
+                                   TCG2_PHYSICAL_PRESENCE_VARIABLE,
+                                   &gEfiTcg2PhysicalPresenceGuid,
+                                   NULL,
+                                   &DataSize,
+                                   &PpData
+                                   );
+    *OperationRequest = (UINT32)PpData.PPRequest;
+    *RequestParameter = PpData.PPRequestParameter;
+  }
+
+  return ReturnCode;
+}
+
+/**
+  The handler for TPM physical presence function:
+  Submit TPM Operation Request to Pre-OS Environment and
+  Submit TPM Operation Request to Pre-OS Environment 2.
+
+  This API should be invoked in OS runtime phase to interface with ACPI method.
+
+  Caution: This function may receive untrusted input.
+  
+  @param[in]      OperationRequest TPM physical presence operation request.
+  @param[in]      RequestParameter TPM physical presence operation request parameter.
+
+  @return Return Code for Submit TPM Operation Request to Pre-OS Environment and
+          Submit TPM Operation Request to Pre-OS Environment 2.
+**/
+UINT32
+EFIAPI
+Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
+  IN UINT32                 OperationRequest,
+  IN UINT32                 RequestParameter
+  )
+{
+  UINT32                 TempOperationRequest;
+  UINT32                 TempRequestParameter;
+
+  TempOperationRequest = OperationRequest;
+  TempRequestParameter = RequestParameter;
+
+  return Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunctionEx(&TempOperationRequest, &TempRequestParameter);
 }
 
 /**
@@ -240,6 +295,7 @@ Tcg2PhysicalPresenceLibGetUserConfirmationStatusFunction (
       }
       break;
 
+    case TCG2_PHYSICAL_PRESENCE_NO_ACTION:
     case TCG2_PHYSICAL_PRESENCE_SET_PP_REQUIRED_FOR_CLEAR_TRUE:
       RequestConfirmed = TRUE;
       break;
@@ -263,13 +319,44 @@ Tcg2PhysicalPresenceLibGetUserConfirmationStatusFunction (
       RequestConfirmed = TRUE;
       break;
 
-    default:
-      if (OperationRequest <= TCG2_PHYSICAL_PRESENCE_NO_ACTION_MAX) {
+    case TCG2_PHYSICAL_PRESENCE_ENABLE_BLOCK_SID:
+      if ((Flags.PPFlags & TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_PP_REQUIRED_FOR_ENABLE_BLOCK_SID) == 0) {
         RequestConfirmed = TRUE;
-      } else {
+      }
+      break;
+
+    case TCG2_PHYSICAL_PRESENCE_DISABLE_BLOCK_SID:
+      if ((Flags.PPFlags & TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_PP_REQUIRED_FOR_DISABLE_BLOCK_SID) == 0) {
+        RequestConfirmed = TRUE;
+      }
+      break;
+
+    case TCG2_PHYSICAL_PRESENCE_SET_PP_REQUIRED_FOR_ENABLE_BLOCK_SID_FUNC_TRUE:
+    case TCG2_PHYSICAL_PRESENCE_SET_PP_REQUIRED_FOR_DISABLE_BLOCK_SID_FUNC_TRUE:
+      RequestConfirmed = TRUE;
+      break;
+
+    case TCG2_PHYSICAL_PRESENCE_SET_PP_REQUIRED_FOR_ENABLE_BLOCK_SID_FUNC_FALSE:
+    case TCG2_PHYSICAL_PRESENCE_SET_PP_REQUIRED_FOR_DISABLE_BLOCK_SID_FUNC_FALSE:
+      break;
+
+    default:
+      if (!mIsTcg2PPVerLowerThan_1_3) {
         if (OperationRequest < TCG2_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION) {
+          //
+          // TCG2 PP1.3 spec defined operations that are reserved or un-implemented
+          //
           return TCG_PP_GET_USER_CONFIRMATION_NOT_IMPLEMENTED;
         }
+      } else {
+       //
+       // TCG PP lower than 1.3. (1.0, 1.1, 1.2)
+       //
+       if (OperationRequest <= TCG2_PHYSICAL_PRESENCE_NO_ACTION_MAX) {
+         RequestConfirmed = TRUE;
+       } else if (OperationRequest < TCG2_PHYSICAL_PRESENCE_VENDOR_SPECIFIC_OPERATION) {
+         return TCG_PP_GET_USER_CONFIRMATION_NOT_IMPLEMENTED;
+       }
       }
       break;
   }
@@ -286,7 +373,7 @@ Tcg2PhysicalPresenceLibGetUserConfirmationStatusFunction (
 }
 
 /**
-  The constructor function register UNI strings into imageHandle.
+  The constructor function locates SmmVariable protocol.
   
   It will ASSERT() if that operation fails and it will always return EFI_SUCCESS. 
 
@@ -304,6 +391,10 @@ Tcg2PhysicalPresenceLibConstructor (
   )
 {
   EFI_STATUS  Status;
+
+  if (AsciiStrnCmp(PP_INF_VERSION_1_2, (CHAR8 *)PcdGetPtr(PcdTcgPhysicalPresenceInterfaceVer), sizeof(PP_INF_VERSION_1_2) - 1) <= 0) {
+    mIsTcg2PPVerLowerThan_1_3 = TRUE;
+  }
 
   //
   // Locate SmmVariableProtocol.

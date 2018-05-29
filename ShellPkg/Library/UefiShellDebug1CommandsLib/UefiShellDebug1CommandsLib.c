@@ -1,7 +1,7 @@
 /** @file
   Main file for NULL named library for debug1 profile shell command functions.
 
-  Copyright (c) 2010 - 2011, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2010 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -131,7 +131,6 @@ UefiShellDebug1CommandsLibDestructor (
   //Stolen from MdePkg Baselib
 **/
 CHAR16
-EFIAPI
 CharToUpper (
   IN      CHAR16                    Char
   )
@@ -154,7 +153,6 @@ CharToUpper (
   @retval EFI_NOT_FOUND    A configuration table matching TableGuid was not found.
 **/
 EFI_STATUS
-EFIAPI
 GetSystemConfigurationTable (
   IN EFI_GUID *TableGuid,
   IN OUT VOID **Table
@@ -174,125 +172,6 @@ GetSystemConfigurationTable (
 }
 
 /**
-  Convert a Unicode character to numerical value.
-
-  This internal function only deal with Unicode character
-  which maps to a valid hexadecimal ASII character, i.e.
-  L'0' to L'9', L'a' to L'f' or L'A' to L'F'. For other
-  Unicode character, the value returned does not make sense.
-
-  @param  Char  The character to convert.
-
-  @return The numerical value converted.
-
-**/
-UINTN
-EFIAPI
-HexCharToUintn (
-  IN      CHAR16                    Char
-  )
-{
-  if (Char >= L'0' && Char <= L'9') {
-    return Char - L'0';
-  }
-
-  return (UINTN) (10 + CharToUpper (Char) - L'A');
-}
-
-/**
-  Convert a string representation of a guid to a Guid value.
-
-  @param[in] StringGuid    The pointer to the string of a guid.
-  @param[in, out] Guid     The pointer to the GUID structure to populate.
-
-  @retval EFI_INVALID_PARAMETER   A parameter was invalid.
-  @retval EFI_SUCCESS             The conversion was successful.
-**/
-EFI_STATUS
-EFIAPI
-ConvertStringToGuid (
-  IN CONST CHAR16 *StringGuid,
-  IN OUT EFI_GUID *Guid
-  )
-{
-  CHAR16  *TempCopy;
-  CHAR16  *TempSpot;
-  CHAR16  *Walker;
-  UINT64  TempVal;
-  EFI_STATUS Status;
-
-  if (StringGuid == NULL) {
-    return (EFI_INVALID_PARAMETER);
-  } else if (StrLen(StringGuid) != 36) {
-    return (EFI_INVALID_PARAMETER);
-  } 
-  TempCopy = NULL;
-  TempCopy = StrnCatGrow(&TempCopy, NULL, StringGuid, 0);
-  if (TempCopy == NULL) {
-    return (EFI_OUT_OF_RESOURCES);
-  }
-  Walker   = TempCopy;
-  TempSpot = StrStr(Walker, L"-");
-  if (TempSpot != NULL) {
-    *TempSpot = CHAR_NULL;
-  }
-  Status = ShellConvertStringToUint64(Walker, &TempVal, TRUE, FALSE);
-  if (EFI_ERROR(Status)) {
-    FreePool(TempCopy);
-    return (Status);
-  }
-  Guid->Data1 = (UINT32)TempVal;
-  Walker += 9;
-  TempSpot = StrStr(Walker, L"-");
-  if (TempSpot != NULL) {
-    *TempSpot = CHAR_NULL;
-  }
-  Status = ShellConvertStringToUint64(Walker, &TempVal, TRUE, FALSE);
-  if (EFI_ERROR(Status)) {
-    FreePool(TempCopy);
-    return (Status);
-  }
-  Guid->Data2 = (UINT16)TempVal;
-  Walker += 5;
-  TempSpot = StrStr(Walker, L"-");
-  if (TempSpot != NULL) {
-    *TempSpot = CHAR_NULL;
-  }
-  Status = ShellConvertStringToUint64(Walker, &TempVal, TRUE, FALSE);
-  if (EFI_ERROR(Status)) {
-    FreePool(TempCopy);
-    return (Status);
-  }
-  Guid->Data3 = (UINT16)TempVal;
-  Walker += 5;
-  Guid->Data4[0] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[0] = (UINT8)(Guid->Data4[0]+ (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 2;
-  Guid->Data4[1] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[1] = (UINT8)(Guid->Data4[1] + (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 3;
-  Guid->Data4[2] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[2] = (UINT8)(Guid->Data4[2] + (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 2;
-  Guid->Data4[3] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[3] = (UINT8)(Guid->Data4[3] + (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 2;
-  Guid->Data4[4] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[4] = (UINT8)(Guid->Data4[4] + (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 2;
-  Guid->Data4[5] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[5] = (UINT8)(Guid->Data4[5] + (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 2;
-  Guid->Data4[6] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[6] = (UINT8)(Guid->Data4[6] + (UINT8)HexCharToUintn(Walker[1]));
-  Walker += 2;
-  Guid->Data4[7] = (UINT8)(HexCharToUintn(Walker[0]) * 16);
-  Guid->Data4[7] = (UINT8)(Guid->Data4[7] + (UINT8)HexCharToUintn(Walker[1]));
-  FreePool(TempCopy);
-  return (EFI_SUCCESS);
-}
-
-/**
   Clear the line at the specified Row.
   
   @param[in] Row                The row number to be cleared ( start from 1 )
@@ -300,13 +179,13 @@ ConvertStringToGuid (
   @param[in] LastRow            The last printable row.
 **/
 VOID
-EFIAPI
 EditorClearLine (
   IN UINTN Row,
   IN UINTN LastCol,
   IN UINTN LastRow
   )
 {
+  UINTN  Col;
   CHAR16 Line[200];
 
   if (Row == 0) {
@@ -315,22 +194,28 @@ EditorClearLine (
 
   //
   // prepare a blank line
+  // If max column is larger, split to multiple prints.
   //
-  SetMem16(Line, LastCol*sizeof(CHAR16), L' ');
+  SetMem16 (Line, sizeof (Line), L' ');
+  Line[ARRAY_SIZE (Line) - 1] = CHAR_NULL;
 
-  if (Row == LastRow) {
+  for (Col = 1; Col <= LastCol; Col += ARRAY_SIZE (Line) - 1) {
+    if (Col + ARRAY_SIZE (Line) - 1 > LastCol) {
+      if (Row == LastRow) {
+        //
+        // if CHAR_NULL is still at position LastCol, it will cause first line error
+        //
+        Line[(LastCol - 1) % (ARRAY_SIZE (Line) - 1)] = CHAR_NULL;
+      } else {
+        Line[LastCol % (ARRAY_SIZE (Line) - 1)] = CHAR_NULL;
+      }
+    }
+ 
     //
-    // if CHAR_NULL is still at position 80, it will cause first line error
+    // print out the blank line
     //
-    Line[LastCol - 1] = CHAR_NULL;
-  } else {
-    Line[LastCol] = CHAR_NULL;
+    ShellPrintEx ((INT32) Col - 1, (INT32) Row - 1, Line);
   }
-
-  //
-  // print out the blank line
-  //
-  ShellPrintEx (0, ((INT32)Row) - 1, Line);
 }
 
 /**
@@ -342,7 +227,6 @@ EditorClearLine (
   @retval FALSE     The character is not valid.
 **/
 BOOLEAN
-EFIAPI
 IsValidFileNameChar (
   IN CONST CHAR16 Ch
   )
@@ -366,7 +250,6 @@ IsValidFileNameChar (
   @retval FALSE     The filename is not ok.
 **/
 BOOLEAN
-EFIAPI
 IsValidFileName (
   IN CONST CHAR16 *Name
   )
@@ -408,7 +291,6 @@ IsValidFileName (
   @return the valid filename.
 **/
 CHAR16 *
-EFIAPI
 EditGetDefaultFileName (
   IN CONST CHAR16 *Extension
   )
@@ -462,7 +344,6 @@ EditGetDefaultFileName (
   @retval EFI_INVALID_PARAMETER FileName was a directory.
 **/
 EFI_STATUS
-EFIAPI
 ReadFileIntoBuffer (
   IN CONST CHAR16 *FileName,
   OUT VOID        **Buffer,

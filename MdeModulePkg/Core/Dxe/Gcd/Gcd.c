@@ -3,7 +3,7 @@
   The GCD services are used to manage the memory and I/O regions that
   are accessible to the CPU that is executing the DXE core.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -16,6 +16,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include "DxeMain.h"
 #include "Gcd.h"
+#include "Mem/HeapGuard.h"
 
 #define MINIMUM_INITIAL_MEMORY_SIZE 0x10000
 
@@ -40,7 +41,12 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #define PRESENT_MEMORY_ATTRIBUTES     (EFI_RESOURCE_ATTRIBUTE_PRESENT)
 
-#define INVALID_CPU_ARCH_ATTRIBUTES   0xffffffff
+#define EXCLUSIVE_MEMORY_ATTRIBUTES   (EFI_MEMORY_UC | EFI_MEMORY_WC | \
+                                       EFI_MEMORY_WT | EFI_MEMORY_WB | \
+                                       EFI_MEMORY_WP | EFI_MEMORY_UCE)
+
+#define NONEXCLUSIVE_MEMORY_ATTRIBUTES (EFI_MEMORY_XP | EFI_MEMORY_RP | \
+                                        EFI_MEMORY_RO)
 
 //
 // Module Variables
@@ -108,7 +114,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED CONST CHAR8 *mGcdMemoryTypeNames[] = {
   "Reserved ",  // EfiGcdMemoryTypeReserved
   "SystemMem",  // EfiGcdMemoryTypeSystemMemory
   "MMIO     ",  // EfiGcdMemoryTypeMemoryMappedIo
-  "PersisMem",  // EfiGcdMemoryTypePersistentMemory
+  "PersisMem",  // EfiGcdMemoryTypePersistent
   "MoreRelia",  // EfiGcdMemoryTypeMoreReliable
   "Unknown  "   // EfiGcdMemoryTypeMaximum
 };
@@ -384,12 +390,21 @@ CoreAllocateGcdMapEntry (
   IN OUT EFI_GCD_MAP_ENTRY  **BottomEntry
   )
 {
+  //
+  // Set to mOnGuarding to TRUE before memory allocation. This will make sure
+  // that the entry memory is not "guarded" by HeapGuard. Otherwise it might
+  // cause problem when it's freed (if HeapGuard is enabled).
+  //
+  mOnGuarding = TRUE;
   *TopEntry = AllocateZeroPool (sizeof (EFI_GCD_MAP_ENTRY));
+  mOnGuarding = FALSE;
   if (*TopEntry == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
+  mOnGuarding = TRUE;
   *BottomEntry = AllocateZeroPool (sizeof (EFI_GCD_MAP_ENTRY));
+  mOnGuarding = FALSE;
   if (*BottomEntry == NULL) {
     CoreFreePool (*TopEntry);
     return EFI_OUT_OF_RESOURCES;
@@ -654,28 +669,25 @@ ConverToCpuArchAttributes (
   UINT64 Attributes
   )
 {
+  UINT64      CpuArchAttributes;
+
+  CpuArchAttributes = Attributes & NONEXCLUSIVE_MEMORY_ATTRIBUTES;
+
   if ( (Attributes & EFI_MEMORY_UC) == EFI_MEMORY_UC) {
-    return EFI_MEMORY_UC;
+    CpuArchAttributes |= EFI_MEMORY_UC;
+  } else if ( (Attributes & EFI_MEMORY_WC ) == EFI_MEMORY_WC) {
+    CpuArchAttributes |= EFI_MEMORY_WC;
+  } else if ( (Attributes & EFI_MEMORY_WT ) == EFI_MEMORY_WT) {
+    CpuArchAttributes |= EFI_MEMORY_WT;
+  } else if ( (Attributes & EFI_MEMORY_WB) == EFI_MEMORY_WB) {
+    CpuArchAttributes |= EFI_MEMORY_WB;
+  } else if ( (Attributes & EFI_MEMORY_UCE) == EFI_MEMORY_UCE) {
+    CpuArchAttributes |= EFI_MEMORY_UCE;
+  } else if ( (Attributes & EFI_MEMORY_WP) == EFI_MEMORY_WP) {
+    CpuArchAttributes |= EFI_MEMORY_WP;
   }
 
-  if ( (Attributes & EFI_MEMORY_WC ) == EFI_MEMORY_WC) {
-    return EFI_MEMORY_WC;
-  }
-
-  if ( (Attributes & EFI_MEMORY_WT ) == EFI_MEMORY_WT) {
-    return EFI_MEMORY_WT;
-  }
-
-  if ( (Attributes & EFI_MEMORY_WB) == EFI_MEMORY_WB) {
-    return EFI_MEMORY_WB;
-  }
-
-  if ( (Attributes & EFI_MEMORY_WP) == EFI_MEMORY_WP) {
-    return EFI_MEMORY_WP;
-  }
-
-  return INVALID_CPU_ARCH_ATTRIBUTES;
-
+  return CpuArchAttributes;
 }
 
 
@@ -854,12 +866,30 @@ CoreConvertSpace (
   }
   ASSERT (TopEntry != NULL && BottomEntry != NULL);
 
+  //
+  // Initialize CpuArchAttributes to suppress incorrect compiler/analyzer warnings.
+  //
+  CpuArchAttributes = 0;
   if (Operation == GCD_SET_ATTRIBUTES_MEMORY_OPERATION) {
     //
     // Call CPU Arch Protocol to attempt to set attributes on the range
     //
     CpuArchAttributes = ConverToCpuArchAttributes (Attributes);
-    if (CpuArchAttributes != INVALID_CPU_ARCH_ATTRIBUTES) {
+    //
+    // CPU arch attributes include page attributes and cache attributes. 
+    // Only page attributes supports to be cleared, but not cache attributes.
+    // Caller is expected to use GetMemorySpaceDescriptor() to get the current
+    // attributes, AND/OR attributes, and then calls SetMemorySpaceAttributes()
+    // to set the new attributes.
+    // So 0 CPU arch attributes should not happen as memory should always have
+    // a cache attribute (no matter UC or WB, etc). 
+    //
+    // Here, 0 CPU arch attributes will be filtered to be compatible with the
+    // case that caller just calls SetMemorySpaceAttributes() with none CPU
+    // arch attributes (for example, RUNTIME) as the purpose of the case is not
+    // to clear CPU arch attributes.
+    //
+    if (CpuArchAttributes != 0) {
       if (gCpu == NULL) {
         Status = EFI_NOT_AVAILABLE_YET;
       } else {
@@ -922,6 +952,13 @@ CoreConvertSpace (
     // Set attributes operation
     //
     case GCD_SET_ATTRIBUTES_MEMORY_OPERATION:
+      if (CpuArchAttributes == 0) {
+        //
+        // Keep original CPU arch attributes when caller just calls
+        // SetMemorySpaceAttributes() with none CPU arch attributes (for example, RUNTIME).
+        //
+        Attributes |= (Entry->Attributes & (EXCLUSIVE_MEMORY_ATTRIBUTES | NONEXCLUSIVE_MEMORY_ATTRIBUTES));
+      }
       Entry->Attributes = Attributes;
       break;
     //
@@ -1337,7 +1374,11 @@ CoreAllocateMemorySpace (
   IN     EFI_HANDLE             DeviceHandle OPTIONAL
   )
 {
-  DEBUG ((DEBUG_GCD, "GCD:AllocateMemorySpace(Base=%016lx,Length=%016lx)\n", *BaseAddress, Length));
+  if (BaseAddress != NULL) {
+    DEBUG ((DEBUG_GCD, "GCD:AllocateMemorySpace(Base=%016lx,Length=%016lx)\n", *BaseAddress, Length));
+  } else {
+    DEBUG ((DEBUG_GCD, "GCD:AllocateMemorySpace(Base=<NULL>,Length=%016lx)\n", Length));
+  }
   DEBUG ((DEBUG_GCD, "  GcdAllocateType = %a\n", mGcdAllocationTypeNames[MIN (GcdAllocateType, EfiGcdMaxAllocateType)]));
   DEBUG ((DEBUG_GCD, "  GcdMemoryType   = %a\n", mGcdMemoryTypeNames[MIN (GcdMemoryType, EfiGcdMemoryTypeMaximum)]));
   DEBUG ((DEBUG_GCD, "  Alignment       = %016lx\n", LShiftU64 (1, Alignment)));
@@ -1624,7 +1665,7 @@ CoreSetMemorySpaceCapabilities (
 
   Status = CoreConvertSpace (GCD_SET_CAPABILITIES_MEMORY_OPERATION, (EFI_GCD_MEMORY_TYPE) 0, (EFI_GCD_IO_TYPE) 0, BaseAddress, Length, Capabilities, 0);
   if (!EFI_ERROR(Status)) {
-    CoreUpdateMemoryAttributes(BaseAddress, RShiftU64(Length, EFI_PAGE_SHIFT), Capabilities);
+    CoreUpdateMemoryAttributes(BaseAddress, RShiftU64(Length, EFI_PAGE_SHIFT), Capabilities & (~EFI_MEMORY_RUNTIME));
   }
 
   return Status;
@@ -1761,7 +1802,11 @@ CoreAllocateIoSpace (
   IN     EFI_HANDLE             DeviceHandle OPTIONAL
   )
 {
-  DEBUG ((DEBUG_GCD, "GCD:AllocateIoSpace(Base=%016lx,Length=%016lx)\n", *BaseAddress, Length));
+  if (BaseAddress != NULL) {
+    DEBUG ((DEBUG_GCD, "GCD:AllocateIoSpace(Base=%016lx,Length=%016lx)\n", *BaseAddress, Length));
+  } else {
+    DEBUG ((DEBUG_GCD, "GCD:AllocateIoSpace(Base=<NULL>,Length=%016lx)\n", Length));
+  }
   DEBUG ((DEBUG_GCD, "  GcdAllocateType = %a\n", mGcdAllocationTypeNames[MIN (GcdAllocateType, EfiGcdMaxAllocateType)]));
   DEBUG ((DEBUG_GCD, "  GcdIoType       = %a\n", mGcdIoTypeNames[MIN (GcdIoType, EfiGcdIoTypeMaximum)]));
   DEBUG ((DEBUG_GCD, "  Alignment       = %016lx\n", LShiftU64 (1, Alignment)));
@@ -2399,7 +2444,7 @@ CoreInitializeGcdServices (
           GcdMemoryType = EfiGcdMemoryTypeReserved;
         }
         if ((ResourceHob->ResourceAttribute & EFI_RESOURCE_ATTRIBUTE_PERSISTENT) == EFI_RESOURCE_ATTRIBUTE_PERSISTENT) {
-          GcdMemoryType = EfiGcdMemoryTypePersistentMemory;
+          GcdMemoryType = EfiGcdMemoryTypePersistent;
         }
         break;
       case EFI_RESOURCE_MEMORY_MAPPED_IO:

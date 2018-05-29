@@ -1,7 +1,9 @@
 /** @file
 Agent Module to load other modules to deploy SMM Entry Vector for X86 CPU.
 
-Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
+
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -74,6 +76,15 @@ EFI_SMM_CPU_PROTOCOL  mSmmCpu  = {
   SmmWriteSaveState
 };
 
+///
+/// SMM Memory Attribute Protocol instance
+///
+EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL  mSmmMemoryAttribute  = {
+  EdkiiSmmGetMemoryAttributes,
+  EdkiiSmmSetMemoryAttributes,
+  EdkiiSmmClearMemoryAttributes
+};
+
 EFI_CPU_INTERRUPT_HANDLER   mExternalVectorTable[EXCEPTION_VECTOR_NUMBER];
 
 //
@@ -82,11 +93,6 @@ EFI_CPU_INTERRUPT_HANDLER   mExternalVectorTable[EXCEPTION_VECTOR_NUMBER];
 UINTN mSmmStackArrayBase;
 UINTN mSmmStackArrayEnd;
 UINTN mSmmStackSize;
-
-//
-// Pointer to structure used during S3 Resume
-//
-SMM_S3_RESUME_STATE *mSmmS3ResumeState = NULL;
 
 UINTN mMaxNumberOfCpus = 1;
 UINTN mNumberOfCpus = 1;
@@ -102,9 +108,28 @@ BOOLEAN mSmmReadyToLock = FALSE;
 BOOLEAN                  mSmmCodeAccessCheckEnable = FALSE;
 
 //
+// Global copy of the PcdPteMemoryEncryptionAddressOrMask
+//
+UINT64                   mAddressEncMask = 0;
+
+//
 // Spin lock used to serialize setting of SMM Code Access Check feature
 //
 SPIN_LOCK                *mConfigSmmCodeAccessCheckLock = NULL;
+
+//
+// Saved SMM ranges information
+//
+EFI_SMRAM_DESCRIPTOR     *mSmmCpuSmramRanges;
+UINTN                    mSmmCpuSmramRangeCount;
+
+UINT8                    mPhysicalAddressBits;
+
+//
+// Control register contents saved for SMM S3 resume state initialization.
+//
+UINT32                   mSmmCr0;
+UINT32                   mSmmCr4;
 
 /**
   Initialize IDT to setup exception handlers for SMM.
@@ -118,6 +143,19 @@ InitializeSmmIdt (
   EFI_STATUS               Status;
   BOOLEAN                  InterruptState;
   IA32_DESCRIPTOR          DxeIdtr;
+
+  //
+  // There are 32 (not 255) entries in it since only processor
+  // generated exceptions will be handled.
+  //
+  gcSmiIdtr.Limit = (sizeof(IA32_IDT_GATE_DESCRIPTOR) * 32) - 1;
+  //
+  // Allocate page aligned IDT, because it might be set as read only.
+  //
+  gcSmiIdtr.Base = (UINTN)AllocateCodePages (EFI_SIZE_TO_PAGES(gcSmiIdtr.Limit + 1));
+  ASSERT (gcSmiIdtr.Base != 0);
+  ZeroMem ((VOID *)gcSmiIdtr.Base, gcSmiIdtr.Limit + 1);
+
   //
   // Disable Interrupt and save DXE IDT table
   //
@@ -152,48 +190,17 @@ DumpModuleInfoByIp (
   )
 {
   UINTN                                Pe32Data;
-  EFI_IMAGE_DOS_HEADER                 *DosHdr;
-  EFI_IMAGE_OPTIONAL_HEADER_PTR_UNION  Hdr;
   VOID                                 *PdbPointer;
-  UINT64                               DumpIpAddress;
 
   //
   // Find Image Base
   //
-  Pe32Data = CallerIpAddress & ~(SIZE_4KB - 1);
-  while (Pe32Data != 0) {
-    DosHdr = (EFI_IMAGE_DOS_HEADER *) Pe32Data;
-    if (DosHdr->e_magic == EFI_IMAGE_DOS_SIGNATURE) {
-      //
-      // DOS image header is present, so read the PE header after the DOS image header.
-      //
-      Hdr.Pe32 = (EFI_IMAGE_NT_HEADERS32 *)(Pe32Data + (UINTN) ((DosHdr->e_lfanew) & 0x0ffff));
-      //
-      // Make sure PE header address does not overflow and is less than the initial address.
-      //
-      if (((UINTN)Hdr.Pe32 > Pe32Data) && ((UINTN)Hdr.Pe32 < CallerIpAddress)) {
-        if (Hdr.Pe32->Signature == EFI_IMAGE_NT_SIGNATURE) {
-          //
-          // It's PE image.
-          //
-          break;
-        }
-      }
-    }
-
-    //
-    // Not found the image base, check the previous aligned address
-    //
-    Pe32Data -= SIZE_4KB;
-  }
-
-  DumpIpAddress = CallerIpAddress;
-  DEBUG ((EFI_D_ERROR, "It is invoked from the instruction before IP(0x%lx)", DumpIpAddress));
-
+  Pe32Data = PeCoffSearchImageBase (CallerIpAddress);
   if (Pe32Data != 0) {
+    DEBUG ((DEBUG_ERROR, "It is invoked from the instruction before IP(0x%p)", (VOID *) CallerIpAddress));
     PdbPointer = PeCoffLoaderGetPdbPointer ((VOID *) Pe32Data);
     if (PdbPointer != NULL) {
-      DEBUG ((EFI_D_ERROR, " in module (%a)", PdbPointer));
+      DEBUG ((DEBUG_ERROR, " in module (%a)\n", PdbPointer));
     }
   }
 }
@@ -336,7 +343,7 @@ SmmInitHandler (
   AsmWriteIdtr (&gcSmiIdtr);
   ApicId = GetApicId ();
 
-  ASSERT (mNumberOfCpus <= PcdGet32 (PcdCpuMaxLogicalProcessorNumber));
+  ASSERT (mNumberOfCpus <= mMaxNumberOfCpus);
 
   for (Index = 0; Index < mNumberOfCpus; Index++) {
     if (ApicId == (UINT32)gSmmCpuPrivate->ProcessorInfo[Index].ProcessorId) {
@@ -349,6 +356,13 @@ SmmInitHandler (
         gSmmCpuPrivate->ProcessorInfo,
         &mCpuHotPlugData
         );
+
+      if (!mSmmS3Flag) {
+        //
+        // Check XD and BTS features on each processor on normal boot
+        //
+        CheckFeatureSupported ();
+      }
 
       if (mIsBsp) {
         //
@@ -397,9 +411,11 @@ SmmRelocateBases (
   //
   // Patch ASM code template with current CR0, CR3, and CR4 values
   //
-  gSmmCr0 = (UINT32)AsmReadCr0 ();
-  gSmmCr3 = (UINT32)AsmReadCr3 ();
-  gSmmCr4 = (UINT32)AsmReadCr4 ();
+  mSmmCr0 = (UINT32)AsmReadCr0 ();
+  PatchInstructionX86 (gPatchSmmCr0, mSmmCr0, 4);
+  PatchInstructionX86 (gPatchSmmCr3, AsmReadCr3 (), 4);
+  mSmmCr4 = (UINT32)AsmReadCr4 ();
+  PatchInstructionX86 (gPatchSmmCr4, mSmmCr4, 4);
 
   //
   // Patch GDTR for SMM base relocation
@@ -467,180 +483,6 @@ SmmRelocateBases (
 }
 
 /**
-  Perform SMM initialization for all processors in the S3 boot path.
-
-  For a native platform, MP initialization in the S3 boot path is also performed in this function.
-**/
-VOID
-EFIAPI
-SmmRestoreCpu (
-  VOID
-  )
-{
-  SMM_S3_RESUME_STATE           *SmmS3ResumeState;
-  IA32_DESCRIPTOR               Ia32Idtr;
-  IA32_DESCRIPTOR               X64Idtr;
-  IA32_IDT_GATE_DESCRIPTOR      IdtEntryTable[EXCEPTION_VECTOR_NUMBER];
-  EFI_STATUS                    Status;
-
-  DEBUG ((EFI_D_INFO, "SmmRestoreCpu()\n"));
-
-  //
-  // See if there is enough context to resume PEI Phase
-  //
-  if (mSmmS3ResumeState == NULL) {
-    DEBUG ((EFI_D_ERROR, "No context to return to PEI Phase\n"));
-    CpuDeadLoop ();
-  }
-
-  SmmS3ResumeState = mSmmS3ResumeState;
-  ASSERT (SmmS3ResumeState != NULL);
-
-  if (SmmS3ResumeState->Signature == SMM_S3_RESUME_SMM_64) {
-    //
-    // Save the IA32 IDT Descriptor
-    //
-    AsmReadIdtr ((IA32_DESCRIPTOR *) &Ia32Idtr);
-
-    //
-    // Setup X64 IDT table
-    //
-    ZeroMem (IdtEntryTable, sizeof (IA32_IDT_GATE_DESCRIPTOR) * 32);
-    X64Idtr.Base = (UINTN) IdtEntryTable;
-    X64Idtr.Limit = (UINT16) (sizeof (IA32_IDT_GATE_DESCRIPTOR) * 32 - 1);
-    AsmWriteIdtr ((IA32_DESCRIPTOR *) &X64Idtr);
-
-    //
-    // Setup the default exception handler
-    //
-    Status = InitializeCpuExceptionHandlers (NULL);
-    ASSERT_EFI_ERROR (Status);
-
-    //
-    // Initialize Debug Agent to support source level debug
-    //
-    InitializeDebugAgent (DEBUG_AGENT_INIT_THUNK_PEI_IA32TOX64, (VOID *)&Ia32Idtr, NULL);
-  }
-
-  //
-  // Skip initialization if mAcpiCpuData is not valid
-  //
-  if (mAcpiCpuData.NumberOfCpus > 0) {
-    //
-    // First time microcode load and restore MTRRs
-    //
-    EarlyInitializeCpu ();
-  }
-
-  //
-  // Restore SMBASE for BSP and all APs
-  //
-  SmmRelocateBases ();
-
-  //
-  // Skip initialization if mAcpiCpuData is not valid
-  //
-  if (mAcpiCpuData.NumberOfCpus > 0) {
-    //
-    // Restore MSRs for BSP and all APs
-    //
-    InitializeCpu ();
-  }
-
-  //
-  // Set a flag to restore SMM configuration in S3 path.
-  //
-  mRestoreSmmConfigurationInS3 = TRUE;
-
-  DEBUG (( EFI_D_INFO, "SMM S3 Return CS                = %x\n", SmmS3ResumeState->ReturnCs));
-  DEBUG (( EFI_D_INFO, "SMM S3 Return Entry Point       = %x\n", SmmS3ResumeState->ReturnEntryPoint));
-  DEBUG (( EFI_D_INFO, "SMM S3 Return Context1          = %x\n", SmmS3ResumeState->ReturnContext1));
-  DEBUG (( EFI_D_INFO, "SMM S3 Return Context2          = %x\n", SmmS3ResumeState->ReturnContext2));
-  DEBUG (( EFI_D_INFO, "SMM S3 Return Stack Pointer     = %x\n", SmmS3ResumeState->ReturnStackPointer));
-
-  //
-  // If SMM is in 32-bit mode, then use SwitchStack() to resume PEI Phase
-  //
-  if (SmmS3ResumeState->Signature == SMM_S3_RESUME_SMM_32) {
-    DEBUG ((EFI_D_INFO, "Call SwitchStack() to return to S3 Resume in PEI Phase\n"));
-
-    SwitchStack (
-      (SWITCH_STACK_ENTRY_POINT)(UINTN)SmmS3ResumeState->ReturnEntryPoint,
-      (VOID *)(UINTN)SmmS3ResumeState->ReturnContext1,
-      (VOID *)(UINTN)SmmS3ResumeState->ReturnContext2,
-      (VOID *)(UINTN)SmmS3ResumeState->ReturnStackPointer
-      );
-  }
-
-  //
-  // If SMM is in 64-bit mode, then use AsmDisablePaging64() to resume PEI Phase
-  //
-  if (SmmS3ResumeState->Signature == SMM_S3_RESUME_SMM_64) {
-    DEBUG ((EFI_D_INFO, "Call AsmDisablePaging64() to return to S3 Resume in PEI Phase\n"));
-    //
-    // Disable interrupt of Debug timer, since new IDT table is for IA32 and will not work in long mode.
-    //
-    SaveAndSetDebugTimerInterrupt (FALSE);
-    //
-    // Restore IA32 IDT table
-    //
-    AsmWriteIdtr ((IA32_DESCRIPTOR *) &Ia32Idtr);
-    AsmDisablePaging64 (
-      SmmS3ResumeState->ReturnCs,
-      (UINT32)SmmS3ResumeState->ReturnEntryPoint,
-      (UINT32)SmmS3ResumeState->ReturnContext1,
-      (UINT32)SmmS3ResumeState->ReturnContext2,
-      (UINT32)SmmS3ResumeState->ReturnStackPointer
-      );
-  }
-
-  //
-  // Can not resume PEI Phase
-  //
-  DEBUG ((EFI_D_ERROR, "No context to return to PEI Phase\n"));
-  CpuDeadLoop ();
-}
-
-/**
-  Copy register table from ACPI NVS memory into SMRAM.
-
-  @param[in] DestinationRegisterTableList  Points to destination register table.
-  @param[in] SourceRegisterTableList       Points to source register table.
-  @param[in] NumberOfCpus                  Number of CPUs.
-
-**/
-VOID
-CopyRegisterTable (
-  IN CPU_REGISTER_TABLE         *DestinationRegisterTableList,
-  IN CPU_REGISTER_TABLE         *SourceRegisterTableList,
-  IN UINT32                     NumberOfCpus
-  )
-{
-  UINTN                      Index;
-  UINTN                      Index1;
-  CPU_REGISTER_TABLE_ENTRY   *RegisterTableEntry;
-
-  CopyMem (DestinationRegisterTableList, SourceRegisterTableList, NumberOfCpus * sizeof (CPU_REGISTER_TABLE));
-  for (Index = 0; Index < NumberOfCpus; Index++) {
-    DestinationRegisterTableList[Index].RegisterTableEntry = AllocatePool (DestinationRegisterTableList[Index].AllocatedSize);
-    ASSERT (DestinationRegisterTableList[Index].RegisterTableEntry != NULL);
-    CopyMem (DestinationRegisterTableList[Index].RegisterTableEntry, SourceRegisterTableList[Index].RegisterTableEntry, DestinationRegisterTableList[Index].AllocatedSize);
-    //
-    // Go though all MSRs in register table to initialize MSR spin lock
-    //
-    RegisterTableEntry = DestinationRegisterTableList[Index].RegisterTableEntry;
-    for (Index1 = 0; Index1 < DestinationRegisterTableList[Index].TableLength; Index1++, RegisterTableEntry++) {
-      if ((RegisterTableEntry->RegisterType == Msr) && (RegisterTableEntry->ValidBitLength < 64)) {
-        //
-        // Initialize MSR spin lock only for those MSRs need bit field writing
-        //
-        InitMsrSpinLockByIndex (RegisterTableEntry->Index);
-      }
-    }
-  }
-}
-
-/**
   SMM Ready To Lock event notification handler.
 
   The CPU S3 data is copied to SMRAM for security and mSmmReadyToLock is set to
@@ -660,77 +502,13 @@ SmmReadyToLockEventNotify (
   IN EFI_HANDLE      Handle
   )
 {
-  ACPI_CPU_DATA              *AcpiCpuData;
-  IA32_DESCRIPTOR            *Gdtr;
-  IA32_DESCRIPTOR            *Idtr;
+  GetAcpiCpuData ();
 
   //
-  // Prevent use of mAcpiCpuData by initialize NumberOfCpus to 0
+  // Cache a copy of UEFI memory map before we start profiling feature.
   //
-  mAcpiCpuData.NumberOfCpus = 0;
+  GetUefiMemoryMap ();
 
-  //
-  // If PcdCpuS3DataAddress was never set, then do not copy CPU S3 Data into SMRAM
-  //
-  AcpiCpuData = (ACPI_CPU_DATA *)(UINTN)PcdGet64 (PcdCpuS3DataAddress);
-  if (AcpiCpuData == 0) {
-    goto Done;
-  }
-
-  //
-  // For a native platform, copy the CPU S3 data into SMRAM for use on CPU S3 Resume.
-  //
-  CopyMem (&mAcpiCpuData, AcpiCpuData, sizeof (mAcpiCpuData));
-
-  mAcpiCpuData.MtrrTable = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePool (sizeof (MTRR_SETTINGS));
-  ASSERT (mAcpiCpuData.MtrrTable != 0);
-
-  CopyMem ((VOID *)(UINTN)mAcpiCpuData.MtrrTable, (VOID *)(UINTN)AcpiCpuData->MtrrTable, sizeof (MTRR_SETTINGS));
-
-  mAcpiCpuData.GdtrProfile = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePool (sizeof (IA32_DESCRIPTOR));
-  ASSERT (mAcpiCpuData.GdtrProfile != 0);
-
-  CopyMem ((VOID *)(UINTN)mAcpiCpuData.GdtrProfile, (VOID *)(UINTN)AcpiCpuData->GdtrProfile, sizeof (IA32_DESCRIPTOR));
-
-  mAcpiCpuData.IdtrProfile = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePool (sizeof (IA32_DESCRIPTOR));
-  ASSERT (mAcpiCpuData.IdtrProfile != 0);
-
-  CopyMem ((VOID *)(UINTN)mAcpiCpuData.IdtrProfile, (VOID *)(UINTN)AcpiCpuData->IdtrProfile, sizeof (IA32_DESCRIPTOR));
-
-  mAcpiCpuData.PreSmmInitRegisterTable = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePool (mAcpiCpuData.NumberOfCpus * sizeof (CPU_REGISTER_TABLE));
-  ASSERT (mAcpiCpuData.PreSmmInitRegisterTable != 0);
-
-  CopyRegisterTable (
-    (CPU_REGISTER_TABLE *)(UINTN)mAcpiCpuData.PreSmmInitRegisterTable,
-    (CPU_REGISTER_TABLE *)(UINTN)AcpiCpuData->PreSmmInitRegisterTable,
-    mAcpiCpuData.NumberOfCpus
-    );
-
-  mAcpiCpuData.RegisterTable = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePool (mAcpiCpuData.NumberOfCpus * sizeof (CPU_REGISTER_TABLE));
-  ASSERT (mAcpiCpuData.RegisterTable != 0);
-
-  CopyRegisterTable (
-    (CPU_REGISTER_TABLE *)(UINTN)mAcpiCpuData.RegisterTable,
-    (CPU_REGISTER_TABLE *)(UINTN)AcpiCpuData->RegisterTable,
-    mAcpiCpuData.NumberOfCpus
-    );
-
-  //
-  // Copy AP's GDT, IDT and Machine Check handler into SMRAM.
-  //
-  Gdtr = (IA32_DESCRIPTOR *)(UINTN)mAcpiCpuData.GdtrProfile;
-  Idtr = (IA32_DESCRIPTOR *)(UINTN)mAcpiCpuData.IdtrProfile;
-
-  mGdtForAp = AllocatePool ((Gdtr->Limit + 1) + (Idtr->Limit + 1) +  mAcpiCpuData.ApMachineCheckHandlerSize);
-  ASSERT (mGdtForAp != NULL);
-  mIdtForAp = (VOID *) ((UINTN)mGdtForAp + (Gdtr->Limit + 1));
-  mMachineCheckHandlerForAp = (VOID *) ((UINTN)mIdtForAp + (Idtr->Limit + 1));
-
-  CopyMem (mGdtForAp, (VOID *)Gdtr->Base, Gdtr->Limit + 1);
-  CopyMem (mIdtForAp, (VOID *)Idtr->Base, Idtr->Limit + 1);
-  CopyMem (mMachineCheckHandlerForAp, (VOID *)(UINTN)mAcpiCpuData.ApMachineCheckHandlerBase, mAcpiCpuData.ApMachineCheckHandlerSize);
-
-Done:
   //
   // Set SMM ready to lock flag and return
   //
@@ -764,9 +542,6 @@ PiCpuSmmEntry (
   UINTN                      TileCodeSize;
   UINTN                      TileDataSize;
   UINTN                      TileSize;
-  VOID                       *GuidHob;
-  EFI_SMRAM_DESCRIPTOR       *SmramDescriptor;
-  SMM_S3_RESUME_STATE        *SmmS3ResumeState;
   UINT8                      *Stacks;
   VOID                       *Registration;
   UINT32                     RegEax;
@@ -774,6 +549,12 @@ PiCpuSmmEntry (
   UINTN                      FamilyId;
   UINTN                      ModelId;
   UINT32                     Cr3;
+
+  //
+  // Initialize address fixup
+  //
+  PiSmmCpuSmmInitFixupAddress ();
+  PiSmmCpuSmiEntryFixupAddress ();
 
   //
   // Initialize Debug Agent to support source level debug in SMM code
@@ -787,13 +568,6 @@ PiCpuSmmEntry (
     EFI_PROGRESS_CODE,
     EFI_COMPUTING_UNIT_HOST_PROCESSOR | EFI_CU_HP_PC_SMM_INIT
     );
-
-  //
-  // Fix segment address of the long-mode-switch jump
-  //
-  if (sizeof (UINTN) == sizeof (UINT64)) {
-    gSmmJmpAddr.Segment = LONG_MODE_CODE_SEGMENT;
-  }
 
   //
   // Find out SMRR Base and SMRR Size
@@ -829,6 +603,13 @@ PiCpuSmmEntry (
   //
   mSmmCodeAccessCheckEnable = PcdGetBool (PcdCpuSmmCodeAccessCheckEnable);
   DEBUG ((EFI_D_INFO, "PcdCpuSmmCodeAccessCheckEnable = %d\n", mSmmCodeAccessCheckEnable));
+
+  //
+  // Save the PcdPteMemoryEncryptionAddressOrMask value into a global variable.
+  // Make sure AddressEncMask is contained to smallest supported address field.
+  //
+  mAddressEncMask = PcdGet64 (PcdPteMemoryEncryptionAddressOrMask) & PAGING_1G_ADDRESS_MASK_64;
+  DEBUG ((EFI_D_INFO, "mAddressEncMask = 0x%lx\n", mAddressEncMask));
 
   //
   // If support CPU hot plug, we need to allocate resources for possibly hot-added processors
@@ -942,22 +723,23 @@ PiCpuSmmEntry (
 
   //
   // Compute tile size of buffer required to hold the CPU SMRAM Save State Map, extra CPU
-  // specific context in a PROCESSOR_SMM_DESCRIPTOR, and the SMI entry point.  This size
-  // is rounded up to nearest power of 2.
+  // specific context start starts at SMBASE + SMM_PSD_OFFSET, and the SMI entry point.
+  // This size is rounded up to nearest power of 2.
   //
   TileCodeSize = GetSmiHandlerSize ();
   TileCodeSize = ALIGN_VALUE(TileCodeSize, SIZE_4KB);
-  TileDataSize = sizeof (SMRAM_SAVE_STATE_MAP) + sizeof (PROCESSOR_SMM_DESCRIPTOR);
+  TileDataSize = (SMRAM_SAVE_STATE_MAP_OFFSET - SMM_PSD_OFFSET) + sizeof (SMRAM_SAVE_STATE_MAP);
   TileDataSize = ALIGN_VALUE(TileDataSize, SIZE_4KB);
   TileSize = TileDataSize + TileCodeSize - 1;
   TileSize = 2 * GetPowerOfTwo32 ((UINT32)TileSize);
   DEBUG ((EFI_D_INFO, "SMRAM TileSize = 0x%08x (0x%08x, 0x%08x)\n", TileSize, TileCodeSize, TileDataSize));
 
   //
-  // If the TileSize is larger than space available for the SMI Handler of CPU[i],
-  // the PROCESSOR_SMM_DESCRIPTOR of CPU[i+1] and the SMRAM Save State Map of CPU[i+1],
-  // the ASSERT().  If this ASSERT() is triggered, then the SMI Handler size must be
-  // reduced.
+  // If the TileSize is larger than space available for the SMI Handler of
+  // CPU[i], the extra CPU specific context of CPU[i+1], and the SMRAM Save
+  // State Map of CPU[i+1], then ASSERT().  If this ASSERT() is triggered, then
+  // the SMI Handler size must be reduced or the size of the extra CPU specific
+  // context must be reduced.
   //
   ASSERT (TileSize <= (SMRAM_SAVE_STATE_MAP_OFFSET + sizeof (SMRAM_SAVE_STATE_MAP) - SMM_HANDLER_OFFSET));
 
@@ -975,9 +757,9 @@ PiCpuSmmEntry (
   //
   BufferPages = EFI_SIZE_TO_PAGES (SIZE_32KB + TileSize * (mMaxNumberOfCpus - 1));
   if ((FamilyId == 4) || (FamilyId == 5)) {
-    Buffer = AllocateAlignedPages (BufferPages, SIZE_32KB);
+    Buffer = AllocateAlignedCodePages (BufferPages, SIZE_32KB);
   } else {
-    Buffer = AllocateAlignedPages (BufferPages, SIZE_4KB);
+    Buffer = AllocateAlignedCodePages (BufferPages, SIZE_4KB);
   }
   ASSERT (Buffer != NULL);
   DEBUG ((EFI_D_INFO, "SMRAM SaveState Buffer (0x%08x, 0x%08x)\n", Buffer, EFI_PAGES_TO_SIZE(BufferPages)));
@@ -1066,7 +848,11 @@ PiCpuSmmEntry (
   //
   // Set SMI stack for SMM base relocation
   //
-  gSmmInitStack = (UINTN) (Stacks + mSmmStackSize - sizeof (UINTN));
+  PatchInstructionX86 (
+    gPatchSmmInitStack,
+    (UINTN) (Stacks + mSmmStackSize - sizeof (UINTN)),
+    sizeof (UINTN)
+    );
 
   //
   // Initialize IDT
@@ -1085,6 +871,8 @@ PiCpuSmmEntry (
   // SMM base addresses have been relocated on all CPUs
   //
   SmmCpuFeaturesSmmRelocationComplete ();
+
+  DEBUG ((DEBUG_INFO, "mXdSupported - 0x%x\n", mXdSupported));
 
   //
   // SMM Time initialization
@@ -1126,6 +914,17 @@ PiCpuSmmEntry (
   ASSERT_EFI_ERROR (Status);
 
   //
+  // Install the SMM Memory Attribute Protocol into SMM protocol database
+  //
+  Status = gSmst->SmmInstallProtocolInterface (
+                    &mSmmCpuHandle,
+                    &gEdkiiSmmMemoryAttributeProtocolGuid,
+                    EFI_NATIVE_INTERFACE,
+                    &mSmmMemoryAttribute
+                    );
+  ASSERT_EFI_ERROR (Status);
+
+  //
   // Expose address of CPU Hot Plug Data structure if CPU hot plug is supported.
   //
   if (FeaturePcdGet (PcdCpuHotPlugSupport)) {
@@ -1149,53 +948,13 @@ PiCpuSmmEntry (
                     );
   ASSERT_EFI_ERROR (Status);
 
-  GuidHob = GetFirstGuidHob (&gEfiAcpiVariableGuid);
-  if (GuidHob != NULL) {
-    SmramDescriptor = (EFI_SMRAM_DESCRIPTOR *) GET_GUID_HOB_DATA (GuidHob);
-
-    DEBUG ((EFI_D_INFO, "SMM S3 SMRAM Structure = %x\n", SmramDescriptor));
-    DEBUG ((EFI_D_INFO, "SMM S3 Structure = %x\n", SmramDescriptor->CpuStart));
-
-    SmmS3ResumeState = (SMM_S3_RESUME_STATE *)(UINTN)SmramDescriptor->CpuStart;
-    ZeroMem (SmmS3ResumeState, sizeof (SMM_S3_RESUME_STATE));
-
-    mSmmS3ResumeState = SmmS3ResumeState;
-    SmmS3ResumeState->Smst = (EFI_PHYSICAL_ADDRESS)(UINTN)gSmst;
-
-    SmmS3ResumeState->SmmS3ResumeEntryPoint = (EFI_PHYSICAL_ADDRESS)(UINTN)SmmRestoreCpu;
-
-    SmmS3ResumeState->SmmS3StackSize = SIZE_32KB;
-    SmmS3ResumeState->SmmS3StackBase = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePages (EFI_SIZE_TO_PAGES ((UINTN)SmmS3ResumeState->SmmS3StackSize));
-    if (SmmS3ResumeState->SmmS3StackBase == 0) {
-      SmmS3ResumeState->SmmS3StackSize = 0;
-    }
-
-    SmmS3ResumeState->SmmS3Cr0 = gSmmCr0;
-    SmmS3ResumeState->SmmS3Cr3 = Cr3;
-    SmmS3ResumeState->SmmS3Cr4 = gSmmCr4;
-
-    if (sizeof (UINTN) == sizeof (UINT64)) {
-      SmmS3ResumeState->Signature = SMM_S3_RESUME_SMM_64;
-    }
-    if (sizeof (UINTN) == sizeof (UINT32)) {
-      SmmS3ResumeState->Signature = SMM_S3_RESUME_SMM_32;
-    }
-  }
-
-  //
-  // Check XD and BTS features
-  //
-  CheckProcessorFeature ();
-
   //
   // Initialize SMM Profile feature
   //
   InitSmmProfile (Cr3);
 
-  //
-  // Patch SmmS3ResumeState->SmmS3Cr3
-  //
-  InitSmmS3Cr3 ();
+  GetAcpiS3EnableFlag ();
+  InitSmmS3ResumeState (Cr3);
 
   DEBUG ((EFI_D_INFO, "SMM CPU Module exit from SMRAM with EFI_SUCCESS\n"));
 
@@ -1220,8 +979,6 @@ FindSmramInfo (
   UINTN                             Size;
   EFI_SMM_ACCESS2_PROTOCOL          *SmmAccess;
   EFI_SMRAM_DESCRIPTOR              *CurrentSmramRange;
-  EFI_SMRAM_DESCRIPTOR              *SmramRanges;
-  UINTN                             SmramRangeCount;
   UINTN                             Index;
   UINT64                            MaxSize;
   BOOLEAN                           Found;
@@ -1239,31 +996,31 @@ FindSmramInfo (
   Status = SmmAccess->GetCapabilities (SmmAccess, &Size, NULL);
   ASSERT (Status == EFI_BUFFER_TOO_SMALL);
 
-  SmramRanges = (EFI_SMRAM_DESCRIPTOR *)AllocatePool (Size);
-  ASSERT (SmramRanges != NULL);
+  mSmmCpuSmramRanges = (EFI_SMRAM_DESCRIPTOR *)AllocatePool (Size);
+  ASSERT (mSmmCpuSmramRanges != NULL);
 
-  Status = SmmAccess->GetCapabilities (SmmAccess, &Size, SmramRanges);
+  Status = SmmAccess->GetCapabilities (SmmAccess, &Size, mSmmCpuSmramRanges);
   ASSERT_EFI_ERROR (Status);
 
-  SmramRangeCount = Size / sizeof (EFI_SMRAM_DESCRIPTOR);
+  mSmmCpuSmramRangeCount = Size / sizeof (EFI_SMRAM_DESCRIPTOR);
 
   //
   // Find the largest SMRAM range between 1MB and 4GB that is at least 256K - 4K in size
   //
   CurrentSmramRange = NULL;
-  for (Index = 0, MaxSize = SIZE_256KB - EFI_PAGE_SIZE; Index < SmramRangeCount; Index++) {
+  for (Index = 0, MaxSize = SIZE_256KB - EFI_PAGE_SIZE; Index < mSmmCpuSmramRangeCount; Index++) {
     //
     // Skip any SMRAM region that is already allocated, needs testing, or needs ECC initialization
     //
-    if ((SmramRanges[Index].RegionState & (EFI_ALLOCATED | EFI_NEEDS_TESTING | EFI_NEEDS_ECC_INITIALIZATION)) != 0) {
+    if ((mSmmCpuSmramRanges[Index].RegionState & (EFI_ALLOCATED | EFI_NEEDS_TESTING | EFI_NEEDS_ECC_INITIALIZATION)) != 0) {
       continue;
     }
 
-    if (SmramRanges[Index].CpuStart >= BASE_1MB) {
-      if ((SmramRanges[Index].CpuStart + SmramRanges[Index].PhysicalSize) <= BASE_4GB) {
-        if (SmramRanges[Index].PhysicalSize >= MaxSize) {
-          MaxSize = SmramRanges[Index].PhysicalSize;
-          CurrentSmramRange = &SmramRanges[Index];
+    if (mSmmCpuSmramRanges[Index].CpuStart >= BASE_1MB) {
+      if ((mSmmCpuSmramRanges[Index].CpuStart + mSmmCpuSmramRanges[Index].PhysicalSize) <= SMRR_MAX_ADDRESS) {
+        if (mSmmCpuSmramRanges[Index].PhysicalSize >= MaxSize) {
+          MaxSize = mSmmCpuSmramRanges[Index].PhysicalSize;
+          CurrentSmramRange = &mSmmCpuSmramRanges[Index];
         }
       }
     }
@@ -1276,13 +1033,14 @@ FindSmramInfo (
 
   do {
     Found = FALSE;
-    for (Index = 0; Index < SmramRangeCount; Index++) {
-      if (SmramRanges[Index].CpuStart < *SmrrBase && *SmrrBase == (SmramRanges[Index].CpuStart + SmramRanges[Index].PhysicalSize)) {
-        *SmrrBase = (UINT32)SmramRanges[Index].CpuStart;
-        *SmrrSize = (UINT32)(*SmrrSize + SmramRanges[Index].PhysicalSize);
+    for (Index = 0; Index < mSmmCpuSmramRangeCount; Index++) {
+      if (mSmmCpuSmramRanges[Index].CpuStart < *SmrrBase &&
+          *SmrrBase == (mSmmCpuSmramRanges[Index].CpuStart + mSmmCpuSmramRanges[Index].PhysicalSize)) {
+        *SmrrBase = (UINT32)mSmmCpuSmramRanges[Index].CpuStart;
+        *SmrrSize = (UINT32)(*SmrrSize + mSmmCpuSmramRanges[Index].PhysicalSize);
         Found = TRUE;
-      } else if ((*SmrrBase + *SmrrSize) == SmramRanges[Index].CpuStart && SmramRanges[Index].PhysicalSize > 0) {
-        *SmrrSize = (UINT32)(*SmrrSize + SmramRanges[Index].PhysicalSize);
+      } else if ((*SmrrBase + *SmrrSize) == mSmmCpuSmramRanges[Index].CpuStart && mSmmCpuSmramRanges[Index].PhysicalSize > 0) {
+        *SmrrSize = (UINT32)(*SmrrSize + mSmmCpuSmramRanges[Index].PhysicalSize);
         Found = TRUE;
       }
     }
@@ -1392,7 +1150,12 @@ ConfigSmmCodeAccessCheck (
   //
   for (Index = 0; Index < gSmst->NumberOfCpus; Index++) {
     if (Index != gSmmCpuPrivate->SmmCoreEntryContext.CurrentlyExecutingCpu) {
-
+      if (gSmmCpuPrivate->ProcessorInfo[Index].ProcessorId == INVALID_APIC_ID) {
+        //
+        // If this processor does not exist
+        //
+        continue;
+      }
       //
       // Acquire Config SMM Code Access Check spin lock.  The AP will release the
       // spin lock when it is done executing ConfigSmmCodeAccessCheckOnCurrentProcessor().
@@ -1450,6 +1213,109 @@ AllocatePageTableMemory (
 }
 
 /**
+  Allocate pages for code.
+
+  @param[in]  Pages Number of pages to be allocated.
+
+  @return Allocated memory.
+**/
+VOID *
+AllocateCodePages (
+  IN UINTN           Pages
+  )
+{
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  Memory;
+
+  if (Pages == 0) {
+    return NULL;
+  }
+
+  Status = gSmst->SmmAllocatePages (AllocateAnyPages, EfiRuntimeServicesCode, Pages, &Memory);
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+  return (VOID *) (UINTN) Memory;
+}
+
+/**
+  Allocate aligned pages for code.
+
+  @param[in]  Pages                 Number of pages to be allocated.
+  @param[in]  Alignment             The requested alignment of the allocation.
+                                    Must be a power of two.
+                                    If Alignment is zero, then byte alignment is used.
+
+  @return Allocated memory.
+**/
+VOID *
+AllocateAlignedCodePages (
+  IN UINTN            Pages,
+  IN UINTN            Alignment
+  )
+{
+  EFI_STATUS            Status;
+  EFI_PHYSICAL_ADDRESS  Memory;
+  UINTN                 AlignedMemory;
+  UINTN                 AlignmentMask;
+  UINTN                 UnalignedPages;
+  UINTN                 RealPages;
+
+  //
+  // Alignment must be a power of two or zero.
+  //
+  ASSERT ((Alignment & (Alignment - 1)) == 0);
+
+  if (Pages == 0) {
+    return NULL;
+  }
+  if (Alignment > EFI_PAGE_SIZE) {
+    //
+    // Calculate the total number of pages since alignment is larger than page size.
+    //
+    AlignmentMask  = Alignment - 1;
+    RealPages      = Pages + EFI_SIZE_TO_PAGES (Alignment);
+    //
+    // Make sure that Pages plus EFI_SIZE_TO_PAGES (Alignment) does not overflow.
+    //
+    ASSERT (RealPages > Pages);
+
+    Status         = gSmst->SmmAllocatePages (AllocateAnyPages, EfiRuntimeServicesCode, RealPages, &Memory);
+    if (EFI_ERROR (Status)) {
+      return NULL;
+    }
+    AlignedMemory  = ((UINTN) Memory + AlignmentMask) & ~AlignmentMask;
+    UnalignedPages = EFI_SIZE_TO_PAGES (AlignedMemory - (UINTN) Memory);
+    if (UnalignedPages > 0) {
+      //
+      // Free first unaligned page(s).
+      //
+      Status = gSmst->SmmFreePages (Memory, UnalignedPages);
+      ASSERT_EFI_ERROR (Status);
+    }
+    Memory         = AlignedMemory + EFI_PAGES_TO_SIZE (Pages);
+    UnalignedPages = RealPages - Pages - UnalignedPages;
+    if (UnalignedPages > 0) {
+      //
+      // Free last unaligned page(s).
+      //
+      Status = gSmst->SmmFreePages (Memory, UnalignedPages);
+      ASSERT_EFI_ERROR (Status);
+    }
+  } else {
+    //
+    // Do not over-allocate pages in this case.
+    //
+    Status = gSmst->SmmAllocatePages (AllocateAnyPages, EfiRuntimeServicesCode, Pages, &Memory);
+    if (EFI_ERROR (Status)) {
+      return NULL;
+    }
+    AlignedMemory  = (UINTN) Memory;
+  }
+  return (VOID *) AlignedMemory;
+}
+
+/**
   Perform the remaining tasks.
 
 **/
@@ -1469,6 +1335,22 @@ PerformRemainingTasks (
     // Create a mix of 2MB and 4KB page table. Update some memory ranges absent and execute-disable.
     //
     InitPaging ();
+
+    //
+    // Mark critical region to be read-only in page table
+    //
+    SetMemMapAttributes ();
+
+    //
+    // For outside SMRAM, we only map SMM communication buffer or MMIO.
+    //
+    SetUefiMemMapAttributes ();
+
+    //
+    // Set page table itself to be read-only
+    //
+    SetPageTableAttributes ();
+
     //
     // Configure SMM Code Access Check feature if available.
     //
@@ -1492,26 +1374,5 @@ PerformPreTasks (
   VOID
   )
 {
-  //
-  // Restore SMM Configuration in S3 boot path.
-  //
-  if (mRestoreSmmConfigurationInS3) {
-    //
-    // Need make sure gSmst is correct because below function may use them.
-    //
-    gSmst->SmmStartupThisAp      = gSmmCpuPrivate->SmmCoreEntryContext.SmmStartupThisAp;
-    gSmst->CurrentlyExecutingCpu = gSmmCpuPrivate->SmmCoreEntryContext.CurrentlyExecutingCpu;
-    gSmst->NumberOfCpus          = gSmmCpuPrivate->SmmCoreEntryContext.NumberOfCpus;
-    gSmst->CpuSaveStateSize      = gSmmCpuPrivate->SmmCoreEntryContext.CpuSaveStateSize;
-    gSmst->CpuSaveState          = gSmmCpuPrivate->SmmCoreEntryContext.CpuSaveState;
-
-    //
-    // Configure SMM Code Access Check feature if available.
-    //
-    ConfigSmmCodeAccessCheck ();
-
-    SmmCpuFeaturesCompleteSmmReadyToLock ();
-
-    mRestoreSmmConfigurationInS3 = FALSE;
-  }
+  RestoreSmmConfigurationInS3 ();
 }

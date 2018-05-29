@@ -1,7 +1,7 @@
 /** @file
   EFI PCI IO protocol functions implementation for PCI Bus module.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 
 #include "PciBus.h"
+
+extern EDKII_IOMMU_PROTOCOL                          *mIoMmuProtocol;
 
 //
 // Pci Io Protocol Interface
@@ -965,8 +967,10 @@ PciIoMap (
   OUT    VOID                           **Mapping
   )
 {
-  EFI_STATUS    Status;
-  PCI_IO_DEVICE *PciIoDevice;
+  EFI_STATUS                                 Status;
+  PCI_IO_DEVICE                              *PciIoDevice;
+  UINT64                                     IoMmuAttribute;
+  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_OPERATION  RootBridgeIoOperation;
 
   PciIoDevice = PCI_IO_DEVICE_FROM_PCI_IO_THIS (This);
 
@@ -978,13 +982,14 @@ PciIoMap (
     return EFI_INVALID_PARAMETER;
   }
 
+  RootBridgeIoOperation = (EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_OPERATION)Operation;
   if ((PciIoDevice->Attributes & EFI_PCI_IO_ATTRIBUTE_DUAL_ADDRESS_CYCLE) != 0) {
-    Operation = (EFI_PCI_IO_PROTOCOL_OPERATION) (Operation + EfiPciOperationBusMasterRead64);
+    RootBridgeIoOperation = (EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_OPERATION)(Operation + EfiPciOperationBusMasterRead64);
   }
 
   Status = PciIoDevice->PciRootBridgeIo->Map (
                                           PciIoDevice->PciRootBridgeIo,
-                                          (EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_OPERATION) Operation,
+                                          RootBridgeIoOperation,
                                           HostAddress,
                                           NumberOfBytes,
                                           DeviceAddress,
@@ -997,6 +1002,31 @@ PciIoMap (
       EFI_IO_BUS_PCI | EFI_IOB_EC_CONTROLLER_ERROR,
       PciIoDevice->DevicePath
       );
+  }
+
+  if (mIoMmuProtocol != NULL) {
+    if (!EFI_ERROR (Status)) {
+      switch (Operation) {
+      case EfiPciIoOperationBusMasterRead:
+        IoMmuAttribute = EDKII_IOMMU_ACCESS_READ;
+        break;
+      case EfiPciIoOperationBusMasterWrite:
+        IoMmuAttribute = EDKII_IOMMU_ACCESS_WRITE;
+        break;
+      case EfiPciIoOperationBusMasterCommonBuffer:
+        IoMmuAttribute = EDKII_IOMMU_ACCESS_READ | EDKII_IOMMU_ACCESS_WRITE;
+        break;
+      default:
+        ASSERT(FALSE);
+        return EFI_INVALID_PARAMETER;
+      }
+      mIoMmuProtocol->SetAttribute (
+                        mIoMmuProtocol,
+                        PciIoDevice->Handle,
+                        *Mapping,
+                        IoMmuAttribute
+                        );
+    }
   }
 
   return Status;
@@ -1024,6 +1054,15 @@ PciIoUnmap (
 
   PciIoDevice = PCI_IO_DEVICE_FROM_PCI_IO_THIS (This);
 
+  if (mIoMmuProtocol != NULL) {
+    mIoMmuProtocol->SetAttribute (
+                      mIoMmuProtocol,
+                      PciIoDevice->Handle,
+                      Mapping,
+                      0
+                      );
+  }
+
   Status = PciIoDevice->PciRootBridgeIo->Unmap (
                                           PciIoDevice->PciRootBridgeIo,
                                           Mapping
@@ -1042,7 +1081,7 @@ PciIoUnmap (
 
 /**
   Allocates pages that are suitable for an EfiPciIoOperationBusMasterCommonBuffer
-  mapping.
+  or EfiPciOperationBusMasterCommonBuffer64 mapping.
 
   @param  This                  A pointer to the EFI_PCI_IO_PROTOCOL instance.
   @param  Type                  This parameter is not used and must be ignored.
@@ -1055,7 +1094,7 @@ PciIoUnmap (
 
   @retval EFI_SUCCESS           The requested memory pages were allocated.
   @retval EFI_UNSUPPORTED       Attributes is unsupported. The only legal attribute bits are
-                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.
+                                MEMORY_WRITE_COMBINE, MEMORY_CACHED and DUAL_ADDRESS_CYCLE.
   @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
   @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.
 
@@ -1773,10 +1812,14 @@ GetMmioAddressTranslationOffset (
     return (UINT64) -1;
   }
 
+  // According to UEFI 2.7, EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL::Configuration()
+  // returns host address instead of device address, while AddrTranslationOffset
+  // is not zero, and device address = host address + AddrTranslationOffset, so
+  // we convert host address to device address for range compare.
   while (Configuration->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR) {
     if ((Configuration->ResType == ACPI_ADDRESS_SPACE_TYPE_MEM) &&
-        (Configuration->AddrRangeMin <= AddrRangeMin) &&
-        (Configuration->AddrRangeMin + Configuration->AddrLen >= AddrRangeMin + AddrLen)
+        (Configuration->AddrRangeMin + Configuration->AddrTranslationOffset <= AddrRangeMin) &&
+        (Configuration->AddrRangeMin + Configuration->AddrLen + Configuration->AddrTranslationOffset >= AddrRangeMin + AddrLen)
         ) {
       return Configuration->AddrTranslationOffset;
     }
@@ -1799,12 +1842,12 @@ GetMmioAddressTranslationOffset (
                                 base address for resource range. The legal range for this field is 0..5.
   @param  Supports              A pointer to the mask of attributes that this PCI controller supports
                                 setting for this BAR with SetBarAttributes().
-  @param  Resources             A pointer to the ACPI 2.0 resource descriptors that describe the current
+  @param  Resources             A pointer to the resource descriptors that describe the current
                                 configuration of this BAR of the PCI controller.
 
   @retval EFI_SUCCESS           If Supports is not NULL, then the attributes that the PCI
                                 controller supports are returned in Supports. If Resources
-                                is not NULL, then the ACPI 2.0 resource descriptors that the PCI
+                                is not NULL, then the resource descriptors that the PCI
                                 controller is currently using are returned in Resources.
   @retval EFI_INVALID_PARAMETER Both Supports and Attributes are NULL.
   @retval EFI_UNSUPPORTED       BarIndex not valid for this PCI controller.
@@ -1929,6 +1972,10 @@ PciIoGetBarAttributes (
         return EFI_UNSUPPORTED;
       }
     }
+
+    // According to UEFI spec 2.7, we need return host address for
+    // PciIo->GetBarAttributes, and host address = device address - translation.
+    Descriptor->AddrRangeMin -= Descriptor->AddrTranslationOffset;
   }
 
   return EFI_SUCCESS;

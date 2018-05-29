@@ -45,7 +45,8 @@ GetXenArmAcpiRsdp (
   EFI_STATUS                                     Status;
   FDT_CLIENT_PROTOCOL                            *FdtClient;
   CONST UINT64                                   *Reg;
-  UINT32                                         RegElemSize, RegSize;
+  UINT32                                         RegSize;
+  UINTN                                          AddressCells, SizeCells;
   UINT64                                         RegBase;
   UINT8                                          Sum;
 
@@ -59,17 +60,21 @@ GetXenArmAcpiRsdp (
   ASSERT_EFI_ERROR (Status);
 
   Status = FdtClient->FindCompatibleNodeReg (FdtClient, "xen,guest-acpi",
-                        (CONST VOID **)&Reg, &RegElemSize, &RegSize);
+                        (CONST VOID **)&Reg, &AddressCells, &SizeCells,
+                        &RegSize);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_WARN, "%a: No 'xen,guest-acpi' compatible DT node found\n",
       __FUNCTION__));
     return EFI_NOT_FOUND;
   }
 
+  ASSERT (AddressCells == 2);
+  ASSERT (SizeCells == 2);
   ASSERT (RegSize == 2 * sizeof (UINT64));
 
   RegBase = SwapBytes64(Reg[0]);
-  RsdpStructurePtr = (EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER *)RegBase;
+  RsdpStructurePtr =
+    (EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER *)(UINTN)RegBase;
 
   if (RsdpStructurePtr && RsdpStructurePtr->Revision >= 2) {
     Sum = CalculateSum8 ((CONST UINT8 *)RsdpStructurePtr,

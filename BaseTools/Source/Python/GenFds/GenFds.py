@@ -1,7 +1,7 @@
 ## @file
 # generate flash image
 #
-#  Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -24,28 +24,29 @@ import Common.BuildToolError as BuildToolError
 from GenFdsGlobalVariable import GenFdsGlobalVariable
 from Workspace.WorkspaceDatabase import WorkspaceDatabase
 from Workspace.BuildClassObject import PcdClassObject
-from Workspace.BuildClassObject import ModuleBuildClassObject
 import RuleComplexFile
 from EfiSection import EfiSection
 import StringIO
 import Common.TargetTxtClassObject as TargetTxtClassObject
 import Common.ToolDefClassObject as ToolDefClassObject
-import Common.DataType
+from Common.DataType import *
 import Common.GlobalData as GlobalData
 from Common import EdkLogger
-from Common.String import *
+from Common.StringUtils import *
 from Common.Misc import DirCache, PathClass
 from Common.Misc import SaveFileOnChange
 from Common.Misc import ClearDuplicatedInf
 from Common.Misc import GuidStructureStringToGuidString
-from Common.Misc import CheckPcdDatum
 from Common.BuildVersion import gBUILD_VERSION
 from Common.MultipleWorkspace import MultipleWorkspace as mws
+import FfsFileStatement
+import glob
+from struct import unpack
 
 ## Version and Copyright
 versionNumber = "1.0" + ' ' + gBUILD_VERSION
 __version__ = "%prog Version " + versionNumber
-__copyright__ = "Copyright (c) 2007 - 2016, Intel Corporation  All rights reserved."
+__copyright__ = "Copyright (c) 2007 - 2017, Intel Corporation  All rights reserved."
 
 ## Tool entrance method
 #
@@ -67,22 +68,22 @@ def main():
 
     EdkLogger.Initialize()
     try:
-        if Options.verbose != None:
+        if Options.verbose is not None:
             EdkLogger.SetLevel(EdkLogger.VERBOSE)
             GenFdsGlobalVariable.VerboseMode = True
             
-        if Options.FixedAddress != None:
+        if Options.FixedAddress is not None:
             GenFdsGlobalVariable.FixedLoadAddress = True
             
-        if Options.quiet != None:
+        if Options.quiet is not None:
             EdkLogger.SetLevel(EdkLogger.QUIET)
-        if Options.debug != None:
+        if Options.debug is not None:
             EdkLogger.SetLevel(Options.debug + 1)
             GenFdsGlobalVariable.DebugLevel = Options.debug
         else:
             EdkLogger.SetLevel(EdkLogger.INFO)
 
-        if (Options.Workspace == None):
+        if (Options.Workspace is None):
             EdkLogger.error("GenFds", OPTION_MISSING, "WORKSPACE not defined",
                             ExtraData="Please use '-w' switch to pass it or set the WORKSPACE environment variable.")
         elif not os.path.exists(Options.Workspace):
@@ -91,10 +92,12 @@ def main():
         else:
             Workspace = os.path.normcase(Options.Workspace)
             GenFdsGlobalVariable.WorkSpaceDir = Workspace
-            if 'EDK_SOURCE' in os.environ.keys():
+            if 'EDK_SOURCE' in os.environ:
                 GenFdsGlobalVariable.EdkSourceDir = os.path.normcase(os.environ['EDK_SOURCE'])
             if (Options.debug):
                 GenFdsGlobalVariable.VerboseLogger("Using Workspace:" + Workspace)
+            if Options.GenfdsMultiThread:
+                GenFdsGlobalVariable.EnableGenfdsMultiThread = True
         os.chdir(GenFdsGlobalVariable.WorkSpaceDir)
         
         # set multiple workspace
@@ -138,6 +141,7 @@ def main():
         else:
             EdkLogger.error("GenFds", OPTION_MISSING, "Missing active platform")
 
+        GlobalData.BuildOptionPcd     = Options.OptionPcd if Options.OptionPcd else {}
         GenFdsGlobalVariable.ActivePlatform = PathClass(NormPath(ActivePlatform))
 
         if (Options.ConfDirectory):
@@ -152,9 +156,14 @@ def main():
                 # This also handles someone specifying the Conf directory in the workspace. Using --conf=Conf
                 ConfDirectoryPath = os.path.join(GenFdsGlobalVariable.WorkSpaceDir, ConfDirectoryPath)
         else:
-            # Get standard WORKSPACE/Conf, use the absolute path to the WORKSPACE/Conf
-            ConfDirectoryPath = mws.join(GenFdsGlobalVariable.WorkSpaceDir, 'Conf')
+            if "CONF_PATH" in os.environ:
+                ConfDirectoryPath = os.path.normcase(os.environ["CONF_PATH"])
+            else:
+                # Get standard WORKSPACE/Conf, use the absolute path to the WORKSPACE/Conf
+                ConfDirectoryPath = mws.join(GenFdsGlobalVariable.WorkSpaceDir, 'Conf')
         GenFdsGlobalVariable.ConfDir = ConfDirectoryPath
+        if not GlobalData.gConfDirectory:
+            GlobalData.gConfDirectory = GenFdsGlobalVariable.ConfDir
         BuildConfigurationFile = os.path.normpath(os.path.join(ConfDirectoryPath, "target.txt"))
         if os.path.isfile(BuildConfigurationFile) == True:
             TargetTxt = TargetTxtClassObject.TargetTxtClassObject()
@@ -169,7 +178,7 @@ def main():
             # if no tool chain given in command line, get it from target.txt
             if not GenFdsGlobalVariable.ToolChainTag:
                 ToolChainList = TargetTxt.TargetTxtDictionary[DataType.TAB_TAT_DEFINES_TOOL_CHAIN_TAG]
-                if ToolChainList == None or len(ToolChainList) == 0:
+                if ToolChainList is None or len(ToolChainList) == 0:
                     EdkLogger.error("GenFds", RESOURCE_NOT_AVAILABLE, ExtraData="No toolchain given. Don't know how to build.")
                 if len(ToolChainList) != 1:
                     EdkLogger.error("GenFds", OPTION_VALUE_INVALID, ExtraData="Only allows one instance for ToolChain.")
@@ -207,11 +216,11 @@ def main():
         os.environ["WORKSPACE"] = Workspace
 
         # Use the -t and -b option as gGlobalDefines's TOOLCHAIN and TARGET if they are not defined
-        if "TARGET" not in GlobalData.gGlobalDefines.keys():
+        if "TARGET" not in GlobalData.gGlobalDefines:
             GlobalData.gGlobalDefines["TARGET"] = GenFdsGlobalVariable.TargetName
-        if "TOOLCHAIN" not in GlobalData.gGlobalDefines.keys():
+        if "TOOLCHAIN" not in GlobalData.gGlobalDefines:
             GlobalData.gGlobalDefines["TOOLCHAIN"] = GenFdsGlobalVariable.ToolChainTag
-        if "TOOL_CHAIN_TAG" not in GlobalData.gGlobalDefines.keys():
+        if "TOOL_CHAIN_TAG" not in GlobalData.gGlobalDefines:
             GlobalData.gGlobalDefines['TOOL_CHAIN_TAG'] = GenFdsGlobalVariable.ToolChainTag
 
         """call Workspace build create database"""
@@ -229,11 +238,11 @@ def main():
             ArchList = Options.archList.split(',')
         else:
 #            EdkLogger.error("GenFds", OPTION_MISSING, "Missing build ARCH")
-            ArchList = BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, 'COMMON', Options.BuildTarget, Options.ToolChain].SupArchList
+            ArchList = BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, TAB_COMMON, Options.BuildTarget, Options.ToolChain].SupArchList
 
-        TargetArchList = set(BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, 'COMMON', Options.BuildTarget, Options.ToolChain].SupArchList) & set(ArchList)
+        TargetArchList = set(BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, TAB_COMMON, Options.BuildTarget, Options.ToolChain].SupArchList) & set(ArchList)
         if len(TargetArchList) == 0:
-            EdkLogger.error("GenFds", GENFDS_ERROR, "Target ARCH %s not in platform supported ARCH %s" % (str(ArchList), str(BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, 'COMMON'].SupArchList)))
+            EdkLogger.error("GenFds", GENFDS_ERROR, "Target ARCH %s not in platform supported ARCH %s" % (str(ArchList), str(BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, TAB_COMMON].SupArchList)))
         
         for Arch in ArchList:
             GenFdsGlobalVariable.OutputDirFromDscDict[Arch] = NormPath(BuildWorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, Arch, Options.BuildTarget, Options.ToolChain].OutputDirectory)
@@ -269,42 +278,59 @@ def main():
             EdkLogger.error("GenFds", FORMAT_NOT_SUPPORTED, "Cycle Reference Detected in FDF file")
 
         if (Options.uiFdName) :
-            if Options.uiFdName.upper() in FdfParserObj.Profile.FdDict.keys():
+            if Options.uiFdName.upper() in FdfParserObj.Profile.FdDict:
                 GenFds.OnlyGenerateThisFd = Options.uiFdName
             else:
                 EdkLogger.error("GenFds", OPTION_VALUE_INVALID,
                                 "No such an FD in FDF file: %s" % Options.uiFdName)
 
         if (Options.uiFvName) :
-            if Options.uiFvName.upper() in FdfParserObj.Profile.FvDict.keys():
+            if Options.uiFvName.upper() in FdfParserObj.Profile.FvDict:
                 GenFds.OnlyGenerateThisFv = Options.uiFvName
             else:
                 EdkLogger.error("GenFds", OPTION_VALUE_INVALID,
                                 "No such an FV in FDF file: %s" % Options.uiFvName)
 
         if (Options.uiCapName) :
-            if Options.uiCapName.upper() in FdfParserObj.Profile.CapsuleDict.keys():
+            if Options.uiCapName.upper() in FdfParserObj.Profile.CapsuleDict:
                 GenFds.OnlyGenerateThisCap = Options.uiCapName
             else:
                 EdkLogger.error("GenFds", OPTION_VALUE_INVALID,
                                 "No such a Capsule in FDF file: %s" % Options.uiCapName)
 
         GenFdsGlobalVariable.WorkSpace = BuildWorkSpace
-        if ArchList != None:
+        if ArchList is not None:
             GenFdsGlobalVariable.ArchList = ArchList
 
-        if Options.OptionPcd:
-            GlobalData.BuildOptionPcd = Options.OptionPcd
-            CheckBuildOptionPcd()
+        # Dsc Build Data will handle Pcd Settings from CommandLine.
 
         """Modify images from build output if the feature of loading driver at fixed address is on."""
         if GenFdsGlobalVariable.FixedLoadAddress:
             GenFds.PreprocessImage(BuildWorkSpace, GenFdsGlobalVariable.ActivePlatform)
+
+        # Record the FV Region info that may specific in the FD
+        if FdfParserObj.Profile.FvDict and FdfParserObj.Profile.FdDict:
+            for Fv in FdfParserObj.Profile.FvDict:
+                FvObj = FdfParserObj.Profile.FvDict[Fv]
+                for Fd in FdfParserObj.Profile.FdDict:
+                    FdObj = FdfParserObj.Profile.FdDict[Fd]
+                    for RegionObj in FdObj.RegionList:
+                        if RegionObj.RegionType != BINARY_FILE_TYPE_FV:
+                            continue
+                        for RegionData in RegionObj.RegionDataList:
+                            if FvObj.UiFvName.upper() == RegionData.upper():
+                                if FvObj.FvRegionInFD:
+                                    if FvObj.FvRegionInFD != RegionObj.Size:
+                                        EdkLogger.error("GenFds", FORMAT_INVALID, "The FV %s's region is specified in multiple FD with different value." %FvObj.UiFvName)
+                                else:
+                                    FvObj.FvRegionInFD = RegionObj.Size
+                                    RegionObj.BlockInfoOfRegion(FdObj.BlockSizeList, FvObj)
+
         """Call GenFds"""
         GenFds.GenFd('', FdfParserObj, BuildWorkSpace, ArchList)
 
         """Generate GUID cross reference file"""
-        GenFds.GenerateGuidXRefFile(BuildWorkSpace, ArchList)
+        GenFds.GenerateGuidXRefFile(BuildWorkSpace, ArchList, FdfParserObj)
 
         """Display FV space info."""
         GenFds.DisplayFvSpaceInfo(FdfParserObj)
@@ -313,7 +339,7 @@ def main():
         EdkLogger.error(X.ToolName, FORMAT_INVALID, File=X.FileName, Line=X.LineNumber, ExtraData=X.Message, RaiseError=False)
         ReturnCode = FORMAT_INVALID
     except FatalError, X:
-        if Options.debug != None:
+        if Options.debug is not None:
             import traceback
             EdkLogger.quiet(traceback.format_exc())
         ReturnCode = X.args[0]
@@ -340,79 +366,98 @@ def SingleCheckCallback(option, opt_str, value, parser):
     else:
         parser.error("Option %s only allows one instance in command line!" % option)
 
-def CheckBuildOptionPcd():
-    for Arch in GenFdsGlobalVariable.ArchList:
-        PkgList  = GenFdsGlobalVariable.WorkSpace.GetPackageList(GenFdsGlobalVariable.ActivePlatform, Arch, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag)
-        for i, pcd in enumerate(GlobalData.BuildOptionPcd):
-            if type(pcd) is tuple:
-                continue
-            (pcdname, pcdvalue) = pcd.split('=')
-            if not pcdvalue:
-                EdkLogger.error('GenFds', OPTION_MISSING, "No Value specified for the PCD %s." % (pcdname))
-            if '.' in pcdname:
-                (TokenSpaceGuidCName, TokenCName) = pcdname.split('.')
-                HasTokenSpace = True
-            else:
-                TokenCName = pcdname
-                TokenSpaceGuidCName = ''
-                HasTokenSpace = False
-            TokenSpaceGuidCNameList = []
-            FoundFlag = False
-            PcdDatumType = ''
-            NewValue = ''
-            for package in PkgList:
-                for key in package.Pcds:
-                    PcdItem = package.Pcds[key]
-                    if HasTokenSpace:
-                        if (PcdItem.TokenCName, PcdItem.TokenSpaceGuidCName) == (TokenCName, TokenSpaceGuidCName):
-                            PcdDatumType = PcdItem.DatumType
-                            NewValue = BuildOptionPcdValueFormat(TokenSpaceGuidCName, TokenCName, PcdDatumType, pcdvalue)
-                            FoundFlag = True
-                    else:
-                        if PcdItem.TokenCName == TokenCName:
-                            if not PcdItem.TokenSpaceGuidCName in TokenSpaceGuidCNameList:
-                                if len (TokenSpaceGuidCNameList) < 1:
-                                    TokenSpaceGuidCNameList.append(PcdItem.TokenSpaceGuidCName)
-                                    PcdDatumType = PcdItem.DatumType
-                                    TokenSpaceGuidCName = PcdItem.TokenSpaceGuidCName
-                                    NewValue = BuildOptionPcdValueFormat(TokenSpaceGuidCName, TokenCName, PcdDatumType, pcdvalue)
-                                    FoundFlag = True
-                                else:
-                                    EdkLogger.error(
-                                            'GenFds',
-                                            PCD_VALIDATION_INFO_ERROR,
-                                            "The Pcd %s is found under multiple different TokenSpaceGuid: %s and %s." % (TokenCName, PcdItem.TokenSpaceGuidCName, TokenSpaceGuidCNameList[0])
-                                            )
+## FindExtendTool()
+#
+#  Find location of tools to process data
+#
+#  @param  KeyStringList    Filter for inputs of section generation
+#  @param  CurrentArchList  Arch list
+#  @param  NameGuid         The Guid name
+#
+def FindExtendTool(KeyStringList, CurrentArchList, NameGuid):
+    ToolDb = ToolDefClassObject.ToolDefDict(GenFdsGlobalVariable.ConfDir).ToolsDefTxtDatabase
+    # if user not specify filter, try to deduce it from global data.
+    if KeyStringList is None or KeyStringList == []:
+        Target = GenFdsGlobalVariable.TargetName
+        ToolChain = GenFdsGlobalVariable.ToolChainTag
+        if ToolChain not in ToolDb['TOOL_CHAIN_TAG']:
+            EdkLogger.error("GenFds", GENFDS_ERROR, "Can not find external tool because tool tag %s is not defined in tools_def.txt!" % ToolChain)
+        KeyStringList = [Target + '_' + ToolChain + '_' + CurrentArchList[0]]
+        for Arch in CurrentArchList:
+            if Target + '_' + ToolChain + '_' + Arch not in KeyStringList:
+                KeyStringList.append(Target + '_' + ToolChain + '_' + Arch)
 
-            GlobalData.BuildOptionPcd[i] = (TokenSpaceGuidCName, TokenCName, NewValue)
+    if GenFdsGlobalVariable.GuidToolDefinition:
+        if NameGuid in GenFdsGlobalVariable.GuidToolDefinition:
+            return GenFdsGlobalVariable.GuidToolDefinition[NameGuid]
 
-def BuildOptionPcdValueFormat(TokenSpaceGuidCName, TokenCName, PcdDatumType, Value):
-    if PcdDatumType == 'VOID*':
-        if Value.startswith('L'):
-            if not Value[1]:
-                EdkLogger.error('GenFds', OPTION_VALUE_INVALID, 'For Void* type PCD, when specify the Value in the command line, please use the following format: "string", L"string", B"{...}"')
-            Value = Value[0] + '"' + Value[1:] + '"'
-        elif Value.startswith('B'):
-            if not Value[1]:
-                EdkLogger.error('GenFds', OPTION_VALUE_INVALID, 'For Void* type PCD, when specify the Value in the command line, please use the following format: "string", L"string", B"{...}"')
-            Value = Value[1:]
-        else:
-            if not Value[0]:
-                EdkLogger.error('GenFds', OPTION_VALUE_INVALID, 'For Void* type PCD, when specify the Value in the command line, please use the following format: "string", L"string", B"{...}"')
-            Value = '"' + Value + '"'
+    ToolDefinition = ToolDefClassObject.ToolDefDict(GenFdsGlobalVariable.ConfDir).ToolsDefTxtDictionary
+    ToolPathTmp = None
+    ToolOption = None
+    ToolPathKey = None
+    ToolOptionKey = None
+    KeyList = None
+    for ToolDef in ToolDefinition.items():
+        if NameGuid.lower() == ToolDef[1].lower() :
+            KeyList = ToolDef[0].split('_')
+            Key = KeyList[0] + \
+                  '_' + \
+                  KeyList[1] + \
+                  '_' + \
+                  KeyList[2]
+            if Key in KeyStringList and KeyList[4] == TAB_GUID:
+                ToolPathKey   = Key + '_' + KeyList[3] + '_PATH'
+                ToolOptionKey = Key + '_' + KeyList[3] + '_FLAGS'
+                ToolPath = ToolDefinition.get(ToolPathKey)
+                ToolOption = ToolDefinition.get(ToolOptionKey)
+                if ToolPathTmp is None:
+                    ToolPathTmp = ToolPath
+                else:
+                    if ToolPathTmp != ToolPath:
+                        EdkLogger.error("GenFds", GENFDS_ERROR, "Don't know which tool to use, %s or %s ?" % (ToolPathTmp, ToolPath))
 
-    IsValid, Cause = CheckPcdDatum(PcdDatumType, Value)
-    if not IsValid:
-        EdkLogger.error('build', FORMAT_INVALID, Cause, ExtraData="%s.%s" % (TokenSpaceGuidCName, TokenCName))
-    if PcdDatumType == 'BOOLEAN':
-        Value = Value.upper()
-        if Value == 'TRUE' or Value == '1':
-            Value = '1'
-        elif Value == 'FALSE' or Value == '0':
-            Value = '0'
-    return  Value
+    BuildOption = {}
+    for Arch in CurrentArchList:
+        Platform = GenFdsGlobalVariable.WorkSpace.BuildObject[GenFdsGlobalVariable.ActivePlatform, Arch, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]
+        # key is (ToolChainFamily, ToolChain, CodeBase)
+        for item in Platform.BuildOptions:
+            if '_PATH' in item[1] or '_FLAGS' in item[1] or '_GUID' in item[1]:
+                if not item[0] or (item[0] and GenFdsGlobalVariable.ToolChainFamily== item[0]):
+                    if item[1] not in BuildOption:
+                        BuildOption[item[1]] = Platform.BuildOptions[item]
+        if BuildOption:
+            ToolList = [TAB_TOD_DEFINES_TARGET, TAB_TOD_DEFINES_TOOL_CHAIN_TAG, TAB_TOD_DEFINES_TARGET_ARCH]
+            for Index in range(2, -1, -1):
+                for Key in list(BuildOption.keys()):
+                    List = Key.split('_')
+                    if List[Index] == '*':
+                        for String in ToolDb[ToolList[Index]]:
+                            if String in [Arch, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]:
+                                List[Index] = String
+                                NewKey = '%s_%s_%s_%s_%s' % tuple(List)
+                                if NewKey not in BuildOption:
+                                    BuildOption[NewKey] = BuildOption[Key]
+                                    continue
+                                del BuildOption[Key]
+                    elif List[Index] not in ToolDb[ToolList[Index]]:
+                        del BuildOption[Key]
+    if BuildOption:
+        if not KeyList:
+            for Op in BuildOption:
+                if NameGuid == BuildOption[Op]:
+                    KeyList = Op.split('_')
+                    Key = KeyList[0] + '_' + KeyList[1] +'_' + KeyList[2]
+                    if Key in KeyStringList and KeyList[4] == TAB_GUID:
+                        ToolPathKey   = Key + '_' + KeyList[3] + '_PATH'
+                        ToolOptionKey = Key + '_' + KeyList[3] + '_FLAGS'
+        if ToolPathKey in BuildOption:
+            ToolPathTmp = BuildOption[ToolPathKey]
+        if ToolOptionKey in BuildOption:
+            ToolOption = BuildOption[ToolOptionKey]
 
-        
+    GenFdsGlobalVariable.GuidToolDefinition[NameGuid] = (ToolPathTmp, ToolOption)
+    return ToolPathTmp, ToolOption
+
 ## Parse command line options
 #
 # Using standard Python module optparse to parse command line option of this tool.
@@ -446,6 +491,7 @@ def myOptionParser():
     Parser.add_option("--conf", action="store", type="string", dest="ConfDirectory", help="Specify the customized Conf directory.")
     Parser.add_option("--ignore-sources", action="store_true", dest="IgnoreSources", default=False, help="Focus to a binary build and ignore all source files")
     Parser.add_option("--pcd", action="append", dest="OptionPcd", help="Set PCD value by command line. Format: \"PcdName=Value\" ")
+    Parser.add_option("--genfds-multi-thread", action="store_true", dest="GenfdsMultiThread", default=False, help="Enable GenFds multi thread to generate ffs file.")
 
     (Options, args) = Parser.parse_args()
     return Options
@@ -476,49 +522,59 @@ class GenFds :
         GenFdsGlobalVariable.SetDir ('', FdfParser, WorkSpace, ArchList)
 
         GenFdsGlobalVariable.VerboseLogger(" Generate all Fd images and their required FV and Capsule images!")
-        if GenFds.OnlyGenerateThisCap != None and GenFds.OnlyGenerateThisCap.upper() in GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict.keys():
-            CapsuleObj = GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict.get(GenFds.OnlyGenerateThisCap.upper())
-            if CapsuleObj != None:
+        if GenFds.OnlyGenerateThisCap is not None and GenFds.OnlyGenerateThisCap.upper() in GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict:
+            CapsuleObj = GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict[GenFds.OnlyGenerateThisCap.upper()]
+            if CapsuleObj is not None:
                 CapsuleObj.GenCapsule()
                 return
 
-        if GenFds.OnlyGenerateThisFd != None and GenFds.OnlyGenerateThisFd.upper() in GenFdsGlobalVariable.FdfParser.Profile.FdDict.keys():
-            FdObj = GenFdsGlobalVariable.FdfParser.Profile.FdDict.get(GenFds.OnlyGenerateThisFd.upper())
-            if FdObj != None:
+        if GenFds.OnlyGenerateThisFd is not None and GenFds.OnlyGenerateThisFd.upper() in GenFdsGlobalVariable.FdfParser.Profile.FdDict:
+            FdObj = GenFdsGlobalVariable.FdfParser.Profile.FdDict[GenFds.OnlyGenerateThisFd.upper()]
+            if FdObj is not None:
                 FdObj.GenFd()
                 return
-        elif GenFds.OnlyGenerateThisFd == None and GenFds.OnlyGenerateThisFv == None:
-            for FdName in GenFdsGlobalVariable.FdfParser.Profile.FdDict.keys():
-                FdObj = GenFdsGlobalVariable.FdfParser.Profile.FdDict[FdName]
+        elif GenFds.OnlyGenerateThisFd is None and GenFds.OnlyGenerateThisFv is None:
+            for FdObj in GenFdsGlobalVariable.FdfParser.Profile.FdDict.values():
                 FdObj.GenFd()
 
         GenFdsGlobalVariable.VerboseLogger("\n Generate other FV images! ")
-        if GenFds.OnlyGenerateThisFv != None and GenFds.OnlyGenerateThisFv.upper() in GenFdsGlobalVariable.FdfParser.Profile.FvDict.keys():
-            FvObj = GenFdsGlobalVariable.FdfParser.Profile.FvDict.get(GenFds.OnlyGenerateThisFv.upper())
-            if FvObj != None:
+        if GenFds.OnlyGenerateThisFv is not None and GenFds.OnlyGenerateThisFv.upper() in GenFdsGlobalVariable.FdfParser.Profile.FvDict:
+            FvObj = GenFdsGlobalVariable.FdfParser.Profile.FvDict[GenFds.OnlyGenerateThisFv.upper()]
+            if FvObj is not None:
                 Buffer = StringIO.StringIO()
                 FvObj.AddToBuffer(Buffer)
                 Buffer.close()
                 return
-        elif GenFds.OnlyGenerateThisFv == None:
-            for FvName in GenFdsGlobalVariable.FdfParser.Profile.FvDict.keys():
+        elif GenFds.OnlyGenerateThisFv is None:
+            for FvObj in GenFdsGlobalVariable.FdfParser.Profile.FvDict.values():
                 Buffer = StringIO.StringIO('')
-                FvObj = GenFdsGlobalVariable.FdfParser.Profile.FvDict[FvName]
                 FvObj.AddToBuffer(Buffer)
                 Buffer.close()
         
-        if GenFds.OnlyGenerateThisFv == None and GenFds.OnlyGenerateThisFd == None and GenFds.OnlyGenerateThisCap == None:
+        if GenFds.OnlyGenerateThisFv is None and GenFds.OnlyGenerateThisFd is None and GenFds.OnlyGenerateThisCap is None:
             if GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict != {}:
                 GenFdsGlobalVariable.VerboseLogger("\n Generate other Capsule images!")
-                for CapsuleName in GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict.keys():
-                    CapsuleObj = GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict[CapsuleName]
+                for CapsuleObj in GenFdsGlobalVariable.FdfParser.Profile.CapsuleDict.values():
                     CapsuleObj.GenCapsule()
 
             if GenFdsGlobalVariable.FdfParser.Profile.OptRomDict != {}:
                 GenFdsGlobalVariable.VerboseLogger("\n Generate all Option ROM!")
-                for DriverName in GenFdsGlobalVariable.FdfParser.Profile.OptRomDict.keys():
-                    OptRomObj = GenFdsGlobalVariable.FdfParser.Profile.OptRomDict[DriverName]
+                for OptRomObj in GenFdsGlobalVariable.FdfParser.Profile.OptRomDict.values():
                     OptRomObj.AddToBuffer(None)
+    @staticmethod
+    def GenFfsMakefile(OutputDir, FdfParser, WorkSpace, ArchList, GlobalData):
+        GenFdsGlobalVariable.SetEnv(FdfParser, WorkSpace, ArchList, GlobalData)
+        for FdObj in GenFdsGlobalVariable.FdfParser.Profile.FdDict.values():
+            FdObj.GenFd(Flag=True)
+
+        for FvObj in GenFdsGlobalVariable.FdfParser.Profile.FvDict.values():
+            FvObj.AddToBuffer(Buffer=None, Flag=True)
+
+        if GenFdsGlobalVariable.FdfParser.Profile.OptRomDict != {}:
+            for OptRomObj in GenFdsGlobalVariable.FdfParser.Profile.OptRomDict.values():
+                OptRomObj.AddToBuffer(Buffer=None, Flag=True)
+
+        return GenFdsGlobalVariable.FfsCmdDict
 
     ## GetFvBlockSize()
     #
@@ -528,14 +584,14 @@ class GenFds :
     def GetFvBlockSize(FvObj):
         DefaultBlockSize = 0x1
         FdObj = None
-        if GenFds.OnlyGenerateThisFd != None and GenFds.OnlyGenerateThisFd.upper() in GenFdsGlobalVariable.FdfParser.Profile.FdDict.keys():
+        if GenFds.OnlyGenerateThisFd is not None and GenFds.OnlyGenerateThisFd.upper() in GenFdsGlobalVariable.FdfParser.Profile.FdDict:
             FdObj = GenFdsGlobalVariable.FdfParser.Profile.FdDict[GenFds.OnlyGenerateThisFd.upper()]
-        if FdObj == None:
+        if FdObj is None:
             for ElementFd in GenFdsGlobalVariable.FdfParser.Profile.FdDict.values():
                 for ElementRegion in ElementFd.RegionList:
-                    if ElementRegion.RegionType == 'FV':
+                    if ElementRegion.RegionType == BINARY_FILE_TYPE_FV:
                         for ElementRegionData in ElementRegion.RegionDataList:
-                            if ElementRegionData != None and ElementRegionData.upper() == FvObj.UiFvName:
+                            if ElementRegionData is not None and ElementRegionData.upper() == FvObj.UiFvName:
                                 if FvObj.BlockSizeList != []:
                                     return FvObj.BlockSizeList[0][0]
                                 else:
@@ -545,9 +601,9 @@ class GenFds :
             return DefaultBlockSize
         else:
             for ElementRegion in FdObj.RegionList:
-                    if ElementRegion.RegionType == 'FV':
+                    if ElementRegion.RegionType == BINARY_FILE_TYPE_FV:
                         for ElementRegionData in ElementRegion.RegionDataList:
-                            if ElementRegionData != None and ElementRegionData.upper() == FvObj.UiFvName:
+                            if ElementRegionData is not None and ElementRegionData.upper() == FvObj.UiFvName:
                                 if FvObj.BlockSizeList != []:
                                     return FvObj.BlockSizeList[0][0]
                                 else:
@@ -611,7 +667,7 @@ class GenFds :
     #   @retval None
     #
     def PreprocessImage(BuildDb, DscFile):
-        PcdDict = BuildDb.BuildObject[DscFile, 'COMMON', GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag].Pcds
+        PcdDict = BuildDb.BuildObject[DscFile, TAB_COMMON, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag].Pcds
         PcdValue = ''
         for Key in PcdDict:
             PcdObj = PcdDict[Key]
@@ -630,19 +686,25 @@ class GenFds :
         if Int64PcdValue > 0:
             TopAddress = Int64PcdValue
             
-        ModuleDict = BuildDb.BuildObject[DscFile, 'COMMON', GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag].Modules
+        ModuleDict = BuildDb.BuildObject[DscFile, TAB_COMMON, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag].Modules
         for Key in ModuleDict:
-            ModuleObj = BuildDb.BuildObject[Key, 'COMMON', GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]
+            ModuleObj = BuildDb.BuildObject[Key, TAB_COMMON, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]
             print ModuleObj.BaseName + ' ' + ModuleObj.ModuleType
 
-    def GenerateGuidXRefFile(BuildDb, ArchList):
+    def GenerateGuidXRefFile(BuildDb, ArchList, FdfParserObj):
         GuidXRefFileName = os.path.join(GenFdsGlobalVariable.FvDir, "Guid.xref")
         GuidXRefFile = StringIO.StringIO('')
         GuidDict = {}
+        ModuleList = []
+        FileGuidList = []
         for Arch in ArchList:
             PlatformDataBase = BuildDb.BuildObject[GenFdsGlobalVariable.ActivePlatform, Arch, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]
             for ModuleFile in PlatformDataBase.Modules:
                 Module = BuildDb.BuildObject[ModuleFile, Arch, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]
+                if Module in ModuleList:
+                    continue
+                else:
+                    ModuleList.append(Module)
                 GuidXRefFile.write("%s %s\n" % (Module.Guid, Module.BaseName))
                 for key, item in Module.Protocols.items():
                     GuidDict[key] = item
@@ -650,6 +712,81 @@ class GenFds :
                     GuidDict[key] = item
                 for key, item in Module.Ppis.items():
                     GuidDict[key] = item
+            for FvName in FdfParserObj.Profile.FvDict:
+                for FfsObj in FdfParserObj.Profile.FvDict[FvName].FfsList:
+                    if not isinstance(FfsObj, FfsFileStatement.FileStatement):
+                        InfPath = PathClass(NormPath(mws.join(GenFdsGlobalVariable.WorkSpaceDir, FfsObj.InfFileName)))
+                        FdfModule = BuildDb.BuildObject[InfPath, Arch, GenFdsGlobalVariable.TargetName, GenFdsGlobalVariable.ToolChainTag]
+                        if FdfModule in ModuleList:
+                            continue
+                        else:
+                            ModuleList.append(FdfModule)
+                        GuidXRefFile.write("%s %s\n" % (FdfModule.Guid, FdfModule.BaseName))
+                        for key, item in FdfModule.Protocols.items():
+                            GuidDict[key] = item
+                        for key, item in FdfModule.Guids.items():
+                            GuidDict[key] = item
+                        for key, item in FdfModule.Ppis.items():
+                            GuidDict[key] = item
+                    else:
+                        FileStatementGuid = FfsObj.NameGuid
+                        if FileStatementGuid in FileGuidList:
+                            continue
+                        else:
+                            FileGuidList.append(FileStatementGuid)
+                        Name = []
+                        FfsPath = os.path.join(GenFdsGlobalVariable.FvDir, 'Ffs')
+                        FfsPath = glob.glob(os.path.join(FfsPath, FileStatementGuid) + '*')
+                        if not FfsPath:
+                            continue
+                        if not os.path.exists(FfsPath[0]):
+                            continue
+                        MatchDict = {}
+                        ReFileEnds = re.compile('\S+(.ui)$|\S+(fv.sec.txt)$|\S+(.pe32.txt)$|\S+(.te.txt)$|\S+(.pic.txt)$|\S+(.raw.txt)$|\S+(.ffs.txt)$')
+                        FileList = os.listdir(FfsPath[0])
+                        for File in FileList:
+                            Match = ReFileEnds.search(File)
+                            if Match:
+                                for Index in range(1, 8):
+                                    if Match.group(Index) and Match.group(Index) in MatchDict:
+                                        MatchDict[Match.group(Index)].append(File)
+                                    elif Match.group(Index):
+                                        MatchDict[Match.group(Index)] = [File]
+                        if not MatchDict:
+                            continue
+                        if '.ui' in MatchDict:
+                            for File in MatchDict['.ui']:
+                                with open(os.path.join(FfsPath[0], File), 'rb') as F:
+                                    F.read()
+                                    length = F.tell()
+                                    F.seek(4)
+                                    TmpStr = unpack('%dh' % ((length - 4) / 2), F.read())
+                                    Name = ''.join(chr(c) for c in TmpStr[:-1])
+                        else:
+                            FileList = []
+                            if 'fv.sec.txt' in MatchDict:
+                                FileList = MatchDict['fv.sec.txt']
+                            elif '.pe32.txt' in MatchDict:
+                                FileList = MatchDict['.pe32.txt']
+                            elif '.te.txt' in MatchDict:
+                                FileList = MatchDict['.te.txt']
+                            elif '.pic.txt' in MatchDict:
+                                FileList = MatchDict['.pic.txt']
+                            elif '.raw.txt' in MatchDict:
+                                FileList = MatchDict['.raw.txt']
+                            elif '.ffs.txt' in MatchDict:
+                                FileList = MatchDict['.ffs.txt']
+                            else:
+                                pass
+                            for File in FileList:
+                                with open(os.path.join(FfsPath[0], File), 'r') as F:
+                                    Name.append((F.read().split()[-1]))
+                        if not Name:
+                            continue
+
+                        Name = ' '.join(Name) if type(Name) == type([]) else Name
+                        GuidXRefFile.write("%s %s\n" %(FileStatementGuid, Name))
+
        # Append GUIDs, Protocols, and PPIs to the Xref file
         GuidXRefFile.write("\n")
         for key, item in GuidDict.items():

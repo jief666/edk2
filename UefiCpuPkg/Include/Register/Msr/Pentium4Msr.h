@@ -6,7 +6,7 @@
   returned is a single 32-bit or 64-bit value, then a data structure is not
   provided for that MSR.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -17,7 +17,7 @@
 
   @par Specification Reference:
   Intel(R) 64 and IA-32 Architectures Software Developer's Manual, Volume 3,
-  December 2015, Chapter 35 Model-Specific-Registers (MSR), Section 35-16.
+  September 2016, Chapter 35 Model-Specific-Registers (MSR), Section 35.18.
 
 **/
 
@@ -25,6 +25,19 @@
 #define __PENTIUM_4_MSR_H__
 
 #include <Register/ArchitecturalMsr.h>
+
+/**
+  Is Pentium(R) 4 Processors?
+
+  @param   DisplayFamily  Display Family ID
+  @param   DisplayModel   Display Model ID
+
+  @retval  TRUE   Yes, it is.
+  @retval  FALSE  No, it isn't.
+**/
+#define IS_PENTIUM_4_PROCESSOR(DisplayFamily, DisplayModel) \
+  (DisplayFamily == 0x0F \
+   )
 
 /**
   3, 4, 6. Shared. See Section 8.10.5, "Monitor/Mwait Address Range
@@ -41,6 +54,7 @@
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IA32_MONITOR_FILTER_LINE_SIZE);
   AsmWriteMsr64 (MSR_PENTIUM_4_IA32_MONITOR_FILTER_LINE_SIZE, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IA32_MONITOR_FILTER_LINE_SIZE is defined as IA32_MONITOR_FILTER_LINE_SIZE in SDM.
 **/
 #define MSR_PENTIUM_4_IA32_MONITOR_FILTER_LINE_SIZE 0x00000006
 
@@ -63,6 +77,7 @@
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_EBC_HARD_POWERON);
   AsmWriteMsr64 (MSR_PENTIUM_4_EBC_HARD_POWERON, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_4_EBC_HARD_POWERON is defined as MSR_EBC_HARD_POWERON in SDM.
 **/
 #define MSR_PENTIUM_4_EBC_HARD_POWERON           0x0000002A
 
@@ -162,6 +177,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_EBC_SOFT_POWERON);
   AsmWriteMsr64 (MSR_PENTIUM_4_EBC_SOFT_POWERON, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_4_EBC_SOFT_POWERON is defined as MSR_EBC_SOFT_POWERON in SDM.
 **/
 #define MSR_PENTIUM_4_EBC_SOFT_POWERON           0x0000002B
 
@@ -242,6 +258,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_EBC_FREQUENCY_ID);
   @endcode
+  @note MSR_PENTIUM_4_EBC_FREQUENCY_ID is defined as MSR_EBC_FREQUENCY_ID in SDM.
 **/
 #define MSR_PENTIUM_4_EBC_FREQUENCY_ID           0x0000002C
 
@@ -314,6 +331,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_EBC_FREQUENCY_ID_1);
   @endcode
+  @note MSR_PENTIUM_4_EBC_FREQUENCY_ID_1 is defined as MSR_EBC_FREQUENCY_ID_1 in SDM.
 **/
 #define MSR_PENTIUM_4_EBC_FREQUENCY_ID_1         0x0000002C
 
@@ -364,6 +382,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RAX);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RAX, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RAX is defined as MSR_MCG_RAX in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RAX                    0x00000180
 
@@ -385,6 +404,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RBX);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RBX, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RBX is defined as MSR_MCG_RBX in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RBX                    0x00000181
 
@@ -406,6 +426,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RCX);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RCX, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RCX is defined as MSR_MCG_RCX in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RCX                    0x00000182
 
@@ -427,6 +448,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RDX);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RDX, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RDX is defined as MSR_MCG_RDX in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RDX                    0x00000183
 
@@ -448,6 +470,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RSI);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RSI, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RSI is defined as MSR_MCG_RSI in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RSI                    0x00000184
 
@@ -469,6 +492,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RDI);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RDI, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RDI is defined as MSR_MCG_RDI in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RDI                    0x00000185
 
@@ -490,6 +514,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RBP);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RBP, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RBP is defined as MSR_MCG_RBP in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RBP                    0x00000186
 
@@ -511,6 +536,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RSP);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RSP, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RSP is defined as MSR_MCG_RSP in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RSP                    0x00000187
 
@@ -532,6 +558,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RFLAGS);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RFLAGS, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RFLAGS is defined as MSR_MCG_RFLAGS in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RFLAGS                 0x00000188
 
@@ -553,6 +580,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_RIP);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_RIP, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_RIP is defined as MSR_MCG_RIP in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_RIP                    0x00000189
 
@@ -574,6 +602,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_MCG_MISC);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_MISC, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_4_MCG_MISC is defined as MSR_MCG_MISC in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_MISC                   0x0000018A
 
@@ -625,6 +654,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R8);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R8, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R8 is defined as MSR_MCG_R8 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R8                     0x00000190
 
@@ -647,6 +677,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R9);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R9, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R9 is defined as MSR_MCG_R9 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R9                     0x00000191
 
@@ -669,6 +700,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R10);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R10, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R10 is defined as MSR_MCG_R10 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R10                    0x00000192
 
@@ -691,6 +723,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R11);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R11, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R11 is defined as MSR_MCG_R11 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R11                    0x00000193
 
@@ -713,6 +746,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R12);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R12, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R12 is defined as MSR_MCG_R12 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R12                    0x00000194
 
@@ -735,6 +769,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R13);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R13, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R13 is defined as MSR_MCG_R13 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R13                    0x00000195
 
@@ -757,6 +792,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R14);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R14, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R14 is defined as MSR_MCG_R14 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R14                    0x00000196
 
@@ -779,6 +815,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MCG_R15);
   AsmWriteMsr64 (MSR_PENTIUM_4_MCG_R15, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MCG_R15 is defined as MSR_MCG_R15 in SDM.
 **/
 #define MSR_PENTIUM_4_MCG_R15                    0x00000197
 
@@ -801,6 +838,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_THERM2_CTL);
   AsmWriteMsr64 (MSR_PENTIUM_4_THERM2_CTL, Msr);
   @endcode
+  @note MSR_PENTIUM_4_THERM2_CTL is defined as MSR_THERM2_CTL in SDM.
 **/
 #define MSR_PENTIUM_4_THERM2_CTL                 0x0000019D
 
@@ -821,6 +859,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_IA32_MISC_ENABLE);
   AsmWriteMsr64 (MSR_PENTIUM_4_IA32_MISC_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_4_IA32_MISC_ENABLE is defined as IA32_MISC_ENABLE in SDM.
 **/
 #define MSR_PENTIUM_4_IA32_MISC_ENABLE           0x000001A0
 
@@ -901,8 +940,8 @@ typedef union {
     ///
     UINT32  BTS:1;
     ///
-    /// [Bit 12] PEBS_UNAVILABLE: Precise Event Based Sampling Unavailable (R)
-    /// See Table 35-2. When set, the processor does not support precise
+    /// [Bit 12] PEBS_UNAVILABLE: Processor Event Based Sampling Unavailable
+    /// (R) See Table 35-2. When set, the processor does not support processor
     /// event-based sampling (PEBS); when clear, PEBS is supported.
     ///
     UINT32  PEBS:1;
@@ -990,6 +1029,7 @@ typedef union {
 
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_PLATFORM_BRV);
   @endcode
+  @note MSR_PENTIUM_4_PLATFORM_BRV is defined as MSR_PLATFORM_BRV in SDM.
 **/
 #define MSR_PENTIUM_4_PLATFORM_BRV               0x000001A1
 
@@ -1026,7 +1066,7 @@ typedef union {
   0, 1, 2, 3, 4, 6. Unique. Last Exception Record From Linear IP (R)  Contains
   a pointer to the last branch instruction that the processor executed prior
   to the last exception that was generated or the last interrupt that was
-  handled. See Section 17.10.3, "Last Exception Records.". Unique. From Linear
+  handled. See Section 17.11.3, "Last Exception Records.". Unique. From Linear
   IP Linear address of the last branch instruction (If IA32e mode is active).
   From Linear IP Linear address of the last branch instruction. Reserved.
 
@@ -1040,6 +1080,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_LER_FROM_LIP);
   @endcode
+  @note MSR_PENTIUM_4_LER_FROM_LIP is defined as MSR_LER_FROM_LIP in SDM.
 **/
 #define MSR_PENTIUM_4_LER_FROM_LIP               0x000001D7
 
@@ -1048,7 +1089,7 @@ typedef union {
   0, 1, 2, 3, 4, 6. Unique. Last Exception Record To Linear IP (R)  This area
   contains a pointer to the target of the last branch instruction that the
   processor executed prior to the last exception that was generated or the
-  last interrupt that was handled. See Section 17.10.3, "Last Exception
+  last interrupt that was handled. See Section 17.11.3, "Last Exception
   Records.". Unique. From Linear IP Linear address of the target of the last
   branch instruction (If IA-32e mode is active). From Linear IP Linear address
   of the target of the last branch instruction. Reserved.
@@ -1063,6 +1104,7 @@ typedef union {
 
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_LER_TO_LIP);
   @endcode
+  @note MSR_PENTIUM_4_LER_TO_LIP is defined as MSR_LER_TO_LIP in SDM.
 **/
 #define MSR_PENTIUM_4_LER_TO_LIP                 0x000001D8
 
@@ -1070,7 +1112,7 @@ typedef union {
 /**
   0, 1, 2, 3, 4, 6. Unique. Debug Control (R/W)  Controls how several debug
   features are used. Bit definitions are discussed in the referenced section.
-  See Section 17.10.1, "MSR_DEBUGCTLA MSR.".
+  See Section 17.11.1, "MSR_DEBUGCTLA MSR.".
 
   @param  ECX  MSR_PENTIUM_4_DEBUGCTLA (0x000001D9)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1083,6 +1125,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_DEBUGCTLA);
   AsmWriteMsr64 (MSR_PENTIUM_4_DEBUGCTLA, Msr);
   @endcode
+  @note MSR_PENTIUM_4_DEBUGCTLA is defined as MSR_DEBUGCTLA in SDM.
 **/
 #define MSR_PENTIUM_4_DEBUGCTLA                  0x000001D9
 
@@ -1091,7 +1134,7 @@ typedef union {
   0, 1, 2, 3, 4, 6. Unique. Last Branch Record Stack TOS (R/W)  Contains an
   index (0-3 or 0-15) that points to the top of the last branch record stack
   (that is, that points the index of the MSR containing the most recent branch
-  record). See Section 17.10.2, "LBR Stack for Processors Based on Intel
+  record). See Section 17.11.2, "LBR Stack for Processors Based on Intel
   NetBurst(R) Microarchitecture"; and addresses 1DBH-1DEH and 680H-68FH.
 
   @param  ECX  MSR_PENTIUM_4_LASTBRANCH_TOS (0x000001DA)
@@ -1105,6 +1148,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_LASTBRANCH_TOS);
   AsmWriteMsr64 (MSR_PENTIUM_4_LASTBRANCH_TOS, Msr);
   @endcode
+  @note MSR_PENTIUM_4_LASTBRANCH_TOS is defined as MSR_LASTBRANCH_TOS in SDM.
 **/
 #define MSR_PENTIUM_4_LASTBRANCH_TOS             0x000001DA
 
@@ -1116,7 +1160,7 @@ typedef union {
   exceptions, or interrupts that the processor took. MSR_LASTBRANCH_0 through
   MSR_LASTBRANCH_3 at 1DBH-1DEH are available only on family 0FH, models
   0H-02H. They have been replaced by the MSRs at 680H68FH and 6C0H-6CFH. See
-  Section 17.9, "Last Branch, Call Stack, Interrupt, and Exception Recording
+  Section 17.10, "Last Branch, Call Stack, Interrupt, and Exception Recording
   for Processors based on Skylake Microarchitecture.".
 
   @param  ECX  MSR_PENTIUM_4_LASTBRANCH_n
@@ -1130,6 +1174,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_LASTBRANCH_0);
   AsmWriteMsr64 (MSR_PENTIUM_4_LASTBRANCH_0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_LASTBRANCH_0 is defined as MSR_LASTBRANCH_0 in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_1 is defined as MSR_LASTBRANCH_1 in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_2 is defined as MSR_LASTBRANCH_2 in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_3 is defined as MSR_LASTBRANCH_3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_LASTBRANCH_0               0x000001DB
@@ -1140,7 +1188,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.2, "Performance Counters.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.2, "Performance Counters.".
 
   @param  ECX  MSR_PENTIUM_4_BPU_COUNTERn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1153,6 +1201,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_BPU_COUNTER0);
   AsmWriteMsr64 (MSR_PENTIUM_4_BPU_COUNTER0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_BPU_COUNTER0 is defined as MSR_BPU_COUNTER0 in SDM.
+        MSR_PENTIUM_4_BPU_COUNTER1 is defined as MSR_BPU_COUNTER1 in SDM.
+        MSR_PENTIUM_4_BPU_COUNTER2 is defined as MSR_BPU_COUNTER2 in SDM.
+        MSR_PENTIUM_4_BPU_COUNTER3 is defined as MSR_BPU_COUNTER3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_BPU_COUNTER0               0x00000300
@@ -1163,7 +1215,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.2, "Performance Counters.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.2, "Performance Counters.".
 
   @param  ECX  MSR_PENTIUM_4_MS_COUNTERn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1176,6 +1228,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MS_COUNTER0);
   AsmWriteMsr64 (MSR_PENTIUM_4_MS_COUNTER0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MS_COUNTER0 is defined as MSR_MS_COUNTER0 in SDM.
+        MSR_PENTIUM_4_MS_COUNTER1 is defined as MSR_MS_COUNTER1 in SDM.
+        MSR_PENTIUM_4_MS_COUNTER2 is defined as MSR_MS_COUNTER2 in SDM.
+        MSR_PENTIUM_4_MS_COUNTER3 is defined as MSR_MS_COUNTER3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_MS_COUNTER0                0x00000304
@@ -1186,7 +1242,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.2, "Performance Counters.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.2, "Performance Counters.".
 
   @param  ECX  MSR_PENTIUM_4_FLAME_COUNTERn (0x00000308)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1199,6 +1255,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FLAME_COUNTER0);
   AsmWriteMsr64 (MSR_PENTIUM_4_FLAME_COUNTER0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FLAME_COUNTER0 is defined as MSR_FLAME_COUNTER0 in SDM.
+        MSR_PENTIUM_4_FLAME_COUNTER1 is defined as MSR_FLAME_COUNTER1 in SDM.
+        MSR_PENTIUM_4_FLAME_COUNTER2 is defined as MSR_FLAME_COUNTER2 in SDM.
+        MSR_PENTIUM_4_FLAME_COUNTER3 is defined as MSR_FLAME_COUNTER3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_FLAME_COUNTER0             0x00000308
@@ -1209,7 +1269,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.2, "Performance Counters.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.2, "Performance Counters.".
 
   @param  ECX  MSR_PENTIUM_4_IQ_COUNTERn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1222,6 +1282,12 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IQ_COUNTER0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IQ_COUNTER0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IQ_COUNTER0 is defined as MSR_IQ_COUNTER0 in SDM.
+        MSR_PENTIUM_4_IQ_COUNTER1 is defined as MSR_IQ_COUNTER1 in SDM.
+        MSR_PENTIUM_4_IQ_COUNTER2 is defined as MSR_IQ_COUNTER2 in SDM.
+        MSR_PENTIUM_4_IQ_COUNTER3 is defined as MSR_IQ_COUNTER3 in SDM.
+        MSR_PENTIUM_4_IQ_COUNTER4 is defined as MSR_IQ_COUNTER4 in SDM.
+        MSR_PENTIUM_4_IQ_COUNTER5 is defined as MSR_IQ_COUNTER5 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_IQ_COUNTER0                0x0000030C
@@ -1234,7 +1300,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.3, "CCCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.3, "CCCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_BPU_CCCRn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1247,6 +1313,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_BPU_CCCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_BPU_CCCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_BPU_CCCR0 is defined as MSR_BPU_CCCR0 in SDM.
+        MSR_PENTIUM_4_BPU_CCCR1 is defined as MSR_BPU_CCCR1 in SDM.
+        MSR_PENTIUM_4_BPU_CCCR2 is defined as MSR_BPU_CCCR2 in SDM.
+        MSR_PENTIUM_4_BPU_CCCR3 is defined as MSR_BPU_CCCR3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_BPU_CCCR0                  0x00000360
@@ -1257,7 +1327,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.3, "CCCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.3, "CCCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_MS_CCCRn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1270,6 +1340,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MS_CCCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_MS_CCCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MS_CCCR0 is defined as MSR_MS_CCCR0 in SDM.
+        MSR_PENTIUM_4_MS_CCCR1 is defined as MSR_MS_CCCR1 in SDM.
+        MSR_PENTIUM_4_MS_CCCR2 is defined as MSR_MS_CCCR2 in SDM.
+        MSR_PENTIUM_4_MS_CCCR3 is defined as MSR_MS_CCCR3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_MS_CCCR0                   0x00000364
@@ -1280,7 +1354,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.3, "CCCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.3, "CCCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FLAME_CCCRn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1293,6 +1367,10 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FLAME_CCCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_FLAME_CCCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FLAME_CCCR0 is defined as MSR_FLAME_CCCR0 in SDM.
+        MSR_PENTIUM_4_FLAME_CCCR1 is defined as MSR_FLAME_CCCR1 in SDM.
+        MSR_PENTIUM_4_FLAME_CCCR2 is defined as MSR_FLAME_CCCR2 in SDM.
+        MSR_PENTIUM_4_FLAME_CCCR3 is defined as MSR_FLAME_CCCR3 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_FLAME_CCCR0                0x00000368
@@ -1303,7 +1381,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.3, "CCCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.3, "CCCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_IQ_CCCRn
   @param  EAX  Lower 32-bits of MSR value.
@@ -1316,6 +1394,12 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IQ_CCCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IQ_CCCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IQ_CCCR0 is defined as MSR_IQ_CCCR0 in SDM.
+        MSR_PENTIUM_4_IQ_CCCR1 is defined as MSR_IQ_CCCR1 in SDM.
+        MSR_PENTIUM_4_IQ_CCCR2 is defined as MSR_IQ_CCCR2 in SDM.
+        MSR_PENTIUM_4_IQ_CCCR3 is defined as MSR_IQ_CCCR3 in SDM.
+        MSR_PENTIUM_4_IQ_CCCR4 is defined as MSR_IQ_CCCR4 in SDM.
+        MSR_PENTIUM_4_IQ_CCCR5 is defined as MSR_IQ_CCCR5 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_IQ_CCCR0                   0x0000036C
@@ -1328,7 +1412,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_BSU_ESCR0 (0x000003A0)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1341,12 +1425,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_BSU_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_BSU_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_BSU_ESCR0 is defined as MSR_BSU_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_BSU_ESCR0                  0x000003A0
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_BSU_ESCR1 (0x000003A1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1359,12 +1444,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_BSU_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_BSU_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_BSU_ESCR1 is defined as MSR_BSU_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_BSU_ESCR1                  0x000003A1
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FSB_ESCR0 (0x000003A2)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1377,12 +1463,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FSB_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_FSB_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FSB_ESCR0 is defined as MSR_FSB_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_FSB_ESCR0                  0x000003A2
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FSB_ESCR1 (0x000003A3)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1395,12 +1482,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FSB_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_FSB_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FSB_ESCR1 is defined as MSR_FSB_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_FSB_ESCR1                  0x000003A3
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FIRM_ESCR0 (0x000003A4)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1413,12 +1501,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FIRM_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_FIRM_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FIRM_ESCR0 is defined as MSR_FIRM_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_FIRM_ESCR0                 0x000003A4
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FIRM_ESCR1 (0x000003A5)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1431,12 +1520,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FIRM_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_FIRM_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FIRM_ESCR1 is defined as MSR_FIRM_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_FIRM_ESCR1                 0x000003A5
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FLAME_ESCR0 (0x000003A6)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1449,12 +1539,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FLAME_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_FLAME_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FLAME_ESCR0 is defined as MSR_FLAME_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_FLAME_ESCR0                0x000003A6
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_FLAME_ESCR1 (0x000003A7)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1467,12 +1558,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_FLAME_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_FLAME_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_FLAME_ESCR1 is defined as MSR_FLAME_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_FLAME_ESCR1                0x000003A7
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_DAC_ESCR0 (0x000003A8)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1485,12 +1577,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_DAC_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_DAC_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_DAC_ESCR0 is defined as MSR_DAC_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_DAC_ESCR0                  0x000003A8
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_DAC_ESCR1 (0x000003A9)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1503,12 +1596,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_DAC_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_DAC_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_DAC_ESCR1 is defined as MSR_DAC_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_DAC_ESCR1                  0x000003A9
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_MOB_ESCR0 (0x000003AA)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1521,12 +1615,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MOB_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_MOB_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MOB_ESCR0 is defined as MSR_MOB_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_MOB_ESCR0                  0x000003AA
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_MOB_ESCR1 (0x000003AB)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1539,12 +1634,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MOB_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_MOB_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MOB_ESCR1 is defined as MSR_MOB_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_MOB_ESCR1                  0x000003AB
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_PMH_ESCR0 (0x000003AC)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1557,12 +1653,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_PMH_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_PMH_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_PMH_ESCR0 is defined as MSR_PMH_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_PMH_ESCR0                  0x000003AC
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_PMH_ESCR1 (0x000003AD)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1575,12 +1672,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_PMH_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_PMH_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_PMH_ESCR1 is defined as MSR_PMH_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_PMH_ESCR1                  0x000003AD
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_SAAT_ESCR0 (0x000003AE)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1593,12 +1691,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_SAAT_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_SAAT_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_SAAT_ESCR0 is defined as MSR_SAAT_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_SAAT_ESCR0                 0x000003AE
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_SAAT_ESCR1 (0x000003AF)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1611,12 +1710,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_SAAT_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_SAAT_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_SAAT_ESCR1 is defined as MSR_SAAT_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_SAAT_ESCR1                 0x000003AF
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_U2L_ESCR0 (0x000003B0)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1629,12 +1729,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_U2L_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_U2L_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_U2L_ESCR0 is defined as MSR_U2L_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_U2L_ESCR0                  0x000003B0
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_U2L_ESCR1 (0x000003B1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1647,12 +1748,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_U2L_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_U2L_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_U2L_ESCR1 is defined as MSR_U2L_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_U2L_ESCR1                  0x000003B1
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_BPU_ESCR0 (0x000003B2)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1665,12 +1767,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_BPU_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_BPU_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_BPU_ESCR0 is defined as MSR_BPU_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_BPU_ESCR0                  0x000003B2
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_BPU_ESCR1 (0x000003B3)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1683,12 +1786,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_BPU_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_BPU_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_BPU_ESCR1 is defined as MSR_BPU_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_BPU_ESCR1                  0x000003B3
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_IS_ESCR0 (0x000003B4)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1701,12 +1805,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IS_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IS_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IS_ESCR0 is defined as MSR_IS_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_IS_ESCR0                   0x000003B4
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_IS_ESCR1 (0x000003B5)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1719,12 +1824,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IS_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_IS_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IS_ESCR1 is defined as MSR_IS_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_IS_ESCR1                   0x000003B5
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_ITLB_ESCR0 (0x000003B6)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1737,12 +1843,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_ITLB_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_ITLB_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_ITLB_ESCR0 is defined as MSR_ITLB_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_ITLB_ESCR0                 0x000003B6
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_ITLB_ESCR1 (0x000003B7)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1755,12 +1862,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_ITLB_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_ITLB_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_ITLB_ESCR1 is defined as MSR_ITLB_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_ITLB_ESCR1                 0x000003B7
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_CRU_ESCR0 (0x000003B8)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1773,12 +1881,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_CRU_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_CRU_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_CRU_ESCR0 is defined as MSR_CRU_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_CRU_ESCR0                  0x000003B8
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_CRU_ESCR1 (0x000003B9)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1791,12 +1900,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_CRU_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_CRU_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_CRU_ESCR1 is defined as MSR_CRU_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_CRU_ESCR1                  0x000003B9
 
 
 /**
-  0, 1, 2. Shared. See Section 18.12.1, "ESCR MSRs." This MSR is not available
+  0, 1, 2. Shared. See Section 18.15.1, "ESCR MSRs." This MSR is not available
   on later processors. It is only available on processor family 0FH, models
   01H-02H.
 
@@ -1811,12 +1921,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IQ_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IQ_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IQ_ESCR0 is defined as MSR_IQ_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_IQ_ESCR0                   0x000003BA
 
 
 /**
-  0, 1, 2. Shared. See Section 18.12.1, "ESCR MSRs." This MSR is not available
+  0, 1, 2. Shared. See Section 18.15.1, "ESCR MSRs." This MSR is not available
   on later processors. It is only available on processor family 0FH, models
   01H-02H.
 
@@ -1831,12 +1942,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IQ_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_IQ_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IQ_ESCR1 is defined as MSR_IQ_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_IQ_ESCR1                   0x000003BB
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_RAT_ESCR0 (0x000003BC)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1849,12 +1961,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_RAT_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_RAT_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_RAT_ESCR0 is defined as MSR_RAT_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_RAT_ESCR0                  0x000003BC
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_RAT_ESCR1 (0x000003BD)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1867,12 +1980,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_RAT_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_RAT_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_RAT_ESCR1 is defined as MSR_RAT_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_RAT_ESCR1                  0x000003BD
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_SSU_ESCR0 (0x000003BE)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1885,12 +1999,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_SSU_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_SSU_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_SSU_ESCR0 is defined as MSR_SSU_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_SSU_ESCR0                  0x000003BE
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_MS_ESCR0 (0x000003C0)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1903,12 +2018,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MS_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_MS_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MS_ESCR0 is defined as MSR_MS_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_MS_ESCR0                   0x000003C0
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_MS_ESCR1 (0x000003C1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1921,12 +2037,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_MS_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_MS_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_MS_ESCR1 is defined as MSR_MS_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_MS_ESCR1                   0x000003C1
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_TBPU_ESCR0 (0x000003C2)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1939,12 +2056,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_TBPU_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_TBPU_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_TBPU_ESCR0 is defined as MSR_TBPU_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_TBPU_ESCR0                 0x000003C2
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_TBPU_ESCR1 (0x000003C3)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1957,12 +2075,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_TBPU_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_TBPU_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_TBPU_ESCR1 is defined as MSR_TBPU_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_TBPU_ESCR1                 0x000003C3
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_TC_ESCR0 (0x000003C4)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1975,12 +2094,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_TC_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_TC_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_TC_ESCR0 is defined as MSR_TC_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_TC_ESCR0                   0x000003C4
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_TC_ESCR1 (0x000003C5)
   @param  EAX  Lower 32-bits of MSR value.
@@ -1993,12 +2113,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_TC_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_TC_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_TC_ESCR1 is defined as MSR_TC_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_TC_ESCR1                   0x000003C5
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_IX_ESCR0 (0x000003C8)
   @param  EAX  Lower 32-bits of MSR value.
@@ -2011,12 +2132,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IX_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IX_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IX_ESCR0 is defined as MSR_IX_ESCR0 in SDM.
 **/
 #define MSR_PENTIUM_4_IX_ESCR0                   0x000003C8
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_IX_ESCR1 (0x000003C9)
   @param  EAX  Lower 32-bits of MSR value.
@@ -2029,12 +2151,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IX_ESCR1);
   AsmWriteMsr64 (MSR_PENTIUM_4_IX_ESCR1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IX_ESCR1 is defined as MSR_IX_ESCR1 in SDM.
 **/
 #define MSR_PENTIUM_4_IX_ESCR1                   0x000003C9
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_ALF_ESCRn
   @param  EAX  Lower 32-bits of MSR value.
@@ -2047,6 +2170,12 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_ALF_ESCR0);
   AsmWriteMsr64 (MSR_PENTIUM_4_ALF_ESCR0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_ALF_ESCR0 is defined as MSR_ALF_ESCR0 in SDM.
+        MSR_PENTIUM_4_ALF_ESCR1 is defined as MSR_ALF_ESCR1 in SDM.
+        MSR_PENTIUM_4_CRU_ESCR2 is defined as MSR_CRU_ESCR2 in SDM.
+        MSR_PENTIUM_4_CRU_ESCR3 is defined as MSR_CRU_ESCR3 in SDM.
+        MSR_PENTIUM_4_CRU_ESCR4 is defined as MSR_CRU_ESCR4 in SDM.
+        MSR_PENTIUM_4_CRU_ESCR5 is defined as MSR_CRU_ESCR5 in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_ALF_ESCR0                  0x000003CA
@@ -2059,7 +2188,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Section 18.12.1, "ESCR MSRs.".
+  0, 1, 2, 3, 4, 6. Shared. See Section 18.15.1, "ESCR MSRs.".
 
   @param  ECX  MSR_PENTIUM_4_TC_PRECISE_EVENT (0x000003F0)
   @param  EAX  Lower 32-bits of MSR value.
@@ -2072,13 +2201,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_TC_PRECISE_EVENT);
   AsmWriteMsr64 (MSR_PENTIUM_4_TC_PRECISE_EVENT, Msr);
   @endcode
+  @note MSR_PENTIUM_4_TC_PRECISE_EVENT is defined as MSR_TC_PRECISE_EVENT in SDM.
 **/
 #define MSR_PENTIUM_4_TC_PRECISE_EVENT           0x000003F0
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. Precise Event-Based Sampling (PEBS) (R/W)
-  Controls the enabling of precise event sampling and replay tagging.
+  0, 1, 2, 3, 4, 6. Shared. Processor Event Based Sampling (PEBS) (R/W)
+  Controls the enabling of processor event sampling and replay tagging.
 
   @param  ECX  MSR_PENTIUM_4_PEBS_ENABLE (0x000003F1)
   @param  EAX  Lower 32-bits of MSR value.
@@ -2093,6 +2223,7 @@ typedef union {
   Msr.Uint64 = AsmReadMsr64 (MSR_PENTIUM_4_PEBS_ENABLE);
   AsmWriteMsr64 (MSR_PENTIUM_4_PEBS_ENABLE, Msr.Uint64);
   @endcode
+  @note MSR_PENTIUM_4_PEBS_ENABLE is defined as MSR_PEBS_ENABLE in SDM.
 **/
 #define MSR_PENTIUM_4_PEBS_ENABLE                0x000003F1
 
@@ -2105,7 +2236,7 @@ typedef union {
   ///
   struct {
     ///
-    /// [Bits 12:0] See Table 19-26.
+    /// [Bits 12:0] See Table 19-33.
     ///
     UINT32  EventNum:13;
     UINT32  Reserved1:11;
@@ -2116,7 +2247,7 @@ typedef union {
     ///
     /// [Bit 25] ENABLE_PEBS_MY_THR (R/W) Enables PEBS for the target logical
     /// processor when set; disables PEBS when clear (default). See Section
-    /// 18.13.3, "IA32_PEBS_ENABLE MSR," for an explanation of the target
+    /// 18.16.3, "IA32_PEBS_ENABLE MSR," for an explanation of the target
     /// logical processor. This bit is called ENABLE_PEBS in IA-32 processors
     /// that do not support Intel HyperThreading Technology.
     ///
@@ -2124,7 +2255,7 @@ typedef union {
     ///
     /// [Bit 26] ENABLE_PEBS_OTH_THR (R/W) Enables PEBS for the target logical
     /// processor when set; disables PEBS when clear (default). See Section
-    /// 18.13.3, "IA32_PEBS_ENABLE MSR," for an explanation of the target
+    /// 18.16.3, "IA32_PEBS_ENABLE MSR," for an explanation of the target
     /// logical processor. This bit is reserved for IA-32 processors that do
     /// not support Intel Hyper-Threading Technology.
     ///
@@ -2144,7 +2275,7 @@ typedef union {
 
 
 /**
-  0, 1, 2, 3, 4, 6. Shared. See Table 19-26.
+  0, 1, 2, 3, 4, 6. Shared. See Table 19-33.
 
   @param  ECX  MSR_PENTIUM_4_PEBS_MATRIX_VERT (0x000003F2)
   @param  EAX  Lower 32-bits of MSR value.
@@ -2157,6 +2288,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_PEBS_MATRIX_VERT);
   AsmWriteMsr64 (MSR_PENTIUM_4_PEBS_MATRIX_VERT, Msr);
   @endcode
+  @note MSR_PENTIUM_4_PEBS_MATRIX_VERT is defined as MSR_PEBS_MATRIX_VERT in SDM.
 **/
 #define MSR_PENTIUM_4_PEBS_MATRIX_VERT           0x000003F2
 
@@ -2169,7 +2301,7 @@ typedef union {
   680H-68FH, 6C0H-6CfH are not available in processor releases before family
   0FH, model 03H. These MSRs replace MSRs previously located at
   1DBH-1DEH.which performed the same function for early releases. See Section
-  17.9, "Last Branch, Call Stack, Interrupt, and Exception Recording for
+  17.10, "Last Branch, Call Stack, Interrupt, and Exception Recording for
   Processors based on Skylake Microarchitecture.".
 
   @param  ECX  MSR_PENTIUM_4_LASTBRANCH_n_FROM_IP
@@ -2183,6 +2315,22 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_LASTBRANCH_0_FROM_IP);
   AsmWriteMsr64 (MSR_PENTIUM_4_LASTBRANCH_0_FROM_IP, Msr);
   @endcode
+  @note MSR_PENTIUM_4_LASTBRANCH_0_FROM_IP  is defined as MSR_LASTBRANCH_0_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_1_FROM_IP  is defined as MSR_LASTBRANCH_1_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_2_FROM_IP  is defined as MSR_LASTBRANCH_2_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_3_FROM_IP  is defined as MSR_LASTBRANCH_3_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_4_FROM_IP  is defined as MSR_LASTBRANCH_4_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_5_FROM_IP  is defined as MSR_LASTBRANCH_5_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_6_FROM_IP  is defined as MSR_LASTBRANCH_6_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_7_FROM_IP  is defined as MSR_LASTBRANCH_7_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_8_FROM_IP  is defined as MSR_LASTBRANCH_8_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_9_FROM_IP  is defined as MSR_LASTBRANCH_9_FROM_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_10_FROM_IP is defined as MSR_LASTBRANCH_10_FROM_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_11_FROM_IP is defined as MSR_LASTBRANCH_11_FROM_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_12_FROM_IP is defined as MSR_LASTBRANCH_12_FROM_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_13_FROM_IP is defined as MSR_LASTBRANCH_13_FROM_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_14_FROM_IP is defined as MSR_LASTBRANCH_14_FROM_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_15_FROM_IP is defined as MSR_LASTBRANCH_15_FROM_IP in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_LASTBRANCH_0_FROM_IP       0x00000680
@@ -2209,7 +2357,7 @@ typedef union {
   record registers on the last branch record stack (6C0H-6CFH). This part of
   the stack contains pointers to the destination instruction for one of the
   last 16 branches, exceptions, or interrupts that the processor took. See
-  Section 17.9, "Last Branch, Call Stack, Interrupt, and Exception Recording
+  Section 17.10, "Last Branch, Call Stack, Interrupt, and Exception Recording
   for Processors based on Skylake Microarchitecture.".
 
   @param  ECX  MSR_PENTIUM_4_LASTBRANCH_n_TO_IP
@@ -2223,6 +2371,22 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_LASTBRANCH_0_TO_IP);
   AsmWriteMsr64 (MSR_PENTIUM_4_LASTBRANCH_0_TO_IP, Msr);
   @endcode
+  @note MSR_PENTIUM_4_LASTBRANCH_0_TO_IP  is defined as MSR_LASTBRANCH_0_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_1_TO_IP  is defined as MSR_LASTBRANCH_1_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_2_TO_IP  is defined as MSR_LASTBRANCH_2_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_3_TO_IP  is defined as MSR_LASTBRANCH_3_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_4_TO_IP  is defined as MSR_LASTBRANCH_4_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_5_TO_IP  is defined as MSR_LASTBRANCH_5_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_6_TO_IP  is defined as MSR_LASTBRANCH_6_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_7_TO_IP  is defined as MSR_LASTBRANCH_7_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_8_TO_IP  is defined as MSR_LASTBRANCH_8_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_9_TO_IP  is defined as MSR_LASTBRANCH_9_TO_IP  in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_10_TO_IP is defined as MSR_LASTBRANCH_10_TO_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_11_TO_IP is defined as MSR_LASTBRANCH_11_TO_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_12_TO_IP is defined as MSR_LASTBRANCH_12_TO_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_13_TO_IP is defined as MSR_LASTBRANCH_13_TO_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_14_TO_IP is defined as MSR_LASTBRANCH_14_TO_IP in SDM.
+        MSR_PENTIUM_4_LASTBRANCH_15_TO_IP is defined as MSR_LASTBRANCH_15_TO_IP in SDM.
   @{
 **/
 #define MSR_PENTIUM_4_LASTBRANCH_0_TO_IP         0x000006C0
@@ -2246,7 +2410,7 @@ typedef union {
 
 /**
   3, 4. Shared. IFSB BUSQ Event Control and Counter  Register (R/W) See
-  Section 18.17, "Performance Monitoring on 64-bit Intel Xeon Processor MP
+  Section 18.21, "Performance Monitoring on 64-bit Intel Xeon Processor MP
   with Up to 8-MByte L3 Cache.".
 
   @param  ECX  MSR_PENTIUM_4_IFSB_BUSQ0 (0x000107CC)
@@ -2260,6 +2424,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IFSB_BUSQ0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IFSB_BUSQ0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IFSB_BUSQ0 is defined as MSR_IFSB_BUSQ0 in SDM.
 **/
 #define MSR_PENTIUM_4_IFSB_BUSQ0                 0x000107CC
 
@@ -2278,13 +2443,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IFSB_BUSQ1);
   AsmWriteMsr64 (MSR_PENTIUM_4_IFSB_BUSQ1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IFSB_BUSQ1 is defined as MSR_IFSB_BUSQ1 in SDM.
 **/
 #define MSR_PENTIUM_4_IFSB_BUSQ1                 0x000107CD
 
 
 /**
   3, 4. Shared. IFSB SNPQ Event Control and Counter  Register (R/W)  See
-  Section 18.17, "Performance Monitoring on 64-bit Intel Xeon Processor MP
+  Section 18.21, "Performance Monitoring on 64-bit Intel Xeon Processor MP
   with Up to 8-MByte L3 Cache.".
 
   @param  ECX  MSR_PENTIUM_4_IFSB_SNPQ0 (0x000107CE)
@@ -2298,6 +2464,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IFSB_SNPQ0);
   AsmWriteMsr64 (MSR_PENTIUM_4_IFSB_SNPQ0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IFSB_SNPQ0 is defined as MSR_IFSB_SNPQ0 in SDM.
 **/
 #define MSR_PENTIUM_4_IFSB_SNPQ0                 0x000107CE
 
@@ -2316,13 +2483,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IFSB_SNPQ1);
   AsmWriteMsr64 (MSR_PENTIUM_4_IFSB_SNPQ1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IFSB_SNPQ1 is defined as MSR_IFSB_SNPQ1 in SDM.
 **/
 #define MSR_PENTIUM_4_IFSB_SNPQ1                 0x000107CF
 
 
 /**
   3, 4. Shared. EFSB DRDY Event Control and Counter  Register (R/W)  See
-  Section 18.17, "Performance Monitoring on 64-bit Intel Xeon Processor MP
+  Section 18.21, "Performance Monitoring on 64-bit Intel Xeon Processor MP
   with Up to 8-MByte L3 Cache" for details.
 
   @param  ECX  MSR_PENTIUM_4_EFSB_DRDY0 (0x000107D0)
@@ -2336,6 +2504,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EFSB_DRDY0);
   AsmWriteMsr64 (MSR_PENTIUM_4_EFSB_DRDY0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EFSB_DRDY0 is defined as MSR_EFSB_DRDY0 in SDM.
 **/
 #define MSR_PENTIUM_4_EFSB_DRDY0                 0x000107D0
 
@@ -2354,12 +2523,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EFSB_DRDY1);
   AsmWriteMsr64 (MSR_PENTIUM_4_EFSB_DRDY1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EFSB_DRDY1 is defined as MSR_EFSB_DRDY1 in SDM.
 **/
 #define MSR_PENTIUM_4_EFSB_DRDY1                 0x000107D1
 
 
 /**
-  3, 4. Shared. IFSB Latency Event Control Register (R/W) See Section 18.17,
+  3, 4. Shared. IFSB Latency Event Control Register (R/W) See Section 18.21,
   "Performance Monitoring on 64-bit Intel Xeon Processor MP with Up to 8-MByte
   L3 Cache" for details.
 
@@ -2374,12 +2544,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IFSB_CTL6);
   AsmWriteMsr64 (MSR_PENTIUM_4_IFSB_CTL6, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IFSB_CTL6 is defined as MSR_IFSB_CTL6 in SDM.
 **/
 #define MSR_PENTIUM_4_IFSB_CTL6                  0x000107D2
 
 
 /**
-  3, 4. Shared. IFSB Latency Event Counter Register  (R/W)  See Section 18.17,
+  3, 4. Shared. IFSB Latency Event Counter Register  (R/W)  See Section 18.21,
   "Performance Monitoring on 64-bit Intel Xeon Processor MP with Up to 8-MByte
   L3 Cache.".
 
@@ -2394,12 +2565,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_IFSB_CNTR7);
   AsmWriteMsr64 (MSR_PENTIUM_4_IFSB_CNTR7, Msr);
   @endcode
+  @note MSR_PENTIUM_4_IFSB_CNTR7 is defined as MSR_IFSB_CNTR7 in SDM.
 **/
 #define MSR_PENTIUM_4_IFSB_CNTR7                 0x000107D3
 
 
 /**
-  6. Shared. GBUSQ Event Control and Counter Register (R/W) See Section 18.17,
+  6. Shared. GBUSQ Event Control and Counter Register (R/W) See Section 18.21,
   "Performance Monitoring on 64-bit Intel Xeon Processor MP with Up to 8-MByte
   L3 Cache.".
 
@@ -2414,6 +2586,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL0);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL0, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL0 is defined as MSR_EMON_L3_CTR_CTL0 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL0           0x000107CC
 
@@ -2432,13 +2605,14 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL1);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL1, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL1 is defined as MSR_EMON_L3_CTR_CTL1 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL1           0x000107CD
 
 
 /**
   6. Shared. GSNPQ Event Control and Counter Register (R/W)  See Section
-  18.17, "Performance Monitoring on 64-bit Intel Xeon Processor MP with Up to
+  18.21, "Performance Monitoring on 64-bit Intel Xeon Processor MP with Up to
   8-MByte L3 Cache.".
 
   @param  ECX  MSR_PENTIUM_4_EMON_L3_CTR_CTL2 (0x000107CE)
@@ -2452,6 +2626,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL2);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL2, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL2 is defined as MSR_EMON_L3_CTR_CTL2 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL2           0x000107CE
 
@@ -2470,12 +2645,13 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL3);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL3, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL3 is defined as MSR_EMON_L3_CTR_CTL3 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL3           0x000107CF
 
 
 /**
-  6. Shared. FSB Event Control and Counter Register  (R/W)  See Section 18.17,
+  6. Shared. FSB Event Control and Counter Register  (R/W)  See Section 18.21,
   "Performance Monitoring on 64-bit Intel Xeon Processor MP with Up to 8-MByte
   L3 Cache" for details.
 
@@ -2490,6 +2666,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL4);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL4, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL4 is defined as MSR_EMON_L3_CTR_CTL4 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL4           0x000107D0
 
@@ -2508,6 +2685,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL5);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL5, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL5 is defined as MSR_EMON_L3_CTR_CTL5 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL5           0x000107D1
 
@@ -2526,6 +2704,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL6);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL6, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL6 is defined as MSR_EMON_L3_CTR_CTL6 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL6           0x000107D2
 
@@ -2544,6 +2723,7 @@ typedef union {
   Msr = AsmReadMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL7);
   AsmWriteMsr64 (MSR_PENTIUM_4_EMON_L3_CTR_CTL7, Msr);
   @endcode
+  @note MSR_PENTIUM_4_EMON_L3_CTR_CTL7 is defined as MSR_EMON_L3_CTR_CTL7 in SDM.
 **/
 #define MSR_PENTIUM_4_EMON_L3_CTR_CTL7           0x000107D3
 

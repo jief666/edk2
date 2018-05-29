@@ -1,7 +1,7 @@
 /** @file
   Implements write firmware file.
 
-  Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
 
   This program and the accompanying materials
   are licensed and made available under the terms and conditions
@@ -202,9 +202,11 @@ FvFileAttrib2FfsFileAttrib (
 {
   UINT8 FvFileAlignment;
   UINT8 FfsFileAlignment;
+  UINT8 FfsFileAlignment2;
 
   FvFileAlignment   = (UINT8) (FvFileAttrib & EFI_FV_FILE_ATTRIB_ALIGNMENT);
   FfsFileAlignment  = 0;
+  FfsFileAlignment2 = 0;
 
   switch (FvFileAlignment) {
   case 0:
@@ -289,9 +291,42 @@ FvFileAttrib2FfsFileAttrib (
   case 16:
     FfsFileAlignment = 7;
     break;
+
+  case 17:
+    FfsFileAlignment = 0;
+    FfsFileAlignment2 = 1;
+    break;
+  case 18:
+    FfsFileAlignment = 1;
+    FfsFileAlignment2 = 1;
+    break;
+  case 19:
+    FfsFileAlignment = 2;
+    FfsFileAlignment2 = 1;
+    break;
+  case 20:
+    FfsFileAlignment = 3;
+    FfsFileAlignment2 = 1;
+    break;
+  case 21:
+    FfsFileAlignment = 4;
+    FfsFileAlignment2 = 1;
+    break;
+  case 22:
+    FfsFileAlignment = 5;
+    FfsFileAlignment2 = 1;
+    break;
+  case 23:
+    FfsFileAlignment = 6;
+    FfsFileAlignment2 = 1;
+    break;
+  case 24:
+    FfsFileAlignment = 7;
+    FfsFileAlignment2 = 1;
+    break;
   }
 
-  *FfsFileAttrib = (UINT8) (FfsFileAlignment << 3);
+  *FfsFileAttrib = (UINT8) ((FfsFileAlignment << 3) | (FfsFileAlignment2 << 1));
 
   return ;
 }
@@ -782,7 +817,7 @@ FvCreateNewFile (
 
   //
   // First find a free space that can hold this image.
-  // Check alignment, FFS at least must be aligned at 8-byte boundry
+  // Check alignment, FFS at least must be aligned at 8-byte boundary
   //
   RequiredAlignment = GetRequiredAlignment (FileAttributes);
 
@@ -1513,7 +1548,7 @@ FvWriteFile (
 
   for (Index1 = 0; Index1 < NumberOfFiles; Index1++) {
     //
-    // Making Buffersize QWORD boundry, and add file tail.
+    // Making Buffersize QWORD boundary, and add file tail.
     //
     HeaderSize = sizeof (EFI_FFS_FILE_HEADER);
     ActualSize = FileData[Index1].BufferSize + HeaderSize;

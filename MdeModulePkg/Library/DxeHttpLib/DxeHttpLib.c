@@ -2,7 +2,7 @@
   This library is used to share code between UEFI network stack modules.
   It provides the helper routines to parse the HTTP message byte stream.
 
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
@@ -56,7 +56,8 @@ UriPercentDecode (
   HexStr[2] = '\0';
   while (Index < BufferLength) {
     if (Buffer[Index] == '%') {
-      if (!NET_IS_HEX_CHAR (Buffer[Index+1]) || !NET_IS_HEX_CHAR (Buffer[Index+2])) {
+      if (Index + 1 >= BufferLength || Index + 2 >= BufferLength || 
+          !NET_IS_HEX_CHAR (Buffer[Index+1]) || !NET_IS_HEX_CHAR (Buffer[Index+2])) {
         return EFI_INVALID_PARAMETER;
       }
       HexStr[0] = Buffer[Index+1];
@@ -155,7 +156,7 @@ NetHttpParseAuthorityChar (
   @param[in, out]  UrlParser      Pointer to the buffer of the parse result.
 
   @retval EFI_SUCCESS             Successfully parse the authority.
-  @retval Other                   Error happened.
+  @retval EFI_INVALID_PARAMETER   The Url is invalid to parse the authority component.
 
 **/
 EFI_STATUS
@@ -372,6 +373,8 @@ HttpParseUrl (
   BOOLEAN               FoundAt;
   EFI_STATUS            Status;
   HTTP_URL_PARSER       *Parser;
+
+  Parser = NULL;
   
   if (Url == NULL || Length == 0 || UrlParser == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -396,12 +399,13 @@ HttpParseUrl (
   FoundAt = FALSE;
   for (Char = Url; Char < Url + Length; Char++) {
     //
-    // Update state machine accoring to next char.
+    // Update state machine according to next char.
     //
     State = NetHttpParseUrlChar (*Char, State);
 
     switch (State) {
     case UrlParserStateMax:
+      FreePool (Parser);
       return EFI_INVALID_PARAMETER;
       
     case UrlParserSchemeColon:
@@ -464,6 +468,7 @@ HttpParseUrl (
   if ((Parser->FieldBitMap & BIT (HTTP_URI_FIELD_AUTHORITY)) != 0) {
     Status = NetHttpParseAuthority (Url, FoundAt, Parser);
     if (EFI_ERROR (Status)) {
+      FreePool (Parser);
       return Status;
     }
   }
@@ -505,7 +510,7 @@ HttpUrlGetHostName (
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_URL_PARSER*) UrlParser;
+  Parser = (HTTP_URL_PARSER *) UrlParser;
 
   if ((Parser->FieldBitMap & BIT (HTTP_URI_FIELD_HOST)) == 0) {
     return EFI_NOT_FOUND;
@@ -523,6 +528,7 @@ HttpUrlGetHostName (
              &ResultLength
              );
   if (EFI_ERROR (Status)) {
+    FreePool (Name);
     return Status;
   }
 
@@ -564,10 +570,10 @@ HttpUrlGetIp4 (
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_URL_PARSER*) UrlParser;
+  Parser = (HTTP_URL_PARSER *) UrlParser;
 
   if ((Parser->FieldBitMap & BIT (HTTP_URI_FIELD_HOST)) == 0) {
-    return EFI_INVALID_PARAMETER;
+    return EFI_NOT_FOUND;
   }
 
   Ip4String = AllocatePool (Parser->FieldData[HTTP_URI_FIELD_HOST].Length + 1);
@@ -582,6 +588,7 @@ HttpUrlGetIp4 (
              &ResultLength
              );
   if (EFI_ERROR (Status)) {
+    FreePool (Ip4String);
     return Status;
   }
 
@@ -626,10 +633,10 @@ HttpUrlGetIp6 (
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_URL_PARSER*) UrlParser;
+  Parser = (HTTP_URL_PARSER *) UrlParser;
 
   if ((Parser->FieldBitMap & BIT (HTTP_URI_FIELD_HOST)) == 0) {
-    return EFI_INVALID_PARAMETER;
+    return EFI_NOT_FOUND;
   }
 
   //
@@ -657,6 +664,7 @@ HttpUrlGetIp6 (
              &ResultLength
              );
   if (EFI_ERROR (Status)) {
+    FreePool (Ip6String);
     return Status;
   }
   
@@ -690,19 +698,24 @@ HttpUrlGetPort (
      OUT  UINT16             *Port
   )
 {
-  CHAR8         *PortString;
-  EFI_STATUS    Status;
-  UINT32        ResultLength;
+  CHAR8                *PortString;
+  EFI_STATUS           Status;
+  UINTN                Index;
+  UINTN                Data;
+  UINT32               ResultLength;
   HTTP_URL_PARSER      *Parser;
 
   if (Url == NULL || UrlParser == NULL || Port == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_URL_PARSER*) UrlParser;
+  *Port = 0;
+  Index = 0;
+
+  Parser = (HTTP_URL_PARSER *) UrlParser;
 
   if ((Parser->FieldBitMap & BIT (HTTP_URI_FIELD_PORT)) == 0) {
-    return EFI_INVALID_PARAMETER;
+    return EFI_NOT_FOUND;
   }
 
   PortString = AllocatePool (Parser->FieldData[HTTP_URI_FIELD_PORT].Length + 1);
@@ -717,13 +730,31 @@ HttpUrlGetPort (
              &ResultLength
              );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_EXIT;
   }
 
   PortString[ResultLength] = '\0';
-  *Port = (UINT16) AsciiStrDecimalToUintn (Url + Parser->FieldData[HTTP_URI_FIELD_PORT].Offset);
 
-  return  EFI_SUCCESS;
+  while (Index < ResultLength) {
+    if (!NET_IS_DIGIT (PortString[Index])) {
+      Status = EFI_INVALID_PARAMETER;
+      goto ON_EXIT;
+    }
+    Index ++;
+  }
+
+  Status =  AsciiStrDecimalToUintnS (Url + Parser->FieldData[HTTP_URI_FIELD_PORT].Offset, (CHAR8 **) NULL, &Data);
+
+  if (Data > HTTP_URI_PORT_MAX_NUM) {
+    Status = EFI_INVALID_PARAMETER;
+    goto ON_EXIT;
+  }
+
+  *Port = (UINT16) Data;
+
+ON_EXIT:
+  FreePool (PortString);
+  return Status;
 }
 
 /**
@@ -759,7 +790,7 @@ HttpUrlGetPath (
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_URL_PARSER*) UrlParser;
+  Parser = (HTTP_URL_PARSER *) UrlParser;
 
   if ((Parser->FieldBitMap & BIT (HTTP_URI_FIELD_PATH)) == 0) {
     return EFI_NOT_FOUND;
@@ -777,6 +808,7 @@ HttpUrlGetPath (
              &ResultLength
              );
   if (EFI_ERROR (Status)) {
+    FreePool (PathStr);
     return Status;
   }
 
@@ -932,8 +964,7 @@ HttpIoParseContentLengthHeader (
     return EFI_NOT_FOUND;
   }
 
-  *ContentLength = AsciiStrDecimalToUintn (Header->FieldValue);
-  return EFI_SUCCESS;
+  return AsciiStrDecimalToUintnS (Header->FieldValue, (CHAR8 **) NULL, ContentLength);
 }
 
 /**
@@ -1103,7 +1134,8 @@ HttpInitMsgParser (
 
   @retval EFI_SUCCESS                Successfully parse the message-body.
   @retval EFI_INVALID_PARAMETER      MsgParser is NULL or Body is NULL or BodyLength is 0.
-  @retval Others                     Operation aborted.
+  @retval EFI_ABORTED                Operation aborted.
+  @retval Other                      Error happened while parsing message body.
 
 **/
 EFI_STATUS
@@ -1128,17 +1160,17 @@ HttpParseMessageBody (
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_BODY_PARSER*) MsgParser;
+  Parser = (HTTP_BODY_PARSER *) MsgParser;
 
   if (Parser->IgnoreBody) {
     Parser->State = BodyParserComplete;
     if (Parser->Callback != NULL) {
       Status = Parser->Callback (
-                 BodyParseEventOnComplete,
-                 Body,
-                 0,
-                 Parser->Context
-                 );
+                         BodyParseEventOnComplete,
+                         Body,
+                         0,
+                         Parser->Context
+                         );
       if (EFI_ERROR (Status)) {
         return Status;
       }
@@ -1170,11 +1202,11 @@ HttpParseMessageBody (
       //
       if (Parser->Callback != NULL) {
         Status = Parser->Callback (
-                   BodyParseEventOnData,
-                   Char,
-                   MIN (BodyLength, Parser->ContentLength - Parser->ParsedBodyLength),
-                   Parser->Context
-                   );
+                           BodyParseEventOnData,
+                           Char,
+                           MIN (BodyLength, Parser->ContentLength - Parser->ParsedBodyLength),
+                           Parser->Context
+                           );
         if (EFI_ERROR (Status)) {
           return Status;
         }
@@ -1185,11 +1217,11 @@ HttpParseMessageBody (
         Parser->State = BodyParserComplete;
         if (Parser->Callback != NULL) {
           Status = Parser->Callback (
-                     BodyParseEventOnComplete,
-                     Char,
-                     0,
-                     Parser->Context
-                     );
+                             BodyParseEventOnComplete,
+                             Char,
+                             0,
+                             Parser->Context
+                             );
           if (EFI_ERROR (Status)) {
             return Status;
           }
@@ -1274,11 +1306,11 @@ HttpParseMessageBody (
         Char++;
         if (Parser->Callback != NULL) {
           Status = Parser->Callback (
-                     BodyParseEventOnComplete,
-                     Char,
-                     0,
-                     Parser->Context
-                     );
+                             BodyParseEventOnComplete,
+                             Char,
+                             0,
+                             Parser->Context
+                             );
           if (EFI_ERROR (Status)) {
             return Status;
           }
@@ -1304,11 +1336,11 @@ HttpParseMessageBody (
       LengthForCallback = MIN (Parser->CurrentChunkSize - Parser->CurrentChunkParsedSize, RemainderLengthInThis);
       if (Parser->Callback != NULL) {
         Status = Parser->Callback (
-                   BodyParseEventOnData,
-                   Char,
-                   LengthForCallback,
-                   Parser->Context
-                   );
+                           BodyParseEventOnData,
+                           Char,
+                           LengthForCallback,
+                           Parser->Context
+                           );
         if (EFI_ERROR (Status)) {
           return Status;
         }
@@ -1369,7 +1401,11 @@ HttpIsMessageComplete (
 {
   HTTP_BODY_PARSER      *Parser;
 
-  Parser = (HTTP_BODY_PARSER*) MsgParser;
+  if (MsgParser == NULL) {
+    return FALSE;
+  }
+
+  Parser = (HTTP_BODY_PARSER *) MsgParser;
 
   if (Parser->State == BodyParserComplete) {
     return TRUE;
@@ -1403,7 +1439,7 @@ HttpGetEntityLength (
     return EFI_INVALID_PARAMETER;
   }
 
-  Parser = (HTTP_BODY_PARSER*) MsgParser;
+  Parser = (HTTP_BODY_PARSER *) MsgParser;
 
   if (!Parser->ContentLengthIsValid) {
     return EFI_NOT_READY;
@@ -1430,10 +1466,10 @@ HttpFreeMsgParser (
 
 
 /**
-  Get the next string, which is distinguished by specified seperator.
+  Get the next string, which is distinguished by specified separator.
 
   @param[in]  String             Pointer to the string.
-  @param[in]  Seperator          Specified seperator used to distinguish where is the beginning
+  @param[in]  Separator          Specified separator used to distinguish where is the beginning
                                  of next string.
 
   @return     Pointer to the next string.
@@ -1441,10 +1477,9 @@ HttpFreeMsgParser (
 
 **/
 CHAR8 *
-EFIAPI
 AsciiStrGetNextToken (
   IN CONST CHAR8 *String,
-  IN       CHAR8 Seperator
+  IN       CHAR8 Separator
   )
 {
   CONST CHAR8 *Token;
@@ -1454,7 +1489,7 @@ AsciiStrGetNextToken (
     if (*Token == 0) {
       return NULL;
     }
-    if (*Token == Seperator) {
+    if (*Token == Separator) {
       return (CHAR8 *)(Token + 1);
     }
     Token++;
@@ -1470,6 +1505,7 @@ AsciiStrGetNextToken (
 
 
   @retval EFI_SUCCESS             The FieldName and FieldValue are set into HttpHeader successfully.
+  @retval EFI_INVALID_PARAMETER   The parameter is invalid.
   @retval EFI_OUT_OF_RESOURCES    Failed to allocate resources.
 
 **/
@@ -1483,6 +1519,10 @@ HttpSetFieldNameAndValue (
 {
   UINTN                       FieldNameSize;
   UINTN                       FieldValueSize;
+
+  if (HttpHeader == NULL || FieldName == NULL || FieldValue == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
 
   if (HttpHeader->FieldName != NULL) {
     FreePool (HttpHeader->FieldName);
@@ -1502,6 +1542,7 @@ HttpSetFieldNameAndValue (
   FieldValueSize = AsciiStrSize (FieldValue);
   HttpHeader->FieldValue = AllocateZeroPool (FieldValueSize);
   if (HttpHeader->FieldValue == NULL) {
+    FreePool (HttpHeader->FieldName);
     return EFI_OUT_OF_RESOURCES;
   }
   CopyMem (HttpHeader->FieldValue, FieldValue, FieldValueSize);
@@ -1532,6 +1573,7 @@ HttpGetFieldNameAndValue (
   CHAR8  *FieldNameStr;
   CHAR8  *FieldValueStr;
   CHAR8  *StrPtr;
+  CHAR8  *EndofHeader;
 
   if (String == NULL || FieldName == NULL || FieldValue == NULL) {
     return NULL;
@@ -1542,6 +1584,16 @@ HttpGetFieldNameAndValue (
   FieldNameStr  = NULL;
   FieldValueStr = NULL;
   StrPtr        = NULL;
+  EndofHeader   = NULL;
+
+
+  //
+  // Check whether the raw HTTP header string is valid or not.
+  //
+  EndofHeader = AsciiStrStr (String, "\r\n\r\n");
+  if (EndofHeader == NULL) {
+    return NULL;
+  }
 
   //
   // Each header field consists of a name followed by a colon (":") and the field value.
@@ -1559,13 +1611,32 @@ HttpGetFieldNameAndValue (
 
   //
   // The field value MAY be preceded by any amount of LWS, though a single SP is preferred.
+  // Note: LWS  = [CRLF] 1*(SP|HT), it can be '\r\n ' or '\r\n\t' or ' ' or '\t'.
+  //       CRLF = '\r\n'.
+  //       SP   = ' '.
+  //       HT   = '\t' (Tab).
   //
   while (TRUE) {
     if (*FieldValueStr == ' ' || *FieldValueStr == '\t') {
+      //
+      // Boundary condition check. 
+      //
+      if ((UINTN) EndofHeader - (UINTN) FieldValueStr < 1) {
+        return NULL;  
+      }
+      
       FieldValueStr ++;
-    } else if (*FieldValueStr == '\r' && *(FieldValueStr + 1) == '\n' &&
-               (*(FieldValueStr + 2) == ' ' || *(FieldValueStr + 2) == '\t')) {
-      FieldValueStr = FieldValueStr + 3;
+    } else if (*FieldValueStr == '\r') {
+      //
+      // Boundary condition check. 
+      //
+      if ((UINTN) EndofHeader - (UINTN) FieldValueStr < 3) {
+        return NULL;  
+      }
+
+      if (*(FieldValueStr + 1) == '\n' && (*(FieldValueStr + 2) == ' ' || *(FieldValueStr + 2) == '\t')) {
+        FieldValueStr = FieldValueStr + 3;
+      }
     } else {
       break;
     }
@@ -1645,9 +1716,9 @@ HttpFreeHeaderFields (
                                   NULL if any error occured.
   @param[out]  RequestMsgSize     Size of the RequestMsg (in bytes).
 
-  @return EFI_SUCCESS             If HTTP request string was created successfully
+  @retval EFI_SUCCESS             If HTTP request string was created successfully.
   @retval EFI_OUT_OF_RESOURCES    Failed to allocate resources.
-  @retval EFI_INVALID_PARAMETER   The input arguments are invalid
+  @retval EFI_INVALID_PARAMETER   The input arguments are invalid.
 
 **/
 EFI_STATUS
@@ -1670,10 +1741,6 @@ HttpGenRequestMessage (
   UINTN                            Index;
   EFI_HTTP_UTILITIES_PROTOCOL      *HttpUtilitiesProtocol;
 
-
-  ASSERT (Message != NULL);
-
-  *RequestMsg           = NULL;
   Status                = EFI_SUCCESS;
   HttpHdrSize           = 0;
   MsgSize               = 0;
@@ -1688,7 +1755,8 @@ HttpGenRequestMessage (
   // 3. If we do not have a Request, HeaderCount should be zero
   // 4. If we do not have Request and Headers, we need at least a message-body
   //
-  if ((Message->Data.Request != NULL && Url == NULL) ||
+  if ((Message == NULL || RequestMsg == NULL || RequestMsgSize == NULL) || 
+      (Message->Data.Request != NULL && Url == NULL) ||
       (Message->Data.Request != NULL && Message->HeaderCount == 0) ||
       (Message->Data.Request == NULL && Message->HeaderCount != 0) ||
       (Message->Data.Request == NULL && Message->HeaderCount == 0 && Message->BodyLength == 0)) {
@@ -1702,7 +1770,7 @@ HttpGenRequestMessage (
     Status = gBS->LocateProtocol (
                     &gEfiHttpUtilitiesProtocolGuid,
                     NULL,
-                    (VOID **)&HttpUtilitiesProtocol
+                    (VOID **) &HttpUtilitiesProtocol
                     );
 
     if (EFI_ERROR (Status)) {
@@ -1726,20 +1794,18 @@ HttpGenRequestMessage (
     // Build raw HTTP Headers
     //
     Status = HttpUtilitiesProtocol->Build (
-                HttpUtilitiesProtocol,
-                0,
-                NULL,
-                0,
-                NULL,
-                Message->HeaderCount,
-                AppendList,
-                &HttpHdrSize,
-                &HttpHdr
-                );
+                                      HttpUtilitiesProtocol,
+                                      0,
+                                      NULL,
+                                      0,
+                                      NULL,
+                                      Message->HeaderCount,
+                                      AppendList,
+                                      &HttpHdrSize,
+                                      &HttpHdr
+                                      );
 
-    if (AppendList != NULL) {
-      FreePool (AppendList);
-    }
+    FreePool (AppendList);
 
     if (EFI_ERROR (Status) || HttpHdr == NULL){
       return Status;
@@ -1769,6 +1835,7 @@ HttpGenRequestMessage (
   //
   // memory for the string that needs to be sent to TCP
   //
+  *RequestMsg = NULL;
   *RequestMsg = AllocateZeroPool (MsgSize);
   if (*RequestMsg == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -1904,7 +1971,7 @@ HttpMappingToStatusCode (
   case 206:
     return HTTP_STATUS_206_PARTIAL_CONTENT;
   case 300:
-    return HTTP_STATUS_300_MULTIPLE_CHIOCES;
+    return HTTP_STATUS_300_MULTIPLE_CHOICES;
   case 301:
     return HTTP_STATUS_301_MOVED_PERMANENTLY;
   case 302:
@@ -1917,6 +1984,8 @@ HttpMappingToStatusCode (
     return HTTP_STATUS_305_USE_PROXY;
   case 307:
     return HTTP_STATUS_307_TEMPORARY_REDIRECT;
+  case 308:
+    return HTTP_STATUS_308_PERMANENT_REDIRECT;
   case 400:
     return HTTP_STATUS_400_BAD_REQUEST;
   case 401:
@@ -1992,7 +2061,15 @@ HttpIsValidHttpHeader (
 {
   UINTN                       Index;
 
+  if (FieldName == NULL) {
+    return FALSE;
+  }
+
   for (Index = 0; Index < DeleteCount; Index++) {
+    if (DeleteList[Index] == NULL) {
+      continue;
+    }
+    
     if (AsciiStrCmp (FieldName, DeleteList[Index]) == 0) {
       return FALSE;
     }

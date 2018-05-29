@@ -29,12 +29,14 @@
   EmbeddedPkg/EmbeddedPkg.dec
   ArmPkg/ArmPkg.dec
   ArmPlatformPkg/ArmPlatformPkg.dec
+  ArmVirtPkg/ArmVirtPkg.dec
 
 [LibraryClasses]
   DebugLib
   HobLib
   ArmLib
-  ArmPlatformLib
+  ArmMmuLib
+  ArmVirtMemInfoLib
   CacheMaintenanceLib
 
 [Guids]

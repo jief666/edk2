@@ -90,21 +90,9 @@ PageFaultIdtHandlerSmmProfile (
 /**
   Check if XD feature is supported by a processor.
 
-  @param[in,out] Buffer  The pointer to private data buffer.
-
 **/
 VOID
-EFIAPI
 CheckFeatureSupported (
-  IN OUT VOID   *Buffer
-  );
-
-/**
-  Enable XD feature.
-
-**/
-VOID
-ActivateXd (
   VOID
   );
 
@@ -118,15 +106,21 @@ InitPaging (
   );
 
 /**
-  Check if XD and BTS features are supported by all processors.
+  Get CPU Index from APIC ID.
 
 **/
-VOID
-CheckProcessorFeature (
+UINTN
+GetCpuIndex (
   VOID
   );
 
+//
+// The flag indicates if execute-disable is supported by processor.
+//
 extern BOOLEAN    mXdSupported;
+//
+// The flag indicates if execute-disable is enabled on processor.
+//
 extern BOOLEAN    mXdEnabled;
 
 #endif // _SMM_PROFILE_H_

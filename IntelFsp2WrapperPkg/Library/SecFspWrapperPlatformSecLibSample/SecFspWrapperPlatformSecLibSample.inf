@@ -23,7 +23,7 @@
   FILE_GUID                      = 8F1AC44A-CE7E-4E29-95BB-92E321BB1573
   MODULE_TYPE                    = SEC
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = FspWrapperPlatformSecLib
+  LIBRARY_CLASS                  = PlatformSecLib
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -46,13 +46,7 @@
   PlatformInit.c
 
 [Sources.IA32]
-  Ia32/SecEntry.asm
-  Ia32/PeiCoreEntry.asm
-  Ia32/Stack.asm
   Ia32/Fsp.h
-  Ia32/SecEntry.S
-  Ia32/PeiCoreEntry.S
-  Ia32/Stack.S
   Ia32/SecEntry.nasm
   Ia32/PeiCoreEntry.nasm
   Ia32/Stack.nasm
@@ -74,6 +68,8 @@
 [LibraryClasses]
   LocalApicLib
   SerialPortLib
+  DebugLib
+  BaseMemoryLib
 
 [Ppis]
   gEfiSecPlatformInformationPpiGuid       ## CONSUMES

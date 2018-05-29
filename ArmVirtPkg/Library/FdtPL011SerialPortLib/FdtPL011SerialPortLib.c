@@ -20,6 +20,7 @@
 #include <Base.h>
 
 #include <Library/PcdLib.h>
+#include <Library/PL011UartLib.h>
 #include <Library/SerialPortLib.h>
 #include <Pi/PiBootMode.h>
 #include <Uefi/UefiBaseType.h>
@@ -27,8 +28,6 @@
 #include <Pi/PiHob.h>
 #include <Library/HobLib.h>
 #include <Guid/EarlyPL011BaseAddress.h>
-
-#include <Drivers/PL011Uart.h>
 
 STATIC UINTN mSerialBaseAddress;
 
@@ -200,7 +199,23 @@ SerialPortSetAttributes (
   IN OUT EFI_STOP_BITS_TYPE *StopBits
   )
 {
-  return RETURN_UNSUPPORTED;
+  RETURN_STATUS Status;
+
+  if (mSerialBaseAddress == 0) {
+    Status = RETURN_UNSUPPORTED;
+  } else {
+    Status = PL011UartInitializePort (
+               mSerialBaseAddress,
+               FixedPcdGet32 (PL011UartClkInHz),
+               BaudRate,
+               ReceiveFifoDepth,
+               Parity,
+               DataBits,
+               StopBits
+               );
+  }
+
+  return Status;
 }
 
 /**
@@ -219,7 +234,15 @@ SerialPortSetControl (
   IN UINT32 Control
   )
 {
-  return RETURN_UNSUPPORTED;
+  RETURN_STATUS Status;
+
+  if (mSerialBaseAddress == 0) {
+    Status = RETURN_UNSUPPORTED;
+  } else {
+    Status = PL011UartSetControl (mSerialBaseAddress, Control);
+  }
+
+  return Status;
 }
 
 /**
@@ -238,6 +261,14 @@ SerialPortGetControl (
   OUT UINT32 *Control
   )
 {
-  return RETURN_UNSUPPORTED;
+  RETURN_STATUS Status;
+
+  if (mSerialBaseAddress == 0) {
+    Status = RETURN_UNSUPPORTED;
+  } else {
+    Status = PL011UartGetControl (mSerialBaseAddress, Control);
+  }
+
+  return Status;
 }
 

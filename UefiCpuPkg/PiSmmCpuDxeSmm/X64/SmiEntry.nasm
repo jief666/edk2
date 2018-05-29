@@ -1,5 +1,5 @@
 ;------------------------------------------------------------------------------ ;
-; Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+; Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
 ; This program and the accompanying materials
 ; are licensed and made available under the terms and conditions of the BSD License
 ; which accompanies this distribution.  The full text of the license may be found at
@@ -21,6 +21,10 @@
 ;
 ; Variables referrenced by C code
 ;
+
+%define MSR_IA32_MISC_ENABLE 0x1A0
+%define MSR_EFER      0xc0000080
+%define MSR_EFER_XD   0x800
 
 ;
 ; Constants relating to PROCESSOR_SMM_DESCRIPTOR
@@ -49,9 +53,11 @@ extern ASM_PFX(gSmiHandlerIdtr)
 extern ASM_PFX(CpuSmmDebugEntry)
 extern ASM_PFX(CpuSmmDebugExit)
 
-global ASM_PFX(gSmbase)
-global ASM_PFX(gSmiStack)
-global ASM_PFX(gSmiCr3)
+global ASM_PFX(gPatchSmbase)
+extern ASM_PFX(mXdSupported)
+global ASM_PFX(gPatchXdSupported)
+global ASM_PFX(gPatchSmiStack)
+global ASM_PFX(gPatchSmiCr3)
 global ASM_PFX(gcSmiHandlerTemplate)
 global ASM_PFX(gcSmiHandlerSize)
 
@@ -69,9 +75,9 @@ _SmiEntryPoint:
     mov     [cs:bx + 2], eax
 o32 lgdt    [cs:bx]                       ; lgdt fword ptr cs:[bx]
     mov     ax, PROTECT_MODE_CS
-    mov     [cs:bx-0x2],ax    
-    DB      0x66, 0xbf                   ; mov edi, SMBASE
-ASM_PFX(gSmbase): DD 0
+    mov     [cs:bx-0x2],ax
+    mov     edi, strict dword 0           ; source operand will be patched
+ASM_PFX(gPatchSmbase):
     lea     eax, [edi + (@ProtectedMode - _SmiEntryPoint) + 0x8000]
     mov     [cs:bx-0x6],eax
     mov     ebx, cr0
@@ -79,7 +85,7 @@ ASM_PFX(gSmbase): DD 0
     or      ebx, 0x23
     mov     cr0, ebx
     jmp     dword 0x0:0x0
-_GdtDesc:   
+_GdtDesc:
     DW 0
     DD 0
 
@@ -91,14 +97,14 @@ o16 mov     es, ax
 o16 mov     fs, ax
 o16 mov     gs, ax
 o16 mov     ss, ax
-    DB      0xbc                   ; mov esp, imm32
-ASM_PFX(gSmiStack): DD 0
+    mov esp, strict dword 0               ; source operand will be patched
+ASM_PFX(gPatchSmiStack):
     jmp     ProtFlatMode
 
 BITS 64
 ProtFlatMode:
-    DB      0xb8                        ; mov eax, offset gSmiCr3
-ASM_PFX(gSmiCr3): DD 0
+    mov eax, strict dword 0               ; source operand will be patched
+ASM_PFX(gPatchSmiCr3):
     mov     cr3, rax
     mov     eax, 0x668                   ; as cr4.PGE is not set here, refresh cr3
     mov     cr4, rax                    ; in PreModifyMtrrs() to flush TLB.
@@ -112,21 +118,49 @@ ASM_PFX(gSmiCr3): DD 0
     mov     eax, TSS_SEGMENT
     ltr     ax
 
+; enable NXE if supported
+    mov     al, strict byte 1           ; source operand may be patched
+ASM_PFX(gPatchXdSupported):
+    cmp     al, 0
+    jz      @SkipXd
+;
+; Check XD disable bit
+;
+    mov     ecx, MSR_IA32_MISC_ENABLE
+    rdmsr
+    sub     esp, 4
+    push    rdx                        ; save MSR_IA32_MISC_ENABLE[63-32]
+    test    edx, BIT2                  ; MSR_IA32_MISC_ENABLE[34]
+    jz      .0
+    and     dx, 0xFFFB                 ; clear XD Disable bit if it is set
+    wrmsr
+.0:
+    mov     ecx, MSR_EFER
+    rdmsr
+    or      ax, MSR_EFER_XD            ; enable NXE
+    wrmsr
+    jmp     @XdDone
+@SkipXd:
+    sub     esp, 8
+@XdDone:
+
 ; Switch into @LongMode
     push    LONG_MODE_CS                ; push cs hardcore here
-    call    Base                       ; push reture address for retf later
+    call    Base                       ; push return address for retf later
 Base:
     add     dword [rsp], @LongMode - Base; offset for far retf, seg is the 1st arg
-    mov     ecx, 0xc0000080
+
+    mov     ecx, MSR_EFER
     rdmsr
-    or      ah, 1
+    or      ah, 1                      ; enable LME
     wrmsr
     mov     rbx, cr0
-    or      ebx, 080010000h            ; enable paging + WP
+    or      ebx, 0x80010023            ; enable paging + WP + NE + MP + PE
     mov     cr0, rbx
     retf
 @LongMode:                              ; long mode (64-bit code) starts here
-    mov     rax, ASM_PFX(gSmiHandlerIdtr)
+    mov     rax, strict qword 0         ;  mov     rax, ASM_PFX(gSmiHandlerIdtr)
+SmiHandlerIdtrAbsAddr:
     lidt    [rax]
     lea     ebx, [rdi + DSC_OFFSET]
     mov     ax, [rbx + DSC_DS]
@@ -137,41 +171,63 @@ Base:
     mov     gs, eax
     mov     ax, [rbx + DSC_SS]
     mov     ss, eax
-;   jmp     _SmiHandler                 ; instruction is not needed
+    mov     rax, strict qword 0         ;   mov     rax, _SmiHandler
+_SmiHandlerAbsAddr:
+    jmp     rax
 
 _SmiHandler:
-    mov     rbx, [rsp]                  ; rbx <- CpuIndex
+    mov     rbx, [rsp + 0x8]             ; rcx <- CpuIndex
 
     ;
     ; Save FP registers
     ;
-    sub     rsp, 0x208
-    DB      0x48                         ; FXSAVE64
-    fxsave  [rsp]
+    sub     rsp, 0x200
+    fxsave64 [rsp]
 
     add     rsp, -0x20
 
     mov     rcx, rbx
-    mov     rax, CpuSmmDebugEntry
-    call    rax
-    
+    call    ASM_PFX(CpuSmmDebugEntry)
+
     mov     rcx, rbx
-    mov     rax, SmiRendezvous          ; rax <- absolute addr of SmiRedezvous
-    call    rax
-    
+    call    ASM_PFX(SmiRendezvous)
+
     mov     rcx, rbx
-    mov     rax, CpuSmmDebugExit
-    call    rax
-    
+    call    ASM_PFX(CpuSmmDebugExit)
+
     add     rsp, 0x20
 
     ;
     ; Restore FP registers
     ;
-    DB      0x48                         ; FXRSTOR64
-    fxrstor [rsp]
+    fxrstor64 [rsp]
 
+    add     rsp, 0x200
+
+    lea     rax, [ASM_PFX(mXdSupported)]
+    mov     al, [rax]
+    cmp     al, 0
+    jz      .1
+    pop     rdx                       ; get saved MSR_IA32_MISC_ENABLE[63-32]
+    test    edx, BIT2
+    jz      .1
+    mov     ecx, MSR_IA32_MISC_ENABLE
+    rdmsr
+    or      dx, BIT2                  ; set XD Disable bit if it was set before entering into SMM
+    wrmsr
+
+.1:
     rsm
 
-gcSmiHandlerSize    DW      $ - _SmiEntryPoint
+ASM_PFX(gcSmiHandlerSize)    DW      $ - _SmiEntryPoint
 
+global ASM_PFX(PiSmmCpuSmiEntryFixupAddress)
+ASM_PFX(PiSmmCpuSmiEntryFixupAddress):
+    lea    rax, [ASM_PFX(gSmiHandlerIdtr)]
+    lea    rcx, [SmiHandlerIdtrAbsAddr]
+    mov    qword [rcx - 8], rax
+
+    lea    rax, [_SmiHandler]
+    lea    rcx, [_SmiHandlerAbsAddr]
+    mov    qword [rcx - 8], rax
+    ret

@@ -1,7 +1,7 @@
 ## @file
 #  library defines a set of interfaces for how to do file explorer.
 #  
-#  Copyright (c) 2011 - 2016, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2011 - 2017, Intel Corporation. All rights reserved.<BR>
 #  This program and the accompanying materials are licensed and made available under
 #  the terms and conditions of the BSD License that accompanies this distribution.
 #  The full text of the license may be found at
@@ -50,15 +50,14 @@
   UefiHiiServicesLib
 
 [Guids]
-  gEfiFileSystemVolumeLabelInfoIdGuid           ## CONSUMES ## GUID (Indicate the information type is volume)
-  gEfiIfrTianoGuid                              ## CONSUMES ## GUID (Extended IFR Guid Opcode)
+  gEfiFileSystemVolumeLabelInfoIdGuid           ## SOMETIMES_CONSUMES ## GUID (Indicate the information type is volume)
+  gEfiIfrTianoGuid                              ## SOMETIMES_CONSUMES ## GUID (Extended IFR Guid Opcode)
  
 [Protocols]
-  gEfiSimpleFileSystemProtocolGuid              ## CONSUMES
-  gEfiLoadFileProtocolGuid                      ## CONSUMES
-  gEfiHiiConfigAccessProtocolGuid               ## CONSUMES
+  gEfiSimpleFileSystemProtocolGuid              ## SOMETIMES_CONSUMES
+  gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
   gEfiFormBrowser2ProtocolGuid                  ## CONSUMES
-  gEfiDevicePathToTextProtocolGuid              ## CONSUMES
+  gEfiDevicePathToTextProtocolGuid              ## PRODUCES
 
 [Depex.common.DXE_DRIVER]
   gEfiFormBrowser2ProtocolGuid AND gEfiHiiDatabaseProtocolGuid

@@ -1,7 +1,7 @@
 /** @file
   The boot manager reference implementation
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2017, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials are licensed and made available under
 the terms and conditions of the BSD License that accompanies this distribution.
 The full text of the license may be found at
@@ -143,7 +143,7 @@ BmSetConsoleMode (
 
   if (IsSetupMode) {
     //
-    // The requried resolution and text mode is setup mode.
+    // The required resolution and text mode is setup mode.
     //
     NewHorizontalResolution = mBmSetupHorizontalResolution;
     NewVerticalResolution   = mBmSetupVerticalResolution;
@@ -199,7 +199,7 @@ BmSetConsoleMode (
             return EFI_SUCCESS;
           } else {
             //
-            // If current text mode is different from requried text mode.  Set new video mode
+            // If current text mode is different from required text mode.  Set new video mode
             //
             for (Index = 0; Index < MaxTextMode; Index++) {
               Status = SimpleTextOut->QueryMode (SimpleTextOut, Index, &CurrentColumn, &CurrentRow);
@@ -224,7 +224,7 @@ BmSetConsoleMode (
             }
             if (Index == MaxTextMode) {
               //
-              // If requried text mode is not supported, return error.
+              // If required text mode is not supported, return error.
               //
               FreePool (Info);
               return EFI_UNSUPPORTED;
@@ -294,6 +294,50 @@ BmSetConsoleMode (
 }
 
 /**
+
+  Check whether a reset is needed,if reset is needed, Popup a menu to notice user.
+
+**/
+VOID
+BmSetupResetReminder (
+  VOID
+  )
+{
+  EFI_INPUT_KEY                 Key;
+  CHAR16                        *StringBuffer1;
+  CHAR16                        *StringBuffer2;
+  EFI_STATUS                    Status;
+  EDKII_FORM_BROWSER_EXTENSION2_PROTOCOL *FormBrowserEx2;
+
+  //
+  // Use BrowserEx2 protocol to check whether reset is required.
+  //
+  Status = gBS->LocateProtocol (&gEdkiiFormBrowserEx2ProtocolGuid, NULL, (VOID **) &FormBrowserEx2);
+  //
+  //check any reset required change is applied? if yes, reset system
+  //
+  if (!EFI_ERROR(Status) && FormBrowserEx2->IsResetRequired ()) {
+    StringBuffer1 = AllocateZeroPool (MAX_STRING_LEN * sizeof (CHAR16));
+    ASSERT (StringBuffer1 != NULL);
+    StringBuffer2 = AllocateZeroPool (MAX_STRING_LEN * sizeof (CHAR16));
+    ASSERT (StringBuffer2 != NULL);
+    StrCpyS (StringBuffer1, MAX_STRING_LEN, L"Configuration changed. Reset to apply it Now.");
+    StrCpyS (StringBuffer2, MAX_STRING_LEN, L"Press ENTER to reset");
+    //
+    // Popup a menu to notice user
+    //
+    do {
+      CreatePopUp (EFI_LIGHTGRAY | EFI_BACKGROUND_BLUE, &Key, StringBuffer1, StringBuffer2, NULL);
+    } while (Key.UnicodeChar != CHAR_CARRIAGE_RETURN);
+
+    FreePool (StringBuffer1);
+    FreePool (StringBuffer2);
+
+    gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+  }
+}
+
+/**
   Group the legacy boot options in the BootOption.
 
   The routine assumes the boot options in the beginning that covers all the device 
@@ -343,7 +387,7 @@ GroupMultipleLegacyBootOption4SameType (
       // Legacy Boot Option
       //
       DEBUG ((EFI_D_ERROR, "[BootManagerDxe] ==== Find Legacy Boot Option  0x%x! ==== \n", Index));
-      ASSERT ((((BBS_BBS_DEVICE_PATH *) BootOption.FilePath)->DeviceType & 0xF) < sizeof (DeviceTypeIndex) / sizeof (DeviceTypeIndex[0]));
+      ASSERT ((((BBS_BBS_DEVICE_PATH *) BootOption.FilePath)->DeviceType & 0xF) < ARRAY_SIZE (DeviceTypeIndex));
       NextIndex = &DeviceTypeIndex[((BBS_BBS_DEVICE_PATH *) BootOption.FilePath)->DeviceType & 0xF];
 
       if (*NextIndex == (UINTN) -1) {
@@ -362,7 +406,7 @@ GroupMultipleLegacyBootOption4SameType (
         //
         // Update the DeviceTypeIndex array to reflect the right shift operation
         //
-        for (DeviceIndex = 0; DeviceIndex < sizeof (DeviceTypeIndex) / sizeof (DeviceTypeIndex[0]); DeviceIndex++) {
+        for (DeviceIndex = 0; DeviceIndex < ARRAY_SIZE (DeviceTypeIndex); DeviceIndex++) {
           if (DeviceTypeIndex[DeviceIndex] != (UINTN) -1 && DeviceTypeIndex[DeviceIndex] >= *NextIndex) {
             DeviceTypeIndex[DeviceIndex]++;
           }
@@ -526,7 +570,7 @@ UpdateBootManager (
                      HiiHandle,
                      0,
                      mDeviceTypeStr[
-                       MIN (DeviceType & 0xF, sizeof (mDeviceTypeStr) / sizeof (mDeviceTypeStr[0]) - 1)
+                       MIN (DeviceType & 0xF, ARRAY_SIZE (mDeviceTypeStr) - 1)
                        ],
                      NULL
                      );
@@ -780,6 +824,11 @@ BootManagerCallback (
   //
   gST->ConOut->SetAttribute (gST->ConOut, EFI_TEXT_ATTR (EFI_LIGHTGRAY, EFI_BLACK));
   gST->ConOut->ClearScreen (gST->ConOut);
+
+  //
+  //check any reset required change is applied? if yes, reset system
+  //
+  BmSetupResetReminder ();
 
   //
   // parse the selected option

@@ -1,5 +1,5 @@
 #========================================================================================
-#  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
+#  Copyright (c) 2011-2017, ARM Limited. All rights reserved.
 #
 #  This program and the accompanying materials
 #  are licensed and made available under the terms and conditions of the BSD License
@@ -14,15 +14,8 @@
 #include <AsmMacroIoLibV8.h>
 #include <Chipset/AArch64.h>
 
-#start of the code section
-.text
-.align 3
-
-GCC_ASM_EXPORT(SetupExceptionLevel1)
-GCC_ASM_EXPORT(SetupExceptionLevel2)
-
 // Setup EL1 while in EL1
-ASM_PFX(SetupExceptionLevel1):
+ASM_FUNC(SetupExceptionLevel1)
    mov  x5, x30                   // Save LR
 
    mov  x0, #CPACR_CP_FULL_ACCESS
@@ -31,7 +24,7 @@ ASM_PFX(SetupExceptionLevel1):
    ret  x5
 
 // Setup EL2 while in EL2
-ASM_PFX(SetupExceptionLevel2):
+ASM_FUNC(SetupExceptionLevel2)
    msr     sctlr_el2, xzr
    mrs     x0, hcr_el2            // Read EL2 Hypervisor configuration Register
 
@@ -42,6 +35,13 @@ ASM_PFX(SetupExceptionLevel2):
    msr     hcr_el2, x0            // Write back our settings
 
    msr     cptr_el2, xzr          // Disable copro traps to EL2
+
+   // Enable Timer access for non-secure EL1 and EL0
+   // The cnthctl_el2 register bits are architecturally
+   // UNKNOWN on reset.
+   // Disable event stream as it is not in use at this stage
+   mov     x0, #(CNTHCTL_EL2_EL1PCTEN | CNTHCTL_EL2_EL1PCEN)
+   msr     cnthctl_el2, x0
 
    ret
 
